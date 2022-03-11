@@ -1,6 +1,8 @@
 ## Consumer Facing Data Sources
 [REFERENCES](https://www.programmableweb.com/category/grocery/api)
 
+[KROGER API](https://developer.kroger.com/reference)
+
 ### Kroger API :: User Story <Shopping Trip 10-14 Days per Week>
 - 5000 Calls Per Day
 - Available Routes:
@@ -11,7 +13,7 @@
         - filter.limit increases products returned
         - filter.start (aka OFFSET) set number of results to skip in the response
         - Additional Valuable Data: Price (both regular and promo); nationalPrice (both regular and promo) for national price of the item;
-        Fullfillment Type (Boolean object of {instore, shiptohome, delivery, curbside}); Aisle Locations;
+        Fulfillment Type (Boolean object of {instore, shiptohome, delivery, curbside}); Aisle Locations;
         - You may also search the API via term (for fuzzy match) or previously looked up productID.
             -filters: term (String>=3); locationId (VarChar 8); productId (Char 13-50); brand (String, case-sensitive, pipe-separated); fulfillment (Char 3)
             start (Int 1-1000); limit (Int 1-50);
@@ -21,7 +23,9 @@
 
 #### Tasks
 
-- [ ] Scan and Document Current Saved Receipts with Tesseract
+- [ ] ~~Scan and Document Current Saved Receipts with Tesseract~~
+- [x] Register Application with Kroger
+- [ ] Scrape User Account to Gather ID, Price, Name, and Weight
 - [ ] Create Visualizations to Sum Up Past Purchases (Past Trips)
 - [ ] Collect 120 Saved Recipe via Saved Documents and Recipe APIs
 - [ ] Breakdown Recipes into Ingredient Parts (and Convert to kgs) and Cooking Windows {long steps}

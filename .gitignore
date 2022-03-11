@@ -107,3 +107,4 @@ venv.bak/
 .vscode/
 
 report_unittest.xml
+api_keys.*
