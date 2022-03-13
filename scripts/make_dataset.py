@@ -1,11 +1,15 @@
 
 import os, sys, math, time, datetime as dt
 
-import pandas as pd, numpy as np
+import pandas as pd, numpy as np, time
+from pymongo import MongoClient
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-sign_in = True
+# client = MongoClient()
+# print(client.database_names())
+
+# Get Purchases - Automation via Selenium
 
 options = webdriver.ChromeOptions() 
 options.add_argument("start-maximized")
@@ -18,11 +22,26 @@ options.add_experimental_option('useAutomationExtension', False)
 driver = webdriver.Chrome("../../../Python/scraping/chromedriver99.exe", options=options)
 driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.53 Safari/537.36'})
-driver.get('https://www.kroger.com')
+driver.get('https://www.kroger.com/mypurchases')
+time.sleep(10)
+# Sign-In to Profile
+elem = driver.find_element(By.ID, 'SignIn-submitButton')
+elem.click()
+time.sleep(4)
+# Get to My Trip Details
+elems = driver.find_elements(By.LINK_TEXT, 'See Order Details')
+driver.quit()
 
-# Sudo Left: 
+# Go Into Each Trip's Details
 
-# Get Purchases - Automation via Selenium
+# Inside Will Find:
+    # Trip Level Data: Total Cost of Purchases, Locations of Store, Order Number, Payment Method, Items/Coupons Together, Tax
+    # One Item Level: Link to Kroger's Web Page for Item, Quantity of Item Purchased, Sale Price, Regular Price, Picture of Item;
+    # Item Webpage: UPC, Weight, Serving Size, Servings per Container, Ingredients, Nutritional Data
+        # Breaks Down Further Nutritional Detail By:
+            # Macronutrients (Weight) (% of Daily Recommended Value)
+        # Recommendations for Like Products
+
 
 
 # User Story => Carts (aka Trips) => Products (Identifying Information, Price, Nutritional Information)
