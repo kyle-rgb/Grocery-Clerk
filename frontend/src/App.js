@@ -7,7 +7,7 @@ require('dotenv').config()
 
 function handleSubmit(event) {
   const text = document.querySelector('#char-input').value
-
+  // Call to API on backend to get answer
   axios
     .get(`/char_count?text=${text}`).then(({data}) => {
       document.querySelector('#char-count').textContent = `${data.count} characters!`

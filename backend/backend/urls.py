@@ -1,4 +1,4 @@
-from contrib.views import char_count
+from contrib.views import char_count, start_page
 from django.contrib import admin
 from django.urls import path, re_path
 from django.views.generic import TemplateView
@@ -6,5 +6,5 @@ from django.views.generic import TemplateView
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("char_count", char_count, name="char_count"),
-    re_path(".*", TemplateView.as_view(template_name="index.html")),
+    re_path(".*", start_page, name='start_page'),
 ]

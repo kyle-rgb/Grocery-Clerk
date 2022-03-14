@@ -8,13 +8,10 @@ pytest-cov==3.0.0
 pytest-django==4.5.1
 pytest-mock==3.6.1
 
-pymongo==3.11.9
-dnspython==2.2.1
-mongoengine==0.24.0
 Faker==9.9.0
 ipdb==0.13.9
 factory_boy==3.2.1
 freezegun==1.1.0
-sqlparse==0.3.1
+
 
 Sphinx==4.3.1
