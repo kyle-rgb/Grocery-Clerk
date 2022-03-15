@@ -8,7 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 
 # Get Purchases - Automation via Selenium
-
+cart_links=[]
 options = webdriver.ChromeOptions() 
 options.add_argument("start-maximized")
 options.add_argument("disable-blink-features=AutomationControlled")
@@ -21,7 +21,7 @@ driver = webdriver.Chrome("../../../Python/scraping/chromedriver99.exe", options
 driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36"})
 time.sleep(2)
-driver.get('https://www.kroger.com/') 
+driver.get('https://www.kroger.com/mypurchases') 
 time.sleep(3.5)
 #Sign-In to Profile
 elem = driver.find_element(By.ID, 'SignIn-submitButton')
@@ -31,7 +31,7 @@ time.sleep(5)
 elems = driver.find_elements(By.LINK_TEXT, 'See Order Details')
 
 for e in elems:
-    print(e.get_attribute('href'))
+    cart_links.append(e.get_attribute('href'))
 time.sleep(2)
 
 # Iterate Through Pages, then press <button aria-label='Next page'>
@@ -44,6 +44,10 @@ def getReceipt(link):
     # Date and time of checkout, location of store, type of payment, savings breakdown (STR CPN & KRO PLUS SAVINGS), TOTAL COUPONS, TOTAL SAVINGS (\d+ pct.), checkout lane / cashier,
     # Fuel Points Earned Today (Total-Tax), Total Month Fuel Points, Remaining Fuel Points from Last Month 
     # Additional Rewards Spending, Additional Rewards Expiration Date
+    
+    # TODO: Search API Endpoint for stores to gather additional store level information that can be applied with trips
+    # /locations/<LOCATION_ID> :: address<Object>, chain<String>, phone<String>, departments<Array of Objects w/[departmentId, name, phone, hours<Object w/ weekdays<Objects w/ Hours>>]>, geolocation<Object>, hours<Object>, locationId<String>, name<String>
+
     driver.get(link)
     time.sleep(1)
     receipt_document={} 
@@ -108,8 +112,8 @@ def getReceipt(link):
     return receipt_document # Handoff to tell Browser to Backup My Purchases Dashboard // Should be last 
 
 
-def getCart(web_elem):
-    web_elem.click()
+def getCart(url):
+    driver.get(url)
     time.sleep(2)
     data = []
     items = driver.find_elements(By.CSS_SELECTOR, 'div.PH-ProductCard-productInfo')
@@ -147,62 +151,101 @@ def getCart(web_elem):
     return data
 
 def getItemInfo(link):
+    # TODO: Parse item details from array to factored out object with specific K:V pairs for Nutrition and Availability
+    # TODO: Match ID to API Search for Further Structured Information for Items
+    # /product?<search terms> :: productID<String>,UPC<String>,aisleLocations<Array>,brand<String>,categories<Array>,countryOrigin<String>,description<String>,items<Array>,itemInformation<Object of 3D Points>,temperature<Object>, images<Array of Objects w/[id, perspective, default=true/false, sizes<Array of Objects w/[id, size, url]>]> 
+    # /product/id
     driver.get(link)
-    time.sleep(1)
-    item_details = []
+    # Parse Out Nutritional Information housed in items_info [calories, health_rating, Tags:['Kosher', 'NonGMO', 'Organic'], info: {'Ingredients': '', 'Allergen Info': '', 'Disclaimer'},
+    # serving_size, nutrients: {"name", "type":['macro', 'sub', 'micro'], "subnutrients": [{}, {}], values: ['DV%', 'Weight']}]]
+    item_details = {}
+    item_details.setdefault("ingredients", [])
+    item_details.setdefault("health_info", {"macros": [], 'calories': 0, 'ratings':[]})
+    item_details.setdefault("serving_size", {})
+    
     # Get Nutritional Inforamtion
     nutrition_we = driver.find_element(By.CSS_SELECTOR, 'div.Nutrition')
         # Servings Per Container
-    item_details.append(nutrition_we.find_element(By.CSS_SELECTOR, 'div.NutritionLabel-ServingsPerContainer').text)
+    item_details['serving_size']['ct'] = nutrition_we.find_element(By.CSS_SELECTOR, 'div.NutritionLabel-ServingsPerContainer').text
         # Servings Amount Per Container
-    item_details.append(nutrition_we.find_element(By.CSS_SELECTOR, 'div.NutritionLabel-ServingSize').text)
+    item_details['serving_size']['by_weight'] = nutrition_we.find_element(By.CSS_SELECTOR, 'div.NutritionLabel-ServingSize').text.replace("\n", ": ")
         # Calories Per Serving
-    item_details.append(nutrition_we.find_element(By.CSS_SELECTOR, 'div.NutritionLabel-Calories').text)
+    item_details['health_info']['calories'] = nutrition_we.find_element(By.CSS_SELECTOR, 'div.NutritionLabel-Calories').text.replace("Calories\n", "")
         # Macronutrients and Subnutrients
     nutrients = nutrition_we.find_elements(By.CSS_SELECTOR, 'div.NutrientDetail')
     subnutrients = nutrition_we.find_elements(By.CSS_SELECTOR, 'div.NutrientDetail-SubNutrients')
-    for n in nutrients:
-        item_details.append(n.find_element(By.CSS_SELECTOR, 'span.NutrientDetail-TitleAndAmount').text)
-        item_details.append(n.find_element(By.CSS_SELECTOR, 'span.NutrientDetail-DailyValue').text)
-    for n in subnutrients:
-        ss = n.find_elements(By.CSS_SELECTOR, 'span.NutrientDetail-TitleAndAmount')
-        dvs = n.find_elements(By.CSS_SELECTOR, 'span.NutrientDetail-DailyValue')
-        for s in ss:
-            item_details.append(s.text)
-        for j in dvs:
-            item_details.append(j.text)
+    hierarchy_switch = 0
+    for x, n in enumerate(nutrients):
+        
+        title_and_amount = n.find_element(By.CSS_SELECTOR, 'span.NutrientDetail-TitleAndAmount')
+        is_macro = "is-macronutrient" in title_and_amount.find_element(By.CSS_SELECTOR, 'span').get_attribute('class')
+        is_micro = "is-micronutrient" in title_and_amount.find_element(By.CSS_SELECTOR, 'span').get_attribute('class')
+        is_sub = "is-subnutrient" in title_and_amount.find_element(By.CSS_SELECTOR, 'span').get_attribute('class')
+        if ((is_macro) & (~is_sub)):
+            hierarchy_switch = x
+        else:
+            hierarchy_switch = hierarchy_switch
+        title_and_amount = title_and_amount.text.replace("\n", ": ").replace("Number of International Units", "IU")
+        title_and_amount = re.sub(r"([A-Za-z]+)(\d\.?\d*){1}", r"\1:\2", title_and_amount).split(':')
+        daily_value = n.find_element(By.CSS_SELECTOR, 'span.NutrientDetail-DailyValue').text.replace("\n", ": ").replace("Number of International Units", "IU")
+        #daily_value = re.sub(r"([A-Za-z]+)(\d\.?\d*){1}", r"\1:\2", daily_value)
+        item_details['health_info']['macros'].append({'name': title_and_amount[0], 'measure': title_and_amount[1],'daily_value': daily_value, 'is_macro': is_macro, 'is_micro': is_micro, 'is_sub': is_sub, 'nutrient_joiner': hierarchy_switch})
+
+    # ii = 0
+    # for n in subnutrients:
+    #     ss = n.find_elements(By.CSS_SELECTOR, 'span.NutrientDetail-TitleAndAmount')
+    #     dvs = n.find_elements(By.CSS_SELECTOR, 'span.NutrientDetail-DailyValue')
+    #     for s in ss:
+    #         sub = re.sub(r"([A-Za-z]+)(\d\.?\d*){1}", r"\1:\2", s.text).split(":")
+    #         item_details['health_info']['micros'].append({'name': sub[0], 'measure': sub[1],'daily_value': ii})
+    #         ii+=1
+    #     for ij, j in enumerate(dvs):
+    #         dv = j.text
+    #         item_details['health_info']['micros'][ij]['daily_value'] = dv
     
-    nutrition_container = nutrition_we.find_element(By.CSS_SELECTOR, 'div.Nutrition-Rating-Indicator-Container')
-    ratings = nutrition_container.find_elements(By.CSS_SELECTOR, 'div.NutritionIndicators-wrapper')
-    health_rating = nutrition_container.find_element(By.CSS_SELECTOR, 'div.Nutrition-Rating-Container > div > svg > text')
-    item_details.append(health_rating.text)
-    for r in ratings:
-        item_details.append(r.get_attribute('title'))
-    ingredients_info = nutrition_we.find_elements(By.CSS_SELECTOR, 'div.NutritionIngredients > p')
+    try:
+        nutrition_container = nutrition_we.find_element(By.CSS_SELECTOR, 'div.Nutrition-Rating-Indicator-Container')
+        ratings = nutrition_container.find_elements(By.CSS_SELECTOR, 'div.NutritionIndicators-wrapper')
+        for r in ratings:
+            item_details['health_info']['ratings'].append(r.get_attribute('title'))
+    except NoSuchElementException:
+        nutrition_container = nutrition_we.find_element(By.CSS_SELECTOR, 'div.Nutrition-Rating-Container')
+    
+    try:
+        health_rating = nutrition_container.find_element(By.CSS_SELECTOR, 'div.Nutrition-Rating-Container > div > svg > text')
+        item_details['health_info']['overall_health_score'] = health_rating.text
+    except NoSuchElementException:
+        item_details['health_info']['overall_health_score'] = None
+    
+    ingredients_info = nutrition_we.find_elements(By.CSS_SELECTOR, 'p.NutritionIngredients-Ingredients')
     for p in ingredients_info:
-        item_details.append(p.text)
+        item_details['ingredients'] = list(map(str.strip, p.text.replace("Ingredients\n", "").split(",")))
+        
 
     return item_details
 
 
 sample_document_collection = {}
-    
-driver.get('')
-cart = getCart(elems[0])
-rec = getReceipt('https://www.kroger.com/mypurchases/image/011~00685')
-items = getItemInfo('https://www.kroger.com/p/item/0001111087808')
-time.sleep(2)
 
-cart2 = getCart(elems[1])
+# cart = getCart(cart_links[0])
+# rec = getReceipt("https://www.kroger.com/mypurchases/image/011~00685")
+# items = getItemInfo("https://www.kroger.com/p/item/0001111087808")
 
-sample_document_collection['items_info'] = items
-sample_document_collection['trip_summary'] = rec
-sample_document_collection['carts'] = [cart, cart2]
+items2 = getItemInfo("https://www.kroger.com/p/item/0001111004756")
 
-with open('./sample_collections.json', 'w') as f:
+items3 = getItemInfo("https://www.kroger.com/p/item/0001111003071")
+
+items4 = getItemInfo("https://www.kroger.com/p/item/0001111060914")
+
+sample_document_collection['items_info'] = [items2, items3, items4]
+# sample_document_collection['trip_summary'] = rec
+# sample_document_collection['carts'] = [cart, cart2]
+
+with open('./sample_collections.json', 'a') as f:
     f.write(json.dumps(sample_document_collection))
 
-time.sleep(10)
+
+time.sleep(5)
 driver.quit()
 
 
