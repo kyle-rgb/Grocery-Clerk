@@ -21,83 +21,95 @@ driver = webdriver.Chrome("../../../Python/scraping/chromedriver99.exe", options
 driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36"})
 time.sleep(2)
-driver.get('')
+driver.get('https://www.kroger.com/') 
 time.sleep(3.5)
-# Sign-In to Profile
-# elem = driver.find_element(By.ID, 'SignIn-submitButton')
-# elem.click()
-# time.sleep(5)
-# Get to My Trip Details
-# elems = driver.find_elements(By.LINK_TEXT, 'See Order Details')
-# print(elems)
-# for e in elems:
-#     print(e.get_attribute('href'))
-#time.sleep(2)
+#Sign-In to Profile
+elem = driver.find_element(By.ID, 'SignIn-submitButton')
+elem.click()
+time.sleep(5)
+#Get to My Trip Details
+elems = driver.find_elements(By.LINK_TEXT, 'See Order Details')
+
+for e in elems:
+    print(e.get_attribute('href'))
+time.sleep(2)
 
 # Iterate Through Pages, then press <button aria-label='Next page'>
 
-# Go Into Each Trip's Details
-def getTrip():
-    # Trip Level:
-    # Store Location
-    # Purchase Type (pickup, delivery, online, instore etc.)
-    # Total Spent, Total Aggregate Savings
-    # Items: {An Object of Objects}
-        # Item:
-            # Image
-    pass
-
-def getReceipt():
+def getReceipt(link):
+    # Merged Receipt and Trip Since Trip Level Information Does Not Give Me Much More than Analyzing the Receipt
     # Marked By SC but does not have specialty DOM tags or classes, all entries exist in rows and will need to be pulled out via RegEx
     # Receipt can tap into elevated Savings Type (eCpn=Loaded App Coupon, Mega Event Savings=Limited Savings Event, KROGER SAVINGS=Regular Plus Card Savings)
     # Could Also Get Kroger's shortName for Items
     # Date and time of checkout, location of store, type of payment, savings breakdown (STR CPN & KRO PLUS SAVINGS), TOTAL COUPONS, TOTAL SAVINGS (\d+ pct.), checkout lane / cashier,
     # Fuel Points Earned Today (Total-Tax), Total Month Fuel Points, Remaining Fuel Points from Last Month 
     # Additional Rewards Spending, Additional Rewards Expiration Date
-    
-    receipt_document={}
+    driver.get(link)
+    time.sleep(1)
+    receipt_document={} 
     # Wanted Not Bolded Text
     payment_type_re= re.compile(r".+Purchase\s*")
     full_address_re= re.compile(r".+GA.+") # <- Would Need to Edit for Additional States
     
     # Wanted Bolded Texts
-    fuel_re = re.compile(r"Fuel Points Earned Today:.+")
-    cumulative_fuel_re = re.compile(r"Total [January|February|March|April|May|June|July|August|September|November|December] Fuel Points:.+")
-    last_month_fuel_re = re.compile(r"Remaining [Feb] Fuel Points:.+")
-    checkout_time_re = re.compile(r"Time:.+")
+    fuel_re = re.compile(r"Fuel Points Earned Today:")
+    cumulative_fuel_re = re.compile(r"Total .+ Fuel Points:")
+    last_month_fuel_re = re.compile(r"Remaining .+ Fuel Points:")
+    street_address_re = re.compile(r"\d+.+(?:Street|St|Avenue|Ave|Road|Rd|Highway|Hwy|Square|Sq|Trail|Trl|Drive|Dr|Court|Ct|Parkway|Pkwy|Circle|Cir|Boulevard|Blvd)+")
+    cashier_re = re.compile(r"Your cashier was")
+    sales_re = re.compile(r'^SC')
+    last_item_index = 0
+    checkout_time_re = re.compile(r"Time:")
+    checkout_date_re = re.compile(r"Date:")
+    item_re = re.compile(r".+(B$|T$)")
     # Get Receipt Image
     receipt = driver.find_element(By.CSS_SELECTOR, 'div.imageContainer')
-    i = 0
-    bold_nodes = receipt.find_elements(By.CSS_SELECTOR, 'div.imageTextLineCenter.bold') # All Savings, but Also Tax, Balance and Saving Aggregations
-    nonbold_nodes = receipt.find_elements(By.CSS_SELECTOR, 'div.imageTextLineCenter')
-    metastore_info = receipt.find_elements(By.CSS_SELECTOR, "span[aria-label='StoreHeader'] > div > div")
+
+    nodes = receipt.find_elements(By.CSS_SELECTOR, 'div.imageTextLineCenter') # All Savings, but Also Tax, Balance and Saving Aggregations
+    # nonbold_nodes = receipt.find_elements(By.CSS_SELECTOR, 'div.imageTextLineCenter')
+    # metastore_info = receipt.find_elements(By.CSS_SELECTOR, "span[aria-label='StoreHeader'] > div > div")
     # Iterate through nodes get ones who match the re's and assign them the proper name to the return document
-    for bn in bold_nodes:
-        # TODO: Parse Bold Terms with Selected RegExs
-        # TODO: Match Sales w/ Items (Could be Done Via Price Matching w/ Exceptions for Same Prices Since Receipt Names are abbreviations)
-        receipt_document.setdefault('bolds', [])
-        receipt_document['bolds'].append(bn.text)
-    for node in nonbold_nodes:
-        if re.match(payment_type_re,node.text) != None:
-            receipt_document['payment_type'] = node.text
-        elif re.match(full_address_re, node.text) != None:
-            receipt_document['address'] = node.text
+    for index, bn in enumerate(nodes):
+        # FINISHED: Match Sales w/ Items (Could be Done Via Price Matching w/ Exceptions for Same Prices Since Receipt Names are abbreviations)
+        # Sales Come After Product Scan, Can Be Multiple Different Promotions, All begin with SC; Skip Ct/Wgt Data as Items already Store this Information
+        # As I iterate through the sales list I need to provide a reference number to point back to the correct item
+        receipt_document.setdefault('checkout_timestamp', '')
+        receipt_document.setdefault('address', '')
+        receipt_document.setdefault('items', [])
+        receipt_document.setdefault('sales', [])
+
+        text = bn.text.strip()
+        if re.match(fuel_re, text) != None:
+            receipt_document['fuel_points_earned'] = re.sub(fuel_re, "", text).strip()
+        elif re.match(cumulative_fuel_re, text) != None:
+            receipt_document['fuel_points_month'] = re.sub(cumulative_fuel_re, "", text).strip()
+        elif re.match(checkout_date_re, text) != None:
+            receipt_document['checkout_timestamp'] += re.sub(checkout_date_re, "" , text)
+        elif re.match(checkout_time_re, text) != None:
+            receipt_document['checkout_timestamp'] += re.sub(checkout_time_re, "" , text)
+            receipt_document['checkout_timestamp'] = receipt_document['checkout_timestamp'].strip()
+        elif re.match(full_address_re, text) != None:
+            receipt_document['address'] = receipt_document['address'] + " " + text
+        elif re.match(street_address_re, text) != None:
+            receipt_document['address'] =  text + " " + receipt_document['address']
+        elif re.match(cashier_re, text ) != None:
+            receipt_document['cashier'] = re.sub(cashier_re, "", text).strip()
+        elif re.match(payment_type_re,text) != None:
+            receipt_document['payment_type'] = text
+        elif re.match(last_month_fuel_re, text) != None:
+            receipt_document['last_month_fuel_points'] = re.sub(last_month_fuel_re, "", text)
+        else:
+            if re.match(sales_re, text) != None:
+                receipt_document['sales'].append({'item_index': last_item_index, 'sale_code': text})
+            elif re.match(item_re, text)!=None:
+                receipt_document['items'].append(bn.text.strip())
+                last_item_index = receipt_document['items'].index(bn.text.strip())
     
-    for row in metastore_info:
-        text = row.text.strip()
-        if text != "":
-            receipt_document['row' + str(i)] = text
-        i+=1
-
-    pprint.pprint(receipt_document)
-    
+    return receipt_document # Handoff to tell Browser to Backup My Purchases Dashboard // Should be last 
 
 
-    return None
-
-
-def getCart():
-    #web_elem.click()
+def getCart(web_elem):
+    web_elem.click()
     time.sleep(2)
     data = []
     items = driver.find_elements(By.CSS_SELECTOR, 'div.PH-ProductCard-productInfo')
@@ -134,16 +146,64 @@ def getCart():
         data.append(document)
     return data
 
+def getItemInfo(link):
+    driver.get(link)
+    time.sleep(1)
+    item_details = []
+    # Get Nutritional Inforamtion
+    nutrition_we = driver.find_element(By.CSS_SELECTOR, 'div.Nutrition')
+        # Servings Per Container
+    item_details.append(nutrition_we.find_element(By.CSS_SELECTOR, 'div.NutritionLabel-ServingsPerContainer').text)
+        # Servings Amount Per Container
+    item_details.append(nutrition_we.find_element(By.CSS_SELECTOR, 'div.NutritionLabel-ServingSize').text)
+        # Calories Per Serving
+    item_details.append(nutrition_we.find_element(By.CSS_SELECTOR, 'div.NutritionLabel-Calories').text)
+        # Macronutrients and Subnutrients
+    nutrients = nutrition_we.find_elements(By.CSS_SELECTOR, 'div.NutrientDetail')
+    subnutrients = nutrition_we.find_elements(By.CSS_SELECTOR, 'div.NutrientDetail-SubNutrients')
+    for n in nutrients:
+        item_details.append(n.find_element(By.CSS_SELECTOR, 'span.NutrientDetail-TitleAndAmount').text)
+        item_details.append(n.find_element(By.CSS_SELECTOR, 'span.NutrientDetail-DailyValue').text)
+    for n in subnutrients:
+        ss = n.find_elements(By.CSS_SELECTOR, 'span.NutrientDetail-TitleAndAmount')
+        dvs = n.find_elements(By.CSS_SELECTOR, 'span.NutrientDetail-DailyValue')
+        for s in ss:
+            item_details.append(s.text)
+        for j in dvs:
+            item_details.append(j.text)
     
+    nutrition_container = nutrition_we.find_element(By.CSS_SELECTOR, 'div.Nutrition-Rating-Indicator-Container')
+    ratings = nutrition_container.find_elements(By.CSS_SELECTOR, 'div.NutritionIndicators-wrapper')
+    health_rating = nutrition_container.find_element(By.CSS_SELECTOR, 'div.Nutrition-Rating-Container > div > svg > text')
+    item_details.append(health_rating.text)
+    for r in ratings:
+        item_details.append(r.get_attribute('title'))
+    ingredients_info = nutrition_we.find_elements(By.CSS_SELECTOR, 'div.NutritionIngredients > p')
+    for p in ingredients_info:
+        item_details.append(p.text)
 
-cart = getCart()
-pprint.pprint(cart)
-time.sleep(2)
+    return item_details
+
+
+sample_document_collection = {}
+    
 driver.get('')
-time.sleep(3.5)
-cart = getCart()
-pprint.pprint(cart)
+cart = getCart(elems[0])
+rec = getReceipt('https://www.kroger.com/mypurchases/image/011~00685')
+items = getItemInfo('https://www.kroger.com/p/item/0001111087808')
+time.sleep(2)
 
+cart2 = getCart(elems[1])
+
+sample_document_collection['items_info'] = items
+sample_document_collection['trip_summary'] = rec
+sample_document_collection['carts'] = [cart, cart2]
+
+with open('./sample_collections.json', 'w') as f:
+    f.write(json.dumps(sample_document_collection))
+
+time.sleep(10)
+driver.quit()
 
 
 # getReceipt()
