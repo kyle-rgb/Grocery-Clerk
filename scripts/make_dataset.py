@@ -111,7 +111,6 @@ def getReceipt(link):
 
 
 def getCart(url):
-    # TODO: Get UPC out of link url
     driver.get(url)
     time.sleep(2)
     data = []
@@ -234,30 +233,39 @@ sample_document_collection = {}
 
 # items4 = getItemInfo("https://www.kroger.com/p/item/0001111060914")
 
+# Sample Page Items to Test Script on Different HTML Pages and Styles w/o having to login each time
+# .mhtml stores all extension and linked files to mirror webpage as close as possible  
 items = ['Fiji.mhtml', 'MaxWell.mhtml', 'Arizona.mhtml', 'STO.mhtml', 'CCC.mhtml', 'Egged.mhtml']
 receipt = ['KrogerR.mhtml', 'KrogerR2.mhtml']
-Trips = ['GAS.mhtml', 'Kroger.mhtml', 'Kroger2.mhtml', 'KrogerBasket.mhtml']
+trips = ['GAS.mhtml', 'Kroger.mhtml', 'Kroger2.mhtml', 'KrogerBasket.mhtml']
 # Dashboard = ['Purchases1.html', 'Purchases2.html']
 base_url = "file:///H:/Big%20Data/a_files/Kroger_files/"
-for i in receipt:
-    sample_document_collection.setdefault('trip_summary', [])
-    sample_document_collection["trip_summary"].append(getReceipt(base_url + i))
-for i in items:
-    sample_document_collection.setdefault('trip_summary', [])
-    sample_document_collection["trip_summary"].append(getItemInfo(base_url + i))
-for i in Trips:
-    sample_document_collection.setdefault('cart', [])
-    sample_document_collection["cart"].append(getCart(base_url + i))
 
-pprint.pprint(sample_document_collection)
+items = []
+trips = []
+purchases = []
+
+# TODO: Join receipts w/ items on UPC 
+# for i in receipt:
+#     trips.append(getReceipt(base_url + i))
+# for i in items:
+#     items.append(getItemInfo(base_url + i))
+# for i in trips:
+#     purchases.extend(getCart(base_url + i))
+
+
+# with open('./cart.json', 'w') as f:
+#     f.write(json.dumps(purchases))
+# with open('./receipt.json', 'w') as f:
+#     f.write(json.dumps(trips))
+# with open('./items.json', 'w') as f:
+#     f.write(json.dumps(items))
 
 
 
-with open('./sample_collections.json', 'w') as f:
-    f.write(json.dumps(sample_document_collection))
+
 
 driver.quit()
-
 
 # getReceipt()
 
