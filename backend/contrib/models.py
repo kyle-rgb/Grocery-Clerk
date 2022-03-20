@@ -1,4 +1,6 @@
 from django.db import models
+from datetime import datetime
+
 
 # Create your models here.
 
@@ -8,7 +10,7 @@ from pymongo.write_concern import WriteConcern
 from pymodm import MongoModel, fields
 
 class Receipts(MongoModel):
-    checkout_timestamp = fields.Timestamp()
+    checkout_timestamp = fields.DateTimeField()
     address = fields.CharField()
     items = fields.ListField()
     sales = fields.ListField()
