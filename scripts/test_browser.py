@@ -11,9 +11,28 @@ options.add_experimental_option('useAutomationExtension', False)
 # Check for Cookies
 # TODO: Add Kroger Cookies to Browser When Executing Long Script
 driver = webdriver.Chrome("../../../Python/scraping/chromedriver99.exe", options=options)
-time.sleep(10)
-driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-cookie = driver.execute_script("document.cookie")
+driver.execute_script("Object.defineProperty(navigator, 'webdriver', false")
+cookie = driver.execute_script(f"document.cookie")
+# print(driver.execute_script(f"navigator.plugins"))
+# print(driver.execute_script(f"navigator.languages"))
 print(cookie)
-driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36"})
 time.sleep(2)
+
+driver.get("https://www.kroger.com")
+cookie = driver.execute_script("document.cookie")
+time.sleep(2)
+print(cookie)
+time.sleep(5)    
+driver.get('https://www.kroger.com/mypurchases') 
+time.sleep(6)
+signInBtn = driver.find_element(By.ID, 'SignIn-submitButton')
+signInBtn.click()
+time.sleep(3)
+driver.quit()
+
+
+
+
+
+
+
