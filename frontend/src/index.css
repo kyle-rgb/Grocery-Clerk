@@ -11,3 +11,20 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.navbarHome {
+  background-color: palegreen;
+  min-height: 50px;
+}
+
+button {
+  background-color: rgb(139, 85, 139);
+  padding: 10px;
+  margin: 10px;
+}
+
+a {
+  text-decoration: none;
+  color: white;
+
+}

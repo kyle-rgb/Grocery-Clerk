@@ -6,9 +6,9 @@ import axiosMock from "axios";
 
 jest.mock("axios");
 
-test("on calling char_count it renders the number of characters", async () => {
+test("on calling get_items it renders the number of characters", async () => {
   const testString = "React Testing";
-  const url = `/char_count?text=${testString}`;
+  const url = `/get_items?type=${testString}`;
   axiosMock.get.mockResolvedValueOnce({
     data: { count: testString.length },
   });

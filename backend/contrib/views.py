@@ -5,7 +5,7 @@ import json
 
 
 #### API
-def char_count(request):
+def get_items(request):
     # Initialize connection; Mongo will connect on first operation
     client = MongoClient('localhost', 27017)
     db = client.groceries # db
@@ -20,9 +20,6 @@ def char_count(request):
         return JsonResponse(reqObj, safe=False)
     else:
         return JsonResponse(trips)
-
-
-    
 
 
 #### Backend Template Pages

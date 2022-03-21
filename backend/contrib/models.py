@@ -6,7 +6,6 @@ from datetime import datetime
 
 # One for Trips
 from pymongo.write_concern import WriteConcern
-
 from pymodm import MongoModel, fields
 
 class Receipts(MongoModel):
@@ -41,8 +40,6 @@ class Items(MongoModel):
     product_size = fields.CharField()
     product_promotional_price = fields.FloatField()
     product_original_price = fields.FloatField()
-    
-
 
     class Meta:
         write_concern = WriteConcern(j=True)

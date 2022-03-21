@@ -29,7 +29,7 @@
 - [x] Scrape Receipts For Trip Level Information
 - [x] Build Sample Collections for Each Table I Want (Trips, Items)
 - [ ] Call API for Products to Extend Scraped Product Level Information
-
+- [ ] Create MongoDB Image for Use in this Project
 - [ ] Store in MongoDB
 - [ ] Collect 120 Saved Recipe via Saved Documents and Recipe APIs
 - [ ] Breakdown Recipes into Ingredient Parts (and Convert to kgs) and Cooking Windows {long steps}
