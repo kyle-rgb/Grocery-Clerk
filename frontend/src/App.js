@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import logo from './logo.svg';
 import axios from 'axios';
 import './App.css';
@@ -7,19 +7,19 @@ import Navbar from './Navbar'
 require('dotenv').config()
 
 function handleSubmit(event) {
-  const text = document.querySelector('#char-input').value
+  const text = document.querySelector('#type-input').value
   // Call to API on backend to get answer
   axios
     .get(`/get_items?type=${text}`).then(({data}) => {
       console.log(data)
-      document.querySelector('#char-count').textContent = `${data.count} characters!`
+      document.querySelector('#request').textContent = JSON.stringify(data)
     })
     .catch(err => console.log(err))
 }
 
 function App() {
+  
   return (
-    
     <div className="App">
       <Navbar></Navbar>
       <header className="App-header">
@@ -29,10 +29,12 @@ function App() {
         </p>
         <div>
         <label htmlFor='char-input'>Make an API Call</label>
-        <input id='char-input' type='text' placeholder="items"/><span> </span>
+        <input id='type-input' type='text' placeholder="items"/><span></span>
         <button onClick={handleSubmit}>have?</button>
         <div>
-          <h3 id='char-count' data-testid="char-count"> </h3>
+          <h3>Return values: </h3>
+          <br />
+          <code id='request' data-testid="get_items"></code>
         </div>
       </div>
       </header>

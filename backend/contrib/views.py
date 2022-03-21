@@ -1,16 +1,17 @@
 from django.http import JsonResponse
 from django.shortcuts import render
 from pymongo import MongoClient
-import json
-
+from urllib.parse import quote_plus
+from api_keys import MONGO_INITDB_ROOT_USERNAME, MONGO_INITDB_ROOT_PASSWORD
 
 #### API
 def get_items(request):
     # Initialize connection; Mongo will connect on first operation
-    client = MongoClient('localhost', 27017)
+    uri = "mongodb://%s:%s@%s" % (quote_plus(MONGO_INITDB_ROOT_USERNAME), quote_plus(MONGO_INITDB_ROOT_PASSWORD), quote_plus("mongo")) ########
+    client = MongoClient(uri)
     db = client.groceries # db
     reqObj = []
-    items = db.carts  # items
+    items = db.items  # items
     trips = db.trips.find_one({}, {'_id': 0})
     for i in items.find({}, {'_id': 0}):
         reqObj.append(i)
@@ -19,8 +20,7 @@ def get_items(request):
     if text == 'items':
         return JsonResponse(reqObj, safe=False)
     else:
-        return JsonResponse(trips)
-
+        return JsonResponse(trips, safe=False)
 
 #### Backend Template Pages
 def start_page(request):
