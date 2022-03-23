@@ -2,7 +2,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from pymongo import MongoClient
 from urllib.parse import quote_plus
-from api_keys import MONGO_INITDB_ROOT_USERNAME, MONGO_INITDB_ROOT_PASSWORD
+from .api_keys import MONGO_INITDB_ROOT_USERNAME, MONGO_INITDB_ROOT_PASSWORD
 
 #### API
 def get_items(request):

@@ -10,11 +10,13 @@ body {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+  background: black;
 }
 
 .navbarHome {
   background-color: palegreen;
   min-height: 50px;
+  align-items: center;
 }
 
 button {
