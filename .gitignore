@@ -108,4 +108,4 @@ venv.bak/
 
 report_unittest.xml
 api_keys.*
-dbconfig.txt
+config/

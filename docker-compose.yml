@@ -30,16 +30,20 @@ services:
   mongo:
     image: mongo:latest
     restart: always
+    volumes:
+      - ./config:/config
     environment:
-      MONGO_INITDB_ROOT_USERNAME_FILE: ./dbconfig.txt
-      MONGO_INITDB_ROOT_PASSWORD_FILE: ./dbconfig.txt
+      MONGO_INITDB_ROOT_USERNAME_FILE: config/dbconfig.txt
+      MONGO_INITDB_ROOT_PASSWORD_FILE: config/dbconfig.txt
 
   mongo-express:
     image: mongo-express
     restart: always
+    volumes:
+      - ./config:/config
     ports:
       - 8081:8081
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME_FILE: ./dbconfig.txt
-      ME_CONFIG_MONGODB_ADMINPASSWORD_FILE: ./dbconfig.txt
-      ME_CONFIG_MONGODB_URL_FILE: ./dbconfig.txt
+      ME_CONFIG_MONGODB_ADMINUSERNAME: $ME_ADMIN
+      ME_CONFIG_MONGODB_ADMINPASSWORD: $ME_PASS
+      ME_CONFIG_MONGODB_URL: $ME_URL

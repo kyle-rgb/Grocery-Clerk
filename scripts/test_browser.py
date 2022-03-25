@@ -18,9 +18,6 @@ def run_browser_tests():
     driver.get("https://www.kroger.com")
     time.sleep(7)
     return driver
-    
-
-
 
 def attach_to_session(executor_url, session_id):
     # REFERNCE: https://web.archive.org/web/20171129014322/http://tarunlalwani.com/post/reusing-existing-browser-session-selenium/
@@ -37,7 +34,7 @@ def attach_to_session(executor_url, session_id):
     driver.session_id = session_id
     # Replace the patced function with original function
     WebDriver.execute = original_execute
-    return driver.execute_script
+    return driver
 
 
 try:
@@ -54,3 +51,12 @@ except: # Leave Session Open for reconnection if error occurs
     attach_to_session(url, session_id)
 
 
+driver = run_browser_tests()
+url = driver.command_executor._url
+session_id = driver.session_id
+
+print(url)
+print(session_id)
+
+# browser = attach_to_session(executor_url="http://localhost:51555", session_id="bf1ff2577faa70362c7df4d1d4a64955")
+# browser.get("www.google.com")

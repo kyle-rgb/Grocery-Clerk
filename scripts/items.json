@@ -1,0 +1,135 @@
+[{
+  "_id": {
+    "oid": "62369d4f5d4f7228e4d938db"
+  },
+  "item_index": 0,
+  "image": "https://www.kroger.com/product/images/small/front/0007080021635",
+  "product_name": "Smithfield® Applewood Smoked Bacon Dry Rubbed Pork Loin Filet",
+  "item_link": "https://www.kroger.com/p/item/0007080021635",
+  "UPC": "0007080021635",
+  "price_equation": "1 x $8.99/each",
+  "product_size": "27.2 oz",
+  "product_promotional_price": "$5.99",
+  "product_original_price": "$8.99",
+  "avg_rating": "4.8",
+  "reviews": "46"
+},{
+  "_id": {
+    "oid": "62369d4f5d4f7228e4d938dc"
+  },
+  "item_index": 1,
+  "image": "https://www.kroger.com/product/images/small/front/0004132211080",
+  "product_name": "SeaPak Shrimp Scampi",
+  "item_link": "https://www.kroger.com/p/item/0004132211080",
+  "UPC": "0004132211080",
+  "price_equation": "2 x $8.49/each",
+  "product_size": "12 oz",
+  "product_promotional_price": "$11.98",
+  "product_original_price": "$16.98",
+  "avg_rating": "4.5",
+  "reviews": "101"
+},{
+  "_id": {
+    "oid": "62369d4f5d4f7228e4d938dd"
+  },
+  "item_index": 2,
+  "image": "https://www.kroger.com/product/images/small/front/0073114951527",
+  "product_name": "Aqua Star Wild Pacific Salmon Fillet",
+  "item_link": "https://www.kroger.com/p/item/0073114951527",
+  "UPC": "0073114951527",
+  "price_equation": "1 x $9.99/each",
+  "product_size": "1.25 lb",
+  "product_promotional_price": "$7.99",
+  "product_original_price": "$9.99"
+},{
+  "_id": {
+    "oid": "62369d4f5d4f7228e4d938de"
+  },
+  "item_index": 3,
+  "image": "https://www.kroger.com/product/images/small/front/0061300871781",
+  "product_name": "AriZona Diet Green Tea",
+  "item_link": "https://www.kroger.com/p/item/0061300871781",
+  "UPC": "0061300871781",
+  "price_equation": "1 x $3.19/each",
+  "product_size": "128 fl oz",
+  "product_promotional_price": "$3.19",
+  "product_original_price": "$3.19"
+},{
+  "_id": {
+    "oid": "62369d4f5d4f7228e4d938df"
+  },
+  "item_index": 4,
+  "image": "",
+  "product_name": "Bakery Fresh Goodness Donut",
+  "item_link": "https://www.kroger.com/p/item/0000000002505",
+  "UPC": "0001111049687",
+  "price_equation": "6 x $0.69/each",
+  "product_size": "each",
+  "product_promotional_price": "$4.14",
+  "product_original_price": "$4.14"
+},{
+  "_id": {
+    "oid": "62369d4f5d4f7228e4d938e0"
+  },
+  "item_index": 5,
+  "image": "https://www.kroger.com/product/images/small/front/0001111049687",
+  "product_name": "Big K® Cherry Cola Soda",
+  "item_link": "https://www.kroger.com/p/item/0001111049687",
+  "UPC": "0021065600000",
+  "price_equation": "1 x $2.99/each",
+  "product_size": "12 cans / 12 fl oz",
+  "product_promotional_price": "$2.15",
+  "product_original_price": "$2.98"
+},{
+  "_id": {
+    "oid": "62369d4f5d4f7228e4d938e1"
+  },
+  "item_index": 6,
+  "image": "https://www.kroger.com/product/images/small/front/0021065600000",
+  "product_name": "Heritage Farm Boneless & Skinless Chicken Breasts with Rib Meat",
+  "item_link": "https://www.kroger.com/p/item/0021065600000",
+  "UPC": "0021077300000",
+  "price_equation": "5.18 lbs x $1.99/each",
+  "product_size": "1 lb",
+  "product_promotional_price": "$10.31",
+  "product_original_price": "$10.31"
+},{
+  "_id": {
+    "oid": "62369d4f5d4f7228e4d938e2"
+  },
+  "item_index": 7,
+  "image": "https://www.kroger.com/product/images/small/front/0021077300000",
+  "product_name": "Heritage Farm® Bone In & Skin On Chicken Drumsticks",
+  "item_link": "https://www.kroger.com/p/item/0021077300000",
+  "UPC": "0084013430052",
+  "price_equation": "4.39 lbs x $1.79/each",
+  "product_size": "1 lb",
+  "product_promotional_price": "$7.86",
+  "product_original_price": "$7.86"
+},{
+  "_id": {
+    "oid": "62369d4f5d4f7228e4d938e3"
+  },
+  "item_index": 8,
+  "image": "https://www.kroger.com/product/images/small/front/0084013430052",
+  "product_name": "Home Chef Full Slab Ribs Cold",
+  "item_link": "https://www.kroger.com/p/item/0084013430052",
+  "UPC": "0004126001237",
+  "price_equation": "1 x $12.99/each",
+  "product_size": "1 lb",
+  "product_promotional_price": "$12.99",
+  "product_original_price": "$12.99"
+},{
+  "_id": {
+    "oid": "62369d4f5d4f7228e4d938e4"
+  },
+  "item_index": 9,
+  "image": "https://www.kroger.com/product/images/small/front/0004126001237",
+  "product_name": "Kroger® Allergy Tablets 25mg",
+  "item_link": "https://www.kroger.com/p/item/0004126001237",
+  "UPC": "0001111004756",
+  "price_equation": "1 x $5.99/each",
+  "product_size": "400 ct",
+  "product_promotional_price": "$5.99",
+  "product_original_price": "$5.99"
+}]

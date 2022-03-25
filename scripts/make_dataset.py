@@ -7,6 +7,22 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 
+from pymongo import MongoClient
+from urllib.parse import quote_plus
+from api_keys import MONGO_INITDB_ROOT_USERNAME, MONGO_INITDB_ROOT_PASSWORD
+
+
+def connectToDatabase():
+    # Going to add Entries to Locally running DB w/ same structure as Container application
+    # Then migrate them over to Container DB
+    # "mongodb+srv://username:password@cluster0-jtpxd.mongodb.net/admin"
+    uri = "mongodb+srv://%s:%s@%s" % (quote_plus(MONGO_INITDB_ROOT_USERNAME), quote_plus(MONGO_INITDB_ROOT_PASSWORD), quote_plus("172.26.0.2"))
+    client = MongoClient(uri)
+    db = client.groceries # db
+    # items = db.items  # items
+    trips = db.trips.find_one({}, {'_id': 0})
+    print(trips)
+
 
 
 def getItemInfo(link, driver):
@@ -242,6 +258,7 @@ def getReceipt(link, driver):
 
 def getMyData():
     # TODO: Write function for handling driver construction/navigation/destruction, url acquisition/release, and waiting
+    # TODO: Write function to enter data into respective MongoDB tables
     cart_links=[]
     # Setup Driver
     options = webdriver.ChromeOptions() 
@@ -297,6 +314,11 @@ def getMyData():
 # Use API to get prices of past purchases and estimate future trips
 # Use API to create same carts for Pickup
 
-getMyData()
+connectToDatabase()
+
+
+
+
+# getMyData()
 
 
