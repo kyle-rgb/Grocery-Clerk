@@ -2,12 +2,12 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from pymongo import MongoClient
 from urllib.parse import quote_plus
-from .api_keys import MONGO_INITDB_ROOT_USERNAME, MONGO_INITDB_ROOT_PASSWORD
 
+import os
 #### API
 def get_items(request):
     # Initialize connection; Mongo will connect on first operation
-    uri = "mongodb://%s:%s@%s" % (quote_plus(MONGO_INITDB_ROOT_USERNAME), quote_plus(MONGO_INITDB_ROOT_PASSWORD), quote_plus("mongo")) ########
+    uri = os.environ.get("MONGO_CONN_URL")
     client = MongoClient(uri)
     db = client.groceries # db
     reqObj = []

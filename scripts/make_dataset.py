@@ -9,19 +9,33 @@ from selenium.common.exceptions import NoSuchElementException
 
 from pymongo import MongoClient
 from urllib.parse import quote_plus
-from api_keys import MONGO_INITDB_ROOT_USERNAME, MONGO_INITDB_ROOT_PASSWORD
 
 
-def connectToDatabase():
+
+def insertData(entries, collection_name):
     # Going to add Entries to Locally running DB w/ same structure as Container application
     # Then migrate them over to Container DB
     # "mongodb+srv://username:password@cluster0-jtpxd.mongodb.net/admin"
-    uri = "mongodb+srv://%s:%s@%s" % (quote_plus(MONGO_INITDB_ROOT_USERNAME), quote_plus(MONGO_INITDB_ROOT_PASSWORD), quote_plus("172.26.0.2"))
-    client = MongoClient(uri)
+    if type(entries) != list:
+        entries = [entries]
+    client = MongoClient()
     db = client.groceries # db
     # items = db.items  # items
-    trips = db.trips.find_one({}, {'_id': 0})
-    print(trips)
+    res = 0
+    if collection_name == 'trips':
+        res = db.trips.insert_many(entries)
+        res = len(res.inserted_ids)
+    elif collection_name == 'items':
+        res = db.items.insert_many(entries)
+        res = len(res.inserted_ids)
+    else:
+        client.close()
+        raise ValueError
+    print(f"Inserted {res} documents in {collection_name}")
+    client.close()
+
+    return None
+
 
 
 
@@ -75,23 +89,27 @@ def getItemInfo(link, driver):
                 title_and_amount = re.sub(r"([A-Za-z]+)(\d\.?\d*){1}", r"\1:\2", title_and_amount).split(':')
                 daily_value = n.find_element(By.CSS_SELECTOR, 'span.NutrientDetail-DailyValue').text.replace("\n", ": ").replace("Number of International Units", "IU")
                 item_details['health_info']['macros'].append({'name': title_and_amount[0], 'measure': title_and_amount[1],'daily_value': daily_value, 'is_macro': is_macro, 'is_micro': is_micro, 'is_sub': is_sub, 'nutrient_joiner': hierarchy_switch})
+            
+            ingredients_info = nutrition_we.find_elements(By.CSS_SELECTOR, 'p.NutritionIngredients-Ingredients')
+            for p in ingredients_info:
+                item_details['ingredients'] = list(map(str.strip, p.text.replace("Ingredients\n", "").split(",")))
 
             try:
-                nutrition_container = nutrition_we.find_element(By.CSS_SELECTOR, 'div.Nutrition-Rating-Indicator-Container')
-                ratings = nutrition_container.find_elements(By.CSS_SELECTOR, 'div.NutritionIndicators-wrapper')
-                for r in ratings:
-                    item_details['health_info']['ratings'].append(r.get_attribute('title'))
+                ratings = nutrition_we.find_elements(By.CSS_SELECTOR, 'div.NutritionIndicators-wrapper')
+                if len(ratings) != 0:
+                    for r in ratings:
+                        item_details['health_info']['ratings'].append(r.get_attribute('title'))
+            except NoSuchElementException:
+                item_details=item_details
+
+
+            try:
                 try:
-                    health_rating = nutrition_container.find_element(By.CSS_SELECTOR, 'div.Nutrition-Rating-Container > div > svg > text')
-                    item_details['health_info']['overall_health_score'] = health_rating.text
-                    ingredients_info = nutrition_we.find_elements(By.CSS_SELECTOR, 'p.NutritionIngredients-Ingredients')
-                    for p in ingredients_info:
-                        item_details['ingredients'] = list(map(str.strip, p.text.replace("Ingredients\n", "").split(",")))
-                except NoSuchElementException:
-                    nutrition_container = nutrition_we.find_element(By.CSS_SELECTOR, 'div.Nutrition-Rating-Container')
-                    ingredients_info = nutrition_we.find_elements(By.CSS_SELECTOR, 'p.NutritionIngredients-Ingredients')
-                    for p in ingredients_info:
-                        item_details['ingredients'] = list(map(str.strip, p.text.replace("Ingredients\n", "").split(",")))
+                    nutrition_rating_container =  nutrition_we.find_element(By.CSS_SELECTOR, 'div.Nutrition-Rating-Container')
+                    health_rating = nutrition_rating_container.find_element(By.TAG_NAME, 'svg').get_attribute('aria-label')
+                    item_details['health_info']['overall_health_score'] = health_rating
+                except :
+                    item_details=item_details
                 finally:
                     item_details = item_details
             except:
@@ -113,20 +131,13 @@ def getItemInfo(link, driver):
 
 
 def getCart(url, driver):
-    testBinary = False
-    randint= random.randint(20, 60) / 10
+    randint= random.randint(10, 20) / 10
     driver.get(url)
     time.sleep(2+randint)
-    while testBinary:
-        ans = input("press enter to continue")
-        if ans == '':
-            testBinary=True
-
-
     data = []
     items = driver.find_elements(By.CSS_SELECTOR, 'div.PH-ProductCard-productInfo')
     # Find all products as List
-    items = items[:10]
+    items = items[:11]
     for scan_number, we in enumerate(items):
         document = {}
         document['item_index'] = scan_number
@@ -159,9 +170,12 @@ def getCart(url, driver):
         except NoSuchElementException:
             document['product_original_price'] = we.find_element(By.CSS_SELECTOR, 'mark.kds-Price-promotional').text.replace('\n', '')
 
-        if document['item_link'] != '':
+        if document['image'] != '':
+            print(document['product_name'])
+            print(document['item_link'])
+            print(scan_number)
             time.sleep(1)
-            moreInfo = getItemInfo(f"file:///H:/Noderizer/webSamples/item{scan_number+1}.mhtml", driver)
+            moreInfo = getItemInfo(f"file:///H:/Noderizer/webSamples/item{scan_number}.mhtml", driver)
             document.update(moreInfo)
             time.sleep(1)
             driver.switch_to.window(driver.window_handles[0])
@@ -272,7 +286,19 @@ def getMyData():
     driver.implicitly_wait(2)
     driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
     driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36"})
+    
+    testBinary = True
+    while testBinary:
+        ans = input("press enter to continue")
+        if ans == '':
+            testBinary=False
+        else:
+            raise ValueError('No other response allowed')
+    
     time.sleep(5)
+
+    # Process Flow: Setup Browser -> Get Purchases Dashboard -> Collect Cart URLS -> foreach cart getCart(cart_page){contains GetItems} and getReceipt(reciept_page) 
+
     driver.get('file:///H:/Noderizer/webSamples/mypurchases.mhtml') 
     # time.sleep(6)
     # signInBtn = driver.find_element(By.ID, 'SignIn-submitButton')
@@ -288,11 +314,9 @@ def getMyData():
         # need link to receipt
         # receiptBtn = driver.find_elements(By.CSS_SELECTOR, "button[aria-label='View Receipt']")
         # receiptBtn.click()
-    with open("purchases.json", "w") as f:
-        f.write(json.dumps(purchases))
-
-    with open("trips.json", "w") as f:
-        f.write(json.dumps(trips))
+    
+    insertData(purchases, 'items')
+    insertData(trips, 'trips')
 
     
     driver.quit()
@@ -314,11 +338,6 @@ def getMyData():
 # Use API to get prices of past purchases and estimate future trips
 # Use API to create same carts for Pickup
 
-connectToDatabase()
-
-
-
-
-# getMyData()
+getMyData()
 
 
