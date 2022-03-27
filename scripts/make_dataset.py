@@ -61,61 +61,61 @@ def getItemInfo(link, driver):
     except NoSuchElementException:
         # Parse Out Nutritional Information housed in items_info [calories, health_rating, Tags:['Kosher', 'NonGMO', 'Organic'], info: {'Ingredients': '', 'Allergen Info': '', 'Disclaimer'},
         # serving_size, nutrients: {"name", "type":['macro', 'sub', 'micro'], "subnutrients": [{}, {}], values: ['DV%', 'Weight']}]]
-        item_details.setdefault("ingredients", [])
-        item_details.setdefault("health_info", {"macros": [], 'calories': 0, 'ratings':[]})
-        item_details.setdefault("serving_size", {})
+        item_details=item_details
         
         # Get Nutritional Inforamtion
-        try:
-            nutrition_we = driver.find_element(By.CSS_SELECTOR, 'div.Nutrition')
-            # Servings Amount Per Container
-            item_details['serving_size']['by_weight'] = nutrition_we.find_element(By.CSS_SELECTOR, 'div.NutritionLabel-ServingSize').text.replace("Serving size\n", "")
-                # Calories Per Serving
-            item_details['health_info']['calories'] = nutrition_we.find_element(By.CSS_SELECTOR, 'div.NutritionLabel-Calories').text.replace("Calories\n", "")
-                # Macronutrients and Subnutrients
-            nutrients = nutrition_we.find_elements(By.CSS_SELECTOR, 'div.NutrientDetail')
-            hierarchy_switch = 0
-            for x, n in enumerate(nutrients):
-                
-                title_and_amount = n.find_element(By.CSS_SELECTOR, 'span.NutrientDetail-TitleAndAmount')
-                is_macro = "is-macronutrient" in title_and_amount.find_element(By.CSS_SELECTOR, 'span').get_attribute('class')
-                is_micro = "is-micronutrient" in title_and_amount.find_element(By.CSS_SELECTOR, 'span').get_attribute('class')
-                is_sub = "is-subnutrient" in title_and_amount.find_element(By.CSS_SELECTOR, 'span').get_attribute('class')
-                if ((is_macro) & (~is_sub)):
-                    hierarchy_switch = x
-                else:
-                    hierarchy_switch = hierarchy_switch
-                title_and_amount = title_and_amount.text.replace("\n", ": ").replace("Number of International Units", "IU")
-                title_and_amount = re.sub(r"([A-Za-z]+)(\d\.?\d*){1}", r"\1:\2", title_and_amount).split(':')
-                daily_value = n.find_element(By.CSS_SELECTOR, 'span.NutrientDetail-DailyValue').text.replace("\n", ": ").replace("Number of International Units", "IU")
-                item_details['health_info']['macros'].append({'name': title_and_amount[0], 'measure': title_and_amount[1],'daily_value': daily_value, 'is_macro': is_macro, 'is_micro': is_micro, 'is_sub': is_sub, 'nutrient_joiner': hierarchy_switch})
+    try:
+        nutrition_we = driver.find_element(By.CSS_SELECTOR, 'div.Nutrition')
+        #item_details.setdefault("ingredients", [])
+        item_details.setdefault("health_info", {"macros": [], 'calories': 0, 'ratings':[], 'serving_size': ''})
+        # Servings Amount Per Container
+        item_details['health_info']['serving_size'] = nutrition_we.find_element(By.CSS_SELECTOR, 'div.NutritionLabel-ServingSize').text.replace("Serving size\n", "")
+            # Calories Per Serving
+        item_details['health_info']['calories'] = nutrition_we.find_element(By.CSS_SELECTOR, 'div.NutritionLabel-Calories').text.replace("Calories\n", "")
+            # Macronutrients and Subnutrients
+        nutrients = nutrition_we.find_elements(By.CSS_SELECTOR, 'div.NutrientDetail')
+        hierarchy_switch = 0
+        for x, n in enumerate(nutrients):
             
-            ingredients_info = nutrition_we.find_elements(By.CSS_SELECTOR, 'p.NutritionIngredients-Ingredients')
-            for p in ingredients_info:
-                item_details['ingredients'] = list(map(str.strip, p.text.replace("Ingredients\n", "").split(",")))
+            title_and_amount = n.find_element(By.CSS_SELECTOR, 'span.NutrientDetail-TitleAndAmount')
+            is_macro = "is-macronutrient" in title_and_amount.find_element(By.CSS_SELECTOR, 'span').get_attribute('class')
+            is_micro = "is-micronutrient" in title_and_amount.find_element(By.CSS_SELECTOR, 'span').get_attribute('class')
+            is_sub = "is-subnutrient" in title_and_amount.find_element(By.CSS_SELECTOR, 'span').get_attribute('class')
+            if ((is_macro) & (~is_sub)):
+                hierarchy_switch = x
+            else:
+                hierarchy_switch = hierarchy_switch
+            title_and_amount = title_and_amount.text.replace("\n", ": ").replace("Number of International Units", "IU")
+            title_and_amount = re.sub(r"([A-Za-z]+)(\d\.?\d*){1}", r"\1:\2", title_and_amount).split(':')
+            daily_value = n.find_element(By.CSS_SELECTOR, 'span.NutrientDetail-DailyValue').text.replace("\n", ": ").replace("Number of International Units", "IU")
+            item_details['health_info']['macros'].append({'name': title_and_amount[0], 'measure': title_and_amount[1],'daily_value': daily_value, 'is_macro': is_macro, 'is_micro': is_micro, 'is_sub': is_sub, 'nutrient_joiner': hierarchy_switch})
+        
+        ingredients_info = nutrition_we.find_elements(By.CSS_SELECTOR, 'p.NutritionIngredients-Ingredients')
+        for p in ingredients_info:
+            item_details['ingredients'] = list(map(str.strip, p.text.replace("Ingredients\n", "").split(",")))
 
-            try:
-                ratings = nutrition_we.find_elements(By.CSS_SELECTOR, 'div.NutritionIndicators-wrapper')
-                if len(ratings) != 0:
-                    for r in ratings:
-                        item_details['health_info']['ratings'].append(r.get_attribute('title'))
-            except NoSuchElementException:
-                item_details=item_details
-
-
-            try:
-                try:
-                    nutrition_rating_container =  nutrition_we.find_element(By.CSS_SELECTOR, 'div.Nutrition-Rating-Container')
-                    health_rating = nutrition_rating_container.find_element(By.TAG_NAME, 'svg').get_attribute('aria-label')
-                    item_details['health_info']['overall_health_score'] = health_rating
-                except :
-                    item_details=item_details
-                finally:
-                    item_details = item_details
-            except:
-                item_details = item_details
+        try:
+            ratings = nutrition_we.find_elements(By.CSS_SELECTOR, 'div.NutritionIndicators-wrapper')
+            if len(ratings) != 0:
+                for r in ratings:
+                    item_details['health_info']['ratings'].append(r.get_attribute('title'))
         except NoSuchElementException:
+            item_details=item_details
+
+
+        try:
+            try:
+                nutrition_rating_container =  nutrition_we.find_element(By.CSS_SELECTOR, 'div.Nutrition-Rating-Container')
+                health_rating = nutrition_rating_container.find_element(By.TAG_NAME, 'svg').get_attribute('aria-label')
+                item_details['health_info']['overall_health_score'] = health_rating
+            except :
+                item_details=item_details
+            finally:
+                item_details = item_details
+        except:
             item_details = item_details
+    except NoSuchElementException:
+        item_details = item_details
     finally:
         item_details = item_details
     
@@ -215,6 +215,9 @@ def getReceipt(link, driver):
     street_address_re = re.compile(r"\d+.+(?:street|st|avenue|ave|road|rd|highway|hwy|square|sq|trail|trl|drive|dr|court|ct|parkway|pkwy|circle|cir|boulevard|blvd)+")
     cashier_re = re.compile(r"Your cashier was")
     sales_re = re.compile(r'^SC')
+    tax_re = re.compile(r"TAX")
+    sales_total_re = re.compile(r"TOTAL SAVINGS \(.+\)")
+
     last_item_index = 0
     checkout_time_re = re.compile(r"Time:")
     checkout_date_re = re.compile(r"Date:")
@@ -225,6 +228,8 @@ def getReceipt(link, driver):
     nodes = receipt.find_elements(By.CSS_SELECTOR, 'div.imageTextLineCenter') # All Savings, but Also Tax, Balance and Saving Aggregations
     # Iterate through nodes get ones who match the re's and assign them the proper name to the return document
 
+    # Get TAX and TOTAL Savings
+
     #nodes= nodes[:10]
 
     for index, bn in enumerate(nodes):
@@ -234,7 +239,6 @@ def getReceipt(link, driver):
         receipt_document.setdefault('checkout_timestamp', '')
         receipt_document.setdefault('address', '')
         receipt_document.setdefault('items', [])
-        receipt_document.setdefault('sales', [])
 
         text = bn.text.strip()
         if re.match(fuel_re, text) != None:
@@ -254,15 +258,21 @@ def getReceipt(link, driver):
             receipt_document['cashier'] = re.sub(cashier_re, "", text).strip()
         elif re.match(payment_type_re,text) != None:
             receipt_document['payment_type'] = text
+        elif re.match(sales_total_re, text ) != None:
+            receipt_document['total_savings'] = re.sub(sales_total_re, "", text).strip()
+        elif re.match(tax_re,text) != None:
+            receipt_document['tax'] = re.sub(tax_re, "", text).strip()
         elif re.match(last_month_fuel_re, text) != None:
             receipt_document['last_month_fuel_points'] = re.sub(last_month_fuel_re, "", text)
         else:
             if re.match(sales_re, text) != None:
-                receipt_document['sales'].append({'item_index': last_item_index, 'sale_code': text})
+                if receipt_document['items'][last_item_index].get('savings') == None:
+                    receipt_document['items'][last_item_index]['savings'] = [text]
+                else:
+                    receipt_document['items'][last_item_index]['savings'].append(text)
             elif re.match(item_re, text)!=None:
-                receipt_document['items'].append(bn.text.strip())
-                last_item_index = receipt_document['items'].index(bn.text.strip())
-    
+                receipt_document['items'].append({"item": bn.text.strip()})
+                last_item_index = receipt_document['items'].index({"item": bn.text.strip()})
     return receipt_document # Handoff to tell Browser to Backup My Purchases Dashboard // Should be last 
 
 # Trip Level Data : Collection<Items>
