@@ -8,14 +8,11 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 
 from pymongo import MongoClient
-from urllib.parse import quote_plus
-
-
 
 def insertData(entries, collection_name):
     # Going to add Entries to Locally running DB w/ same structure as Container application
     # Then migrate them over to Container DB
-    # "mongodb+srv://username:password@cluster0-jtpxd.mongodb.net/admin"
+    # Wrapper to always use insert many
     if type(entries) != list:
         entries = [entries]
     client = MongoClient()
@@ -37,8 +34,6 @@ def insertData(entries, collection_name):
     return None
 
 
-
-
 def getItemInfo(link, driver):
     # TODO: Parse item details from array to factored out object with specific K:V pairs for Nutrition and Availability
     # TODO: Match ID to API Search for Further Structured Information for Items
@@ -52,7 +47,13 @@ def getItemInfo(link, driver):
     driver.get(link)
     item_details = {}
     # UPC
-    item_details['UPC'] = driver.find_element(By.CSS_SELECTOR, "span.ProductDetails-upc").text.replace("UPC:", "").strip()
+    try: 
+        item_details['UPC'] = driver.find_element(By.CSS_SELECTOR, "span.ProductDetails-upc").text.replace("UPC:", "").strip()
+    except NoSuchElementException:
+        time.sleep(10)
+        item_details['UPC'] = driver.find_element(By.CSS_SELECTOR, "span.ProductDetails-upc").text.replace("UPC:", "").strip()
+    finally:
+        item_details['UPC'] = ''
     try:
         # nonfood product rating
         item_details['avg_rating'] = driver.find_element(By.CSS_SELECTOR, "div.bv_avgRating_component_container.notranslate").text
@@ -88,8 +89,11 @@ def getItemInfo(link, driver):
             title_and_amount = title_and_amount.text.replace("\n", ": ").replace("Number of International Units", "IU")
             title_and_amount = re.sub(r"([A-Za-z]+)(\d\.?\d*){1}", r"\1:\2", title_and_amount).split(':')
             daily_value = n.find_element(By.CSS_SELECTOR, 'span.NutrientDetail-DailyValue').text.replace("\n", ": ").replace("Number of International Units", "IU")
-            item_details['health_info']['macros'].append({'name': title_and_amount[0], 'measure': title_and_amount[1],'daily_value': daily_value, 'is_macro': is_macro, 'is_micro': is_micro, 'is_sub': is_sub, 'nutrient_joiner': hierarchy_switch})
-        
+            try:      
+                item_details['health_info']['macros'].append({'name': title_and_amount[0], 'measure': title_and_amount[1],'daily_value': daily_value, 'is_macro': is_macro, 'is_micro': is_micro, 'is_sub': is_sub, 'nutrient_joiner': hierarchy_switch})
+            except:
+                item_details['health_info']['macros'].append({'title_and_amound': str(title_and_amount),'daily_value': daily_value, 'is_macro': is_macro, 'is_micro': is_micro, 'is_sub': is_sub, 'nutrient_joiner': hierarchy_switch})
+
         ingredients_info = nutrition_we.find_elements(By.CSS_SELECTOR, 'p.NutritionIngredients-Ingredients')
         for p in ingredients_info:
             item_details['ingredients'] = list(map(str.strip, p.text.replace("Ingredients\n", "").split(",")))
@@ -118,26 +122,19 @@ def getItemInfo(link, driver):
         item_details = item_details
     finally:
         item_details = item_details
-    
-        
-        
-
-    driver.close()
-
+    driver.close() # close item page
+    driver.switch_to.window(driver.window_handles[1]) # brings you back to trip page
     return item_details
-
-
-
-
 
 def getCart(url, driver):
     randint= random.randint(10, 20) / 10
-    driver.get(url)
     time.sleep(2+randint)
+    driver.switch_to.new_window("tab")
+    driver.get(url)
+    time.sleep(4)
     data = []
     items = driver.find_elements(By.CSS_SELECTOR, 'div.PH-ProductCard-productInfo')
     # Find all products as List
-    items = items[:11]
     for scan_number, we in enumerate(items):
         document = {}
         document['item_index'] = scan_number
@@ -170,19 +167,18 @@ def getCart(url, driver):
         except NoSuchElementException:
             document['product_original_price'] = we.find_element(By.CSS_SELECTOR, 'mark.kds-Price-promotional').text.replace('\n', '')
 
-        if document['image'] != '':
-            print(document['product_name'])
-            print(document['item_link'])
-            print(scan_number)
+        if document['image'] != '': # No Image indicates a functionally dead webpage with no data
             time.sleep(1)
-            moreInfo = getItemInfo(f"file:///H:/Noderizer/webSamples/item{scan_number}.mhtml", driver)
+            moreInfo = getItemInfo(document['item_link'], driver) # Change this to item_link
             document.update(moreInfo)
-            time.sleep(1)
-            driver.switch_to.window(driver.window_handles[0])
+            time.sleep(1.5)
             
-
         data.append(document)
-    return data
+
+    insertData(data, 'items')
+    driver.close()
+    driver.switch_to.window(driver.window_handles[0]) 
+    return None
 
 
 
@@ -197,9 +193,10 @@ def getReceipt(link, driver):
     # Date and time of checkout, location of store, type of payment, savings breakdown (STR CPN & KRO PLUS SAVINGS), TOTAL COUPONS, TOTAL SAVINGS (\d+ pct.), checkout lane / cashier,
     # Fuel Points Earned Today (Total-Tax), Total Month Fuel Points, Remaining Fuel Points from Last Month 
     # Additional Rewards Spending, Additional Rewards Expiration Date
-    # TODO: Get Tax, Savings, Trip Cost
     # TODO: Search API Endpoint for stores to gather additional store level information that can be applied with trips
     # /locations/<LOCATION_ID> :: address<Object>, chain<String>, phone<String>, departments<Array of Objects w/[departmentId, name, phone, hours<Object w/ weekdays<Objects w/ Hours>>]>, geolocation<Object>, hours<Object>, locationId<String>, name<String>
+    driver.switch_to.new_window("tab")
+    time.sleep(1.5)
     driver.get(link)
     randint = random.randint(20, 60) / 10
     time.sleep(1+randint)
@@ -223,57 +220,77 @@ def getReceipt(link, driver):
     checkout_date_re = re.compile(r"Date:")
     item_re = re.compile(r".+(B$|T$)")
     # Get Receipt Image
-    receipt = driver.find_element(By.CSS_SELECTOR, 'div.imageContainer')
+    try:
+        receipt = driver.find_element(By.CSS_SELECTOR, 'div.imageContainer')
+        nodes = receipt.find_elements(By.CSS_SELECTOR, 'div.imageTextLineCenter')
+        for index, bn in enumerate(nodes):
+        # FINISHED: Match Sales w/ Items (Could be Done Via Price Matching w/ Exceptions for Same Prices Since Receipt Names are abbreviations)
+        # Sales Come After Product Scan, Can Be Multiple Different Promotions, All begin with SC; Skip Ct/Wgt Data as Items already Store this Information
+        # As I iterate through the sales list I need to provide a reference number to point back to the correct item
+            receipt_document.setdefault('checkout_timestamp', '')
+            receipt_document.setdefault('address', '')
+            receipt_document.setdefault('items', [])
 
-    nodes = receipt.find_elements(By.CSS_SELECTOR, 'div.imageTextLineCenter') # All Savings, but Also Tax, Balance and Saving Aggregations
+            text = bn.text.strip()
+            if re.match(fuel_re, text) != None:
+                receipt_document['fuel_points_earned'] = re.sub(fuel_re, "", text).strip()
+            elif re.match(cumulative_fuel_re, text) != None:
+                receipt_document['fuel_points_month'] = re.sub(cumulative_fuel_re, "", text).strip()
+            elif re.match(checkout_date_re, text) != None:
+                receipt_document['checkout_timestamp'] += re.sub(checkout_date_re, "" , text)
+            elif re.match(checkout_time_re, text) != None:
+                receipt_document['checkout_timestamp'] += re.sub(checkout_time_re, "" , text)
+                receipt_document['checkout_timestamp'] = receipt_document['checkout_timestamp'].strip()
+            elif re.match(full_address_re, text) != None:
+                receipt_document['address'] = receipt_document['address'] + " " + text
+            elif re.match(street_address_re, text.lower()) != None:
+                receipt_document['address'] =  text + " " + receipt_document['address']
+            elif re.match(cashier_re, text ) != None:
+                receipt_document['cashier'] = re.sub(cashier_re, "", text).strip()
+            elif re.match(payment_type_re,text) != None:
+                receipt_document['payment_type'] = text
+            elif re.match(sales_total_re, text ) != None:
+                receipt_document['total_savings'] = re.sub(sales_total_re, "", text).strip()
+            elif re.match(tax_re,text) != None:
+                receipt_document['tax'] = re.sub(tax_re, "", text).strip()
+            elif re.match(last_month_fuel_re, text) != None:
+                receipt_document['last_month_fuel_points'] = re.sub(last_month_fuel_re, "", text)
+            else:
+                if re.match(sales_re, text) != None:
+                    if receipt_document['items'][last_item_index].get('savings') == None:
+                        receipt_document['items'][last_item_index]['savings'] = [text]
+                    else:
+                        receipt_document['items'][last_item_index]['savings'].append(text)
+                elif re.match(item_re, text)!=None:
+                    receipt_document['items'].append({"item": bn.text.strip()})
+                    last_item_index = receipt_document['items'].index({"item": bn.text.strip()})
+    except NoSuchElementException:
+        driver.back()
+        time.sleep(5)
+        receipt_document.setdefault('checkout_timestamp', '')
+        receipt_document.setdefault('address', '')
+        try:
+            receipt_document['address'] = driver.find_element(By.CSS_SELECTOR, 'span.kds-Text--l.mb-0').text
+            receipt_document['checkout_timestamp'] = driver.find_element(By.CSS_SELECTOR, 'h2.kds-Heading.kds-Heading--m').text
+            receipt_document['total_savings'] = driver.find_element(By.CSS_SELECTOR)
+            receipt_document['total_savings'] = driver.find_element(By.CSS_SELECTOR, "span.kds-Text--m block min-w-0 font-bold > span").text
+            receipt_document['total'] = driver.find_element(By.CSS_SELECTOR, 'span[data-test]="payment-summary-total" > span').text
+        except :
+            receipt_document=receipt_document
+
+    finally:
+        receipt_document = receipt_document
+     # All Savings, but Also Tax, Balance and Saving Aggregations
     # Iterate through nodes get ones who match the re's and assign them the proper name to the return document
 
     # Get TAX and TOTAL Savings
 
     #nodes= nodes[:10]
-
-    for index, bn in enumerate(nodes):
-        # FINISHED: Match Sales w/ Items (Could be Done Via Price Matching w/ Exceptions for Same Prices Since Receipt Names are abbreviations)
-        # Sales Come After Product Scan, Can Be Multiple Different Promotions, All begin with SC; Skip Ct/Wgt Data as Items already Store this Information
-        # As I iterate through the sales list I need to provide a reference number to point back to the correct item
-        receipt_document.setdefault('checkout_timestamp', '')
-        receipt_document.setdefault('address', '')
-        receipt_document.setdefault('items', [])
-
-        text = bn.text.strip()
-        if re.match(fuel_re, text) != None:
-            receipt_document['fuel_points_earned'] = re.sub(fuel_re, "", text).strip()
-        elif re.match(cumulative_fuel_re, text) != None:
-            receipt_document['fuel_points_month'] = re.sub(cumulative_fuel_re, "", text).strip()
-        elif re.match(checkout_date_re, text) != None:
-            receipt_document['checkout_timestamp'] += re.sub(checkout_date_re, "" , text)
-        elif re.match(checkout_time_re, text) != None:
-            receipt_document['checkout_timestamp'] += re.sub(checkout_time_re, "" , text)
-            receipt_document['checkout_timestamp'] = receipt_document['checkout_timestamp'].strip()
-        elif re.match(full_address_re, text) != None:
-            receipt_document['address'] = receipt_document['address'] + " " + text
-        elif re.match(street_address_re, text.lower()) != None:
-            receipt_document['address'] =  text + " " + receipt_document['address']
-        elif re.match(cashier_re, text ) != None:
-            receipt_document['cashier'] = re.sub(cashier_re, "", text).strip()
-        elif re.match(payment_type_re,text) != None:
-            receipt_document['payment_type'] = text
-        elif re.match(sales_total_re, text ) != None:
-            receipt_document['total_savings'] = re.sub(sales_total_re, "", text).strip()
-        elif re.match(tax_re,text) != None:
-            receipt_document['tax'] = re.sub(tax_re, "", text).strip()
-        elif re.match(last_month_fuel_re, text) != None:
-            receipt_document['last_month_fuel_points'] = re.sub(last_month_fuel_re, "", text)
-        else:
-            if re.match(sales_re, text) != None:
-                if receipt_document['items'][last_item_index].get('savings') == None:
-                    receipt_document['items'][last_item_index]['savings'] = [text]
-                else:
-                    receipt_document['items'][last_item_index]['savings'].append(text)
-            elif re.match(item_re, text)!=None:
-                receipt_document['items'].append({"item": bn.text.strip()})
-                last_item_index = receipt_document['items'].index({"item": bn.text.strip()})
-    return receipt_document # Handoff to tell Browser to Backup My Purchases Dashboard // Should be last 
+    
+    insertData(receipt_document, 'trips')
+    driver.close()
+    driver.switch_to.window(driver.window_handles[0]) # bring back to current dashboard page
+    return None
 
 # Trip Level Data : Collection<Items>
 # Trip and Account Metadata and More Precise Data on the Sales 
@@ -281,9 +298,8 @@ def getReceipt(link, driver):
 
 
 def getMyData():
-    # TODO: Write function for handling driver construction/navigation/destruction, url acquisition/release, and waiting
-    # TODO: Write function to enter data into respective MongoDB tables
-    cart_links=[]
+    # Process Flow: Setup Browser -> Get Purchases Dashboard -> Collect Cart URLS -> foreach cart getCart(cart_page){contains GetItems} and getReceipt(reciept_page) 
+    # Purchase Dashboard, Acquire links for each trip on the page and buttons to next page, get links for each item and finish with receipt acquistion
     # Setup Driver
     options = webdriver.ChromeOptions() 
     options.add_argument("start-maximized")
@@ -293,7 +309,7 @@ def getMyData():
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
     driver = webdriver.Chrome("../../../Python/scraping/chromedriver99.exe", options=options)
-    driver.implicitly_wait(2)
+    driver.implicitly_wait(3.5)
     driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
     driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36"})
     
@@ -305,30 +321,37 @@ def getMyData():
         else:
             raise ValueError('No other response allowed')
     
+    time.sleep(7)
+    dashboard_url_base = 'https://www.kroger.com/mypurchases?tab=purchases&page='
+    dashboard_index = 4
+    driver.get(dashboard_url_base + f"{dashboard_index}")
+    ### Website SignIn ###
     time.sleep(5)
+    signInBtn = driver.find_element(By.ID, 'SignIn-submitButton')
+    signInBtn.click()
+    time.sleep(6.7)
+    pages = driver.find_elements(By.CSS_SELECTOR, "nav.kds-Pagination > a")
+    last_page = [p.text for p in pages][-1]
+    last_page = int(last_page)
 
-    # Process Flow: Setup Browser -> Get Purchases Dashboard -> Collect Cart URLS -> foreach cart getCart(cart_page){contains GetItems} and getReceipt(reciept_page) 
-
-    driver.get('file:///H:/Noderizer/webSamples/mypurchases.mhtml') 
-    # time.sleep(6)
-    # signInBtn = driver.find_element(By.ID, 'SignIn-submitButton')
-    # signInBtn.click()
-    # time.sleep(3)
-    elems = driver.find_elements(By.LINK_TEXT, 'See Order Details')
-    # for single page
-    elems = elems[:1]
-    for e in elems:
-        #e.get_attribute('href')
-        purchases = getCart("file:///H:/Noderizer/webSamples/Cart.mhtml", driver)
-        trips = getReceipt("file:///H:/Noderizer/webSamples/Receipt.mhtml", driver)
-        # need link to receipt
-        # receiptBtn = driver.find_elements(By.CSS_SELECTOR, "button[aria-label='View Receipt']")
-        # receiptBtn.click()
-    
-    insertData(purchases, 'items')
-    insertData(trips, 'trips')
-
-    
+    for i in range(dashboard_index, last_page+1):
+        ##### Trip Selection #####
+        driver.get(dashboard_url_base+str(i))
+        time.sleep(9)
+        trips = driver.find_elements(By.LINK_TEXT, 'See Order Details')
+        wait  = random.randint(20, 70)/10
+        time.sleep(wait)
+        if i == 4:
+            trips = trips[4:]
+        for trip in trips:
+            starting_url = trip.get_attribute('href')
+            ### receipt is the same url with detail replaced with image (of receipt)
+            receipt_url = trip.get_attribute('href').replace('detail', 'image')
+            time.sleep(wait)
+            getCart(starting_url, driver)
+            getReceipt(receipt_url, driver)
+            time.sleep(random.randint(20, 60)/10)
+        print(f"Finished with Page {i}")
     driver.quit()
 
 # Inside Will Find:
@@ -349,5 +372,3 @@ def getMyData():
 # Use API to create same carts for Pickup
 
 getMyData()
-
-
