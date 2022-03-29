@@ -1,0 +1,531 @@
+[{
+  "_id": {
+    "$oid": "62437362a77d75e8c3a5a8ca"
+  },
+  "checkout_timestamp": "03/28/22 19:11",
+  "cart_number": "HASH(cart)",
+  "address": "3559 Chamblee Tucker Road ",
+  "items": [
+    {
+      "item": "BKRY COOKIES      PC    3.99 B",
+      "savings": [
+        "SC      KROGER SAVINGS    0.50",
+        "SC      Fuel Points"
+      ]
+    }
+  ],
+  "cashier": "CHEC 523",
+  "tax": "0.32",
+  "total": "4.31",
+  "payment_type": "US DEBIT Purchase",
+  "total_savings": "$   0.50",
+  "fuel_points_earned": "4",
+  "fuel_points_month": "255",
+  "last_month_fuel_points": "384",
+  "full_document": [],
+},{
+  "_id": {
+    "$oid": "6243781fa77d75e8c3a5a8fb"
+  },
+  "checkout_timestamp": "03/11/22 17:36",
+  "cart_number": "HASH(cart)",
+  "address": "3559 Chamblee Tucker Road  Atlanta GA 30341",
+  "items": [
+    {
+      "item": "PRSL FZN FRT      XP    3.99 B"
+    },
+    {
+      "item": "PRSL FZN FRT      XP    4.99 B"
+    },
+    {
+      "item": "KRO CRM CHS             2.49 B"
+    },
+    {
+      "item": "SAS GRND BLCK PPR       1.29 B"
+    },
+    {
+      "item": "PRES FETA         <+    1.99 B",
+      "savings": [
+        "SC      KROGER SAVINGS    1.00",
+        "SC      Mega Event Savings1.00"
+      ]
+    },
+    {
+      "item": "KROGER BAKING CH  PC    2.00 B",
+      "savings": [
+        "SC      KROGER SAVINGS    0.79"
+      ]
+    },
+    {
+      "item": "KROGER CHOCOLATE        3.99 B"
+    },
+    {
+      "item": "GRAPEFRUIT RED EST      9.45 B"
+    },
+    {
+      "item": "LEMON FANCY             3.99 B"
+    },
+    {
+      "item": "MANGOES                 5.00 B"
+    },
+    {
+      "item": "PRSL PARMESAN CHS       4.99 B"
+    },
+    {
+      "item": "MAC AND CHEESE    PC    4.99 B",
+      "savings": [
+        "SC      KROGER SAVINGS    1.00"
+      ]
+    },
+    {
+      "item": "KRO ALLERGY TABLET      5.99 T"
+    },
+    {
+      "item": "TYFR SALAD KIT    PC    3.50 B",
+      "savings": [
+        "SC      KROGER SAVINGS    0.69"
+      ]
+    },
+    {
+      "item": "KRO SALTED BUTTER PC    6.00 B",
+      "savings": [
+        "SC      KROGER SAVINGS    0.49"
+      ]
+    },
+    {
+      "item": "WT      NECTARINES              2.51 B"
+    },
+    {
+      "item": "PILLSBURY FROSTINGPC    1.50 B",
+      "savings": [
+        "SC      KROGER SAVINGS    0.39"
+      ]
+    },
+    {
+      "item": "PILLSBURY FROSTINGPC    1.50 B",
+      "savings": [
+        "SC      KROGER SAVINGS    0.39"
+      ]
+    },
+    {
+      "item": "PRSL CHPTL PPR          2.49 B"
+    },
+    {
+      "item": "KRO SALT                0.59 B"
+    },
+    {
+      "item": "PILLSBURY BISCUITS      2.49 B"
+    },
+    {
+      "item": "KRO HVY CRM             2.29 B"
+    },
+    {
+      "item": "LA BNDTA TORTILLA       3.99 B"
+    },
+    {
+      "item": "KRO INST CHOC FDGE      0.65 B"
+    },
+    {
+      "item": "KRO INST CHOC FDGE      0.65 B"
+    },
+    {
+      "item": "KRO SHRED CHEESE  <+    4.99 B",
+      "savings": [
+        "SC      KROGER SAVINGS    1.00",
+        "SC      Mega Event Savings1.00"
+      ]
+    },
+    {
+      "item": "KROGER PIE CRUST        1.19 B"
+    },
+    {
+      "item": "KRUSTEAZ CAKE MIX PC    2.79 B",
+      "savings": [
+        "SC      KROGER SAVINGS    1.50"
+      ]
+    },
+    {
+      "item": "KRUSTEAZ CAKE MIX PC    2.79 B",
+      "savings": [
+        "SC      KROGER SAVINGS    1.50"
+      ]
+    },
+    {
+      "item": "SPK S SCAMPI      PC    5.99 B",
+      "savings": [
+        "SC      KROGER SAVINGS    2.50"
+      ]
+    },
+    {
+      "item": "SPK S SCAMPI      PC    5.99 B",
+      "savings": [
+        "SC      KROGER SAVINGS    2.50"
+      ]
+    },
+    {
+      "item": "OLE CHEESE              6.99 B"
+    },
+    {
+      "item": "KRO BACON               5.49 B"
+    },
+    {
+      "item": "SMFD LOIN FILLET  PC    5.99 B",
+      "savings": [
+        "SC      KROGER SAVINGS    3.00"
+      ]
+    },
+    {
+      "item": "ARIZONA TEA             3.19 B"
+    },
+    {
+      "item": "KRO VITAMIN D MILK      2.99 B"
+    },
+    {
+      "item": "MXWLL HOUSE COFFEE<+    5.99 B",
+      "savings": [
+        "SC      Mega Event Savings1.00"
+      ]
+    },
+    {
+      "item": "MXWLL HOUSE COFFEE<+    5.99 B",
+      "savings": [
+        "SC      Mega Event Savings1.00"
+      ]
+    },
+    {
+      "item": "MMS MILK CHOCOLAT XP    8.99 B",
+      "savings": [
+        "SC      KROGER SAVINGS    4.50"
+      ]
+    },
+    {
+      "item": "MISSION TORT CHIPS<+    1.49 B",
+      "savings": [
+        "SC      KROGER SAVINGS    0.80",
+        "SC      Mega Event Savings1.00"
+      ]
+    },
+    {
+      "item": "KROGER RICE             2.89 B"
+    },
+    {
+      "item": "SLMN ATLNTC LOIN       10.33 B"
+    },
+    {
+      "item": "AQSR SALMON       PC    7.99 B",
+      "savings": [
+        "SC      KROGER SAVINGS    2.00"
+      ]
+    },
+    {
+      "item": "HTGF CHK BRST          10.31 B"
+    },
+    {
+      "item": "HTGF CHK DRMST          7.86 B"
+    },
+    {
+      "item": "SLAB RIBS              12.99 B"
+    },
+    {
+      "item": "BIG K COLA 12PK   PC    2.15 B",
+      "savings": [
+        "SC      KROGER SAVINGS    0.24",
+        "SC      eCpn KRO BKZro Sug0.60"
+      ]
+    },
+    {
+      "item": "SARALEE ARTI ROLLSPC    3.00 B",
+      "savings": [
+        "SC      KROGER SAVINGS    1.29"
+      ]
+    },
+    {
+      "item": "KROGER EGGS             2.38 B"
+    },
+    {
+      "item": "BKRY DONUT              4.14 B",
+      "savings": [
+        "SC      Fuel Points"
+      ]
+    }
+  ],
+  "cashier": "CHEC 520",
+  "tax": "7.70",
+  "total": "225.90",
+  "payment_type": "CHASE VISA Purchase",
+  "total_savings": "$  31.18",
+  "fuel_points_earned": "218",
+  "fuel_points_month": "251",
+  "last_month_fuel_points": "384",
+  "full_document": [],
+},{
+  "_id": {
+    "$oid": "62437886a77d75e8c3a5a901"
+  },
+  "checkout_timestamp": "03/10/22 18:34",
+  "cart_number": "HASH(cart)",
+  "address": "3559 Chamblee Tucker Road  Atlanta GA 30341",
+  "items": [
+    {
+      "item": "WT      WING HOT BAR            7.19 T"
+    },
+    {
+      "item": "WT      WING HOT BAR           12.46 T"
+    },
+    {
+      "item": "ICED RD VLVT CAKE       2.99 B"
+    },
+    {
+      "item": "ARIZONA GREEN TEA       0.99 B",
+      "savings": [
+        "SC      Fuel Points"
+      ]
+    }
+  ],
+  "cashier": "CHEC 512",
+  "tax": "1.69",
+  "total": "25.32",
+  "payment_type": "CHASE VISA Purchase",
+  "fuel_points_earned": "24",
+  "fuel_points_month": "33",
+  "last_month_fuel_points": "384",
+  "full_document": [],
+},{
+  "_id": {
+    "$oid": "624378daa77d75e8c3a5a906"
+  },
+  "checkout_timestamp": "03/03/22 18:32",
+  "cart_number": "HASH(cart)",
+  "address": "4357 LAWRENCEVILLE HIGHWAY  TUCKER (U.S. HIGHWAY 29 AT LAVISTA) GA",
+  "items": [
+    {
+      "item": "MMS MILK CHOCOLAT PC    3.00 B",
+      "savings": [
+        "SC      KROGER SAVINGS    0.99",
+        "SC      Fuel Points"
+      ]
+    }
+  ],
+  "cashier": "CHEC 503",
+  "tax": "0.59",
+  "total": "9.88",
+  "payment_type": "CHASE VISA Purchase",
+  "total_savings": "$   0.99",
+  "fuel_points_earned": "9",
+  "fuel_points_month": "9",
+  "last_month_fuel_points": "384",
+  "full_document": [],
+},{
+  "_id": {
+    "$oid": "62437d0da77d75e8c3a5a931"
+  },
+  "checkout_timestamp": "",
+  "cart_number": "HASH(cart)",
+  "address": "3559 Chamblee Tucker Road  Atlanta GA 30341",
+  "items": [
+    {
+      "item": "KRUSTEAZ CAKE MIX PC    2.79 B",
+      "savings": [
+        "SC      KROGER SAVINGS    1.00"
+      ]
+    },
+    {
+      "item": "KRUSTEAZ CAKE MIX PC    2.79 B",
+      "savings": [
+        "SC      KROGER SAVINGS    1.00"
+      ]
+    },
+    {
+      "item": "KRO SHRED CHEESE        6.99 B"
+    },
+    {
+      "item": "KRO CHPPD ONION   PC    0.00 B",
+      "savings": [
+        "SC      KROGER SAVINGS    3.99"
+      ]
+    },
+    {
+      "item": "KRO RED PEPPER    PC    4.79 B"
+    },
+    {
+      "item": "KRO RED PEPPER    PC    5.99 B"
+    },
+    {
+      "item": "PRSL PRMSN        PC    3.99 B",
+      "savings": [
+        "SC      KROGER SAVINGS    1.00"
+      ]
+    },
+    {
+      "item": "DELMONTE PEACHES        2.19 B"
+    },
+    {
+      "item": "STO CAN SLICED          2.49 B"
+    },
+    {
+      "item": "KRO ANCHVES             2.19 B"
+    },
+    {
+      "item": "KRO ANCHVES             2.19 B"
+    },
+    {
+      "item": "TYFR SALAD        PC    5.00 B",
+      "savings": [
+        "SC      KROGER SAVINGS    0.99"
+      ]
+    },
+    {
+      "item": "MMS CRISPY BAR          1.31 B"
+    },
+    {
+      "item": "MMS MILK CHOCOLA        1.09 B"
+    },
+    {
+      "item": "MMS MILK CHOCOLA        1.09 B"
+    },
+    {
+      "item": "MMS MILK CHOCOLA        1.09 B"
+    },
+    {
+      "item": "MMS MILK CHOCOLA        1.09 B"
+    },
+    {
+      "item": "MMS MILK CHOCOLA        1.09 B"
+    },
+    {
+      "item": "MMS MILK CHOCOLA        1.09 B"
+    },
+    {
+      "item": "MXHS GROUND COFFEEPC    8.99 B",
+      "savings": [
+        "SC      KROGER SAVINGS    1.00"
+      ]
+    },
+    {
+      "item": "WT      APL GRNY SMT            3.38 B"
+    },
+    {
+      "item": "WT      PEPPERS JALAPENO        0.37 B"
+    },
+    {
+      "item": "PEPPERS BELL RED        3.00 B"
+    },
+    {
+      "item": "KRO FRSH BURRTO TO      1.79 B"
+    },
+    {
+      "item": "BLACKBERRY              2.69 B"
+    },
+    {
+      "item": "GRAPEFRUIT RED EST      3.78 B"
+    },
+    {
+      "item": "KRO SHRIMP             15.98 B"
+    },
+    {
+      "item": "STO MANGO               7.99 B"
+    },
+    {
+      "item": "HRML PRK TND      PC    7.99 B",
+      "savings": [
+        "SC      KROGER SAVINGS    2.00"
+      ]
+    },
+    {
+      "item": "SEAC TERIYAKI SLMN     10.99 B"
+    },
+    {
+      "item": "CTPL SSG JLPNO CHSPC    3.99 B",
+      "savings": [
+        "SC      KROGER SAVINGS    0.80"
+      ]
+    },
+    {
+      "item": "OLE CHS DIP       PC    4.49 B",
+      "savings": [
+        "SC      KROGER SAVINGS    0.50"
+      ]
+    },
+    {
+      "item": "SMFD BACON        PC    5.99 B",
+      "savings": [
+        "SC      KROGER SAVINGS    0.80"
+      ]
+    },
+    {
+      "item": "MMS MACCHS        PC    2.50 B",
+      "savings": [
+        "SC      KROGER SAVINGS    0.49"
+      ]
+    },
+    {
+      "item": "HTGF CHK BRST          11.30 B"
+    },
+    {
+      "item": "KRO BF STK SHAVED PC    6.99 B",
+      "savings": [
+        "SC      KROGER SAVINGS    1.00"
+      ]
+    },
+    {
+      "item": "BUITONI TORTELLONIPC    5.99 B",
+      "savings": [
+        "SC      KROGER SAVINGS    1.00"
+      ]
+    },
+    {
+      "item": "SLAB RIBS         PC   10.99 B",
+      "savings": [
+        "SC      KROGER SAVINGS    2.00"
+      ]
+    },
+    {
+      "item": "KRO ONIONS RED          2.49 B"
+    },
+    {
+      "item": "KROGER PIE CRUST        1.19 B"
+    },
+    {
+      "item": "KROGER PIE CRUST        1.19 B"
+    },
+    {
+      "item": "WHT DNR ROLLS           4.49 B"
+    },
+    {
+      "item": "MRTN HOAGIE ROLLS       4.19 B"
+    },
+    {
+      "item": "KRO DLX ICE CREAM PC    2.77 B",
+      "savings": [
+        "SC      KROGER SAVINGS    0.22"
+      ]
+    },
+    {
+      "item": "KRO DLX ICE CREAM PC    2.77 B",
+      "savings": [
+        "SC      KROGER SAVINGS    0.22"
+      ]
+    },
+    {
+      "item": "KROGER EGGS       PC    1.69 B",
+      "savings": [
+        "SC      KROGER SAVINGS    0.80"
+      ]
+    },
+    {
+      "item": "KRO VITAMIN D MILK      3.19 B"
+    },
+    {
+      "item": "BIG K STRAWBERRY  PC    2.75 B",
+      "savings": [
+        "SC      KROGER SAVINGS    0.24"
+      ]
+    }
+  ],
+  "cashier": "CHEC 523",
+  "tax": "6.63",
+  "total": "201.79",
+  "payment_type": "CHASE VISA Purchase",
+  "total_savings": "$  19.05",
+  "full_document": [],
+}]
