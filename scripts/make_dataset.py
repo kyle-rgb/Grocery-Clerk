@@ -1,12 +1,28 @@
+import time, re, random
 
-import os, sys, math, time, datetime as dt, pprint, re, random
-import pandas as pd, numpy as np, time, json
 from pymongo import MongoClient
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException, InvalidArgumentException
 
-from pymongo import MongoClient
+# Inside Will Find:
+    # Trip Level Data: Total Cost of Purchases, Locations of Store, Order Number, Payment Method, Items/Coupons Together, Tax
+    # One Item Level: Link to Kroger's Web Page for Item, Quantity of Item Purchased, Sale Price, Regular Price, Picture of Item;
+    # Item Webpage: UPC, Weight, Serving Size, Servings per Container, Ingredients, Nutritional Data
+        # Breaks Down Further Nutritional Detail By:
+            # Macronutrients (Weight) (% of Daily Recommended Value)
+        # Recommendations for Like Products
+
+# User Story => Carts (aka Trips) => Products (Identifying Information, Price, Nutritional Information)
+# Analyze Shopping Patterns and How Much I Saved Via Trips
+
+# Meals => Combinations of Purchased Foods => Single Food Products
+# Use Purchase History as Gauge for Interest in future promotions and basis for queries for new recipes
+
+# Use API to get prices of past purchases and estimate future trips
+# Use API to create same carts for Pickup
+
 
 def insertData(entries, collection_name):
     # Going to add Entries to Locally running DB w/ same structure as Container application
@@ -215,8 +231,6 @@ def getReceipt(link, driver):
     # Date and time of checkout, location of store, type of payment, savings breakdown (STR CPN & KRO PLUS SAVINGS), TOTAL COUPONS, TOTAL SAVINGS (\d+ pct.), checkout lane / cashier,
     # Fuel Points Earned Today (Total-Tax), Total Month Fuel Points, Remaining Fuel Points from Last Month 
     # Additional Rewards Spending, Additional Rewards Expiration Date
-    # TODO: Search API Endpoint for stores to gather additional store level information that can be applied with trips
-    # /locations/<LOCATION_ID> :: address<Object>, chain<String>, phone<String>, departments<Array of Objects w/[departmentId, name, phone, hours<Object w/ weekdays<Objects w/ Hours>>]>, geolocation<Object>, hours<Object>, locationId<String>, name<String>
     driver.switch_to.new_window("tab")
     time.sleep(1.5)
     driver.get(link)
@@ -365,7 +379,7 @@ def getMyData():
     
     time.sleep(7)
     dashboard_url_base = 'https://www.kroger.com/mypurchases?tab=purchases&page='
-    dashboard_index = 1
+    dashboard_index = 2
     driver.get(dashboard_url_base + f"{dashboard_index}")
     ### Website SignIn ###
     time.sleep(7)
@@ -392,42 +406,6 @@ def getMyData():
             getReceipt(receipt_url, driver)
             time.sleep(random.randint(20, 50)/10)
         print(f"Finished with Page {i}")
-        if i == 1:
-            break
     driver.quit()
 
-# Inside Will Find:
-    # Trip Level Data: Total Cost of Purchases, Locations of Store, Order Number, Payment Method, Items/Coupons Together, Tax
-    # One Item Level: Link to Kroger's Web Page for Item, Quantity of Item Purchased, Sale Price, Regular Price, Picture of Item;
-    # Item Webpage: UPC, Weight, Serving Size, Servings per Container, Ingredients, Nutritional Data
-        # Breaks Down Further Nutritional Detail By:
-            # Macronutrients (Weight) (% of Daily Recommended Value)
-        # Recommendations for Like Products
-
-# User Story => Carts (aka Trips) => Products (Identifying Information, Price, Nutritional Information)
-# Analyze Shopping Patterns and How Much I Saved Via Trips
-
-# Meals => Combinations of Purchased Foods => Single Food Products
-# Use Purchase History as Gauge for Interest in future promotions and basis for queries for new recipes
-
-# Use API to get prices of past purchases and estimate future trips
-# Use API to create same carts for Pickup
-
 getMyData()
-
-# def testpage():
-#     options = webdriver.ChromeOptions() 
-#     options.add_argument("start-maximized")
-#     options.add_argument("disable-blink-features=AutomationControlled")
-#     # Load Credentials from Browser Profile
-#     options.add_argument("user-data-dir=C:\\Users\\Kyle\\AppData\\Local\\Google\\Chrome\\User Data")
-#     options.add_experimental_option("excludeSwitches", ["enable-automation"])
-#     options.add_experimental_option('useAutomationExtension', False)
-#     driver = webdriver.Chrome("../../../Python/scraping/chromedriver99.exe", options=options)
-#     driver.implicitly_wait(3.5)
-#     driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-#     driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36"})
-    
-#     getReceipt("H:\\Noderizer\\webSamples\\011~00685~2022-02-18~523~981743.mhtml", driver)
-#     getReceipt("H:\\Noderizer\\webSamples\\Receipt.mhtml", driver)
-#     getReceipt("H:\\Noderizer\\webSamples\\imageA.mhtml", driver)

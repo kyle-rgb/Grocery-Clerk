@@ -28,9 +28,12 @@
 - [x] Scrape User Account to Gather ID, Price, Name, and Weight
 - [x] Scrape Receipts For Trip Level Information
 - [x] Build Sample Collections for Each Table I Want (Trips, Items)
-- [ ] Call API for Products to Extend Scraped Product Level Information
-- [ ] Create MongoDB Image for Use in this Project
-- [ ] Store in MongoDB
+- [x] Create Collections for All Documented Trips
+- [x] Incorporate MongoDB Image for Use in this Project via Docker-Compose
+- [x] Store in MongoDB
+- [ ] Call API for Products to Extend Scraped Product Level Information via new Script
+- [ ] Create (Pipeline) / DAG definition file to run make_dataset.py for new entries every week or on manual backend basis
+- [ ] Collect Available Manufacturer Coupons via Store's Website via new Script
 - [ ] Collect 120 Saved Recipe via Saved Documents and Recipe APIs
 - [ ] Breakdown Recipes into Ingredient Parts (and Convert to kgs) and Cooking Windows {long steps}
 - [ ] Create Visualizations to Sum Up Past Purchases (Past Trips) and Eating Habits
