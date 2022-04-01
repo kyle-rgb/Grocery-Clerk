@@ -49,14 +49,22 @@ from api_keys import CLIENT_ID, CLIENT_SECRET
 # When making an access token request, the authorization header must be in the following form, where your client_id and client_secret are joined by a single colon and base64 encoded.
 
 def parseUPC():
-    # TODO: Get UPC using REGEX via the link tag in the item document
-    # match on trip joining column and return UPC and correct location ID to pass to API
+    # this method functionally deals with uneven scraping procedures and updated data handling since I have come to learn the data some more
+    # these steps should be able to be reintegrated back into a refactored make_dataset.py
+    # the idea would be to reformat the item data based on the now known conditions that can also handle API calls for the same item.
+    # the items collection itself and the api items should now have a date_scraped feature to better pair a specific price to a specific location at a set instance in time.
+    # ???: the api calls for a specific product can be filtered by the specific locationId, where the response will return the information iff the product is currently available @ that location.
+    # TODO:
+    # place subnutrients inside macros, reformat ingredients array () chars should help
+    # reformat string numbers back to numbers (sans upc)
+    
     client = MongoClient()
     db = client.groceries # db
     results = list(db.items.find({}))
     trips = list(db.trips.find({}))
     upc_re = re.compile(r"/\d+")
     additional_date_regex = re.compile(r'20[1-2][0-9]-[0-1][0-9]-[0-3][0-9]')
+    reviews_regex = re.compile(r'(\d+) reviews with (\d{1}) stars\.')
     upcs = set()
     # address backup -> to checkout timestamp
     # standardize address backup by using order_number and gathering am/pm distinction (since the majority of purchases already have their times in military time use this format)
@@ -67,12 +75,30 @@ def parseUPC():
 
     for r in results:
         upc = r.get('UPC')
+        # get location id from cart number
+        location = r['cart_number'].split('/')[-1].split('~')
+        locationid = location[0]+location[1]
+
         r['cart_number'] = hash(r.get('cart_number').replace('detail', 'image'))
         if upc != None:
             # upc is a link
             if len(re.findall(upc_re, upc)) > 0:
                 r['UPC'] = ''.join(re.findall(upc_re, upc)).replace('/', '')
-            upcs.add(r['UPC'])
+            upcs.add(f"{r['UPC']};{locationid}")
+            r['upc'] = r['UPC']
+            r.pop("UPC")
+        # parse ratings
+        if 'ratings_distribution' in r:
+            ratings_list =  re.findall(reviews_regex, r['ratings_distribution'])
+            r['ratings_distribution'] = {f"{v} stars":k for k, v in ratings_list}
+            r['reviews'] = int(re.sub(r"\(|\)", '', r['reviews']))
+            r['avg_rating'] = float(r['avg_rating'])
+        
+        if ('health_info' in r ):
+            if ('overall_health_score' in r.get('health_info')):
+                r['health_info']['overall_health_score'] = int(r['health_info']['overall_health_score'].replace('percentage', ''))
+
+        
 
     for _ in trips:
         # exact time of order is the trailing 4 digits of the order number
@@ -93,10 +119,10 @@ def parseUPC():
         _.pop('order_number')
         _['full_document'] = hash(_.get('full_document').__str__())
 
-    with open('./collections/items.json', 'w') as file:
+    with open('./data/collections/items.json', 'w') as file:
         file.write(dumps(results))
     
-    with open('./collections/trips.json', 'w') as file:
+    with open('./data/collections/trips.json', 'w') as file:
         file.write(dumps(trips))
 
 
@@ -124,42 +150,93 @@ def getToken():
 
 
 
-def getStoreLocation(zipCode):    
-    # TODO: Search API Endpoint for stores to gather additional store level information that can be applied with trips
-        # /locations/<LOCATION_ID> :: address<Object>, chain<String>, phone<String>, departments<Array of Objects w/[departmentId, name, phone, hours<Object w/ weekdays<Objects w/ Hours>>]>, geolocation<Object>, hours<Object>, locationId<String>, name<String>
-        # Web App can provide general information about the store chain, hours, departments, etc. 
-        # IDEA: Store information can be combined with /cart route to quickly compare prices across close stores, submit cart reorders across stores and see if an order is possible given the time the client app is accessed.
-        # This will give me general cart information and allow me to accurately query products via the correct store.
+def getStoreLocation(ids):    
     # TODO: Add Location Id to the trip collection via the address attribute
+    # /locations/<LOCATION_ID> :: address<Object>, chain<String>, phone<String>, departments<Array of Objects w/[departmentId, name, phone, hours<Object w/ weekdays<Objects w/ Hours>>]>, geolocation<Object>, hours<Object>, locationId<String>, name<String>
+    # Web App can provide general information about the store chain, hours, departments, etc. 
+    # IDEA: Store information can be combined with /cart route to quickly compare prices across close stores, submit cart reorders across stores and see if an order is possible given the time the client app is accessed.
+    # This will give me general cart information and allow me to accurately query products via the correct store.
     token = getToken()
+    #current_locations = {'01100482', '01100685', '01100438'} <- '01100479' refers to the pre-remodel '01100685' location : thus, id need to map '01100685':'01100479'
     headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/json'}
     # endpoint
     endpoint = 'https://api.kroger.com/v1/locations'
-    params = f"?filter.zipCode.near={zipCode}"
+    # params = f"?filter.zipCode.near={zipCode}"
     # will be a list of 10 closest stores to zip
-    response = requests.get(endpoint+params, headers=headers)
-    with open('./API/storesAPI.json', 'w') as file:
-        file.write(response.text)
+    array = []
+    for id in ids:
+        response = requests.get(endpoint+f"/{id}", headers=headers)
+        if response.ok:
+            array.append(json.loads(response.text)['data'])
 
-    print('locations written to disk')
+    array.append({'meta': {'data_acquired': (datetime.datetime.now()).timestamp()}})
+
+    with open('./data/API/myStoresAPI.json', 'w') as file:
+        file.write(json.dumps(array))
+
+    print(f'{len(array)-1} locations written to disk')
 
     return None
 
-def getItemInfo(upcSet):
-    # TODO: call f"https://api.kroger.com/v1/products/{ID}?filter.locationId={LOCATION_ID}"
+def getItemInfo(itemLocationPairs):
+    # TODO: call with location id f"https://api.kroger.com/v1/products/{ID}?filter.locationId={LOCATION_ID}"
     # bring in Bearer token in headers and Accept application/json
+    # critical item features require a LocationId filter such as, {aisleLocations, items, itemInformation, fulfillment, price, nationalPrice, size, soldBy} :: w/o it I am only getting a few of these features, most importantly not price
+    # The product will return if the queried store currently sells the product (but this does not mean it is currently stocked at the store),
+    # I will have to handle the control flow to call the generalized item id route if this certain one fails.
+
+    # make upcSet come with location data from cart_number column that is never shown but is used for calling
+
+    # change upcSet to container with both upc and location id
+
+    # I want to keep locationId to be cart specific
+
+    # EXPIRES:  2022-04-01 14:27:30.245842
+
+    # return item object:
+        # query API for appropiate item @ store associated with the trip:
+        # probably  static properties of item (not location bound thus can be added to the current item object in items collection)
+            # location-bound: aisleLocations<Array>, items<Array> {favorite, fulfillment, price{promo, regular}, size, soldBy}, itemInformation<Object> 
+            # static: brand<String>, categories<Array>, countryOrigin<String>, description<String>, images<Array>, productId<String>, temperature<Object>, upc<String>, productId<String>
+
+    # product_description = description, upc=UPC/productId
+
+    # API items currently all have: 'productId', 'upc', 'aisleLocations', 'categories', 'description', 'items', 'itemInformation', 'temperature'
+        # 508 have 'images'
+        # 490 have 'countryOrigin'
+        # 494 have 'brand'
+
+    # items currently all have: _id, cart_number, item_index, image, product_name, item_link, UPC, price_equation, product_size, product_promotional_price, product_original_price
+        # 1043 have health_info and ingredients
+        # 363 have avg_ratings, reviews and ratings_distribution
+
     token = getToken()
     headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/json'}
     # endpoint
     endpoint = 'https://api.kroger.com/v1/products'
     data = []
 
-    for upc in upcSet:
-        params = f'/{upc}' # ?filter.locationId={LOCATION_ID}
-        response = requests.get(endpoint+params, headers=headers)
-        data.append(json.loads(response.text))
+    for i, pair in enumerate(itemLocationPairs):
+        pairs = pair.split(";")
+        upc = pairs[0]
+        location = pairs[1]
+        if location == '01100479':
+            location = '01100685'
 
-    with open('./API/itemsAPI.json', 'w') as file:
+        params = f'/{upc}' # ?filter.locationId={LOCATION_ID}
+        req = endpoint+params+"?filter.locationId={}".format(location)
+        response = requests.get(req, headers=headers)
+        object = json.loads(response.text)
+        object = object.get('data')
+        # add the implicit queried location id to response
+        object['locationId'] = location
+        # add timestamp of scrape for future data analysis
+        object['acquistion_timestamp'] = datetime.datetime.now().timestamp()
+        data.append(object)
+
+            
+
+    with open('./data/API/itemsAPI.json', 'w') as file:
         file.write(json.dumps(data))
 
     print(f'{len(data)} items written to disk')
@@ -167,7 +244,8 @@ def getItemInfo(upcSet):
     return None
 
 
-upcSET = parseUPC()
-getItemInfo(upcSET)
-getStoreLocation(30084)
 
+#workData()
+upcSET = parseUPC()
+#getItemInfo(upcSET)
+# getStoreLocation({'01100482', '01100685', '01100438'})

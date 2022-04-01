@@ -31,9 +31,14 @@
 - [x] Create Collections for All Documented Trips
 - [x] Incorporate MongoDB Image for Use in this Project via Docker-Compose
 - [x] Store in MongoDB
-- [ ] Call API for Products to Extend Scraped Product Level Information via new Script
+- [x] Call API for Products to Extend Scraped Product Level Information via new Script
+- [ ] Write function to integrate API data with cleaned scraped collections
+- [ ] Collect Available Manufacturer Coupons via Store's Website via new Python Script
 - [ ] Create (Pipeline) / DAG definition file to run make_dataset.py for new entries every week or on manual backend basis
-- [ ] Collect Available Manufacturer Coupons via Store's Website via new Script
+- [ ] Create DAG for collecting digital coupons to run on a weekly basis. Store Expired Coupons to Create DB of the running history of these digital coupons.
+- [ ] Create Landing Page Dashboard for a User's Profile via Next.js
+- [ ] Create Landing Page for Purchased Items (Parsed cleaned setup that utilizes scrapes and API data) via Next.js
+- [ ] Create Landing Page for Trips via Next.js
 - [ ] Collect 120 Saved Recipe via Saved Documents and Recipe APIs
 - [ ] Breakdown Recipes into Ingredient Parts (and Convert to kgs) and Cooking Windows {long steps}
 - [ ] Create Visualizations to Sum Up Past Purchases (Past Trips) and Eating Habits
