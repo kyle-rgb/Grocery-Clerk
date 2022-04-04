@@ -108,7 +108,8 @@ def getItemInfo(link, driver):
             try:      
                 item_details['health_info']['macros'].append({'name': title_and_amount[0], 'measure': title_and_amount[1],'daily_value': daily_value, 'is_macro': is_macro, 'is_micro': is_micro, 'is_sub': is_sub, 'nutrient_joiner': hierarchy_switch})
             except:
-                item_details['health_info']['macros'].append({'title_and_amound': str(title_and_amount),'daily_value': daily_value, 'is_macro': is_macro, 'is_micro': is_micro, 'is_sub': is_sub, 'nutrient_joiner': hierarchy_switch})
+                # BUG: Micronutrients with no amount listed by still given a percentage mess-up title and amount
+                item_details['health_info']['macros'].append({'title_and_amount': str(title_and_amount),'daily_value': daily_value, 'is_macro': is_macro, 'is_micro': is_micro, 'is_sub': is_sub, 'nutrient_joiner': hierarchy_switch})
 
         ingredients_info = nutrition_we.find_elements(By.CSS_SELECTOR, 'p.NutritionIngredients-Ingredients')
         for p in ingredients_info:
@@ -408,4 +409,6 @@ def getMyData():
         print(f"Finished with Page {i}")
     driver.quit()
 
-getMyData()
+getMyData() 
+
+

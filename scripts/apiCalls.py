@@ -1,8 +1,8 @@
 import re, requests, datetime, time, json, pprint
 from django.forms import ValidationError
 
-from base64 import b64encode, b64decode
-from requests_oauthlib import OAuth2Session
+from base64 import b64encode
+# from requests_oauthlib import OAuth2Session
 from bson.json_util import dumps
 from pymongo import MongoClient
 
@@ -37,17 +37,6 @@ from api_keys import CLIENT_ID, CLIENT_SECRET
     # ...
     # The crucuial routes seem to map directly to my two routes as of now via. {Trips} => /Locations (One Trip of Many Items Occurs at One Location) 
 
-# DOCS: https://developer.kroger.com/reference/#section/Refresh-Token-Grant
-### HEADERS ####
-# Authorization: Basic {base64(client_id:client_secret)}
-### ROUTE ####
-# for cilent id based operation (im guessing mostly cart and data about client)
-# f"https://api.kroger.com/v1/connect/oauth2/authorize?scope={SCOPES}&response_type=code&client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}"
-# for more basic information: 
-# f"https://api.kroger.com/v1/connect/oauth2/token?scope=product.compact&response_type=code&client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}"
-
-# When making an access token request, the authorization header must be in the following form, where your client_id and client_secret are joined by a single colon and base64 encoded.
-
 def parseUPC():
     # this method functionally deals with uneven scraping procedures and updated data handling since I have come to learn the data some more
     # these steps should be able to be reintegrated back into a refactored make_dataset.py
@@ -55,7 +44,18 @@ def parseUPC():
     # the items collection itself and the api items should now have a date_scraped feature to better pair a specific price to a specific location at a set instance in time.
     # ???: the api calls for a specific product can be filtered by the specific locationId, where the response will return the information iff the product is currently available @ that location.
     # TODO:
-    # place subnutrients inside macros, reformat ingredients array () chars should help
+        
+        # reformat ingredients array (, ), [, & ] chars should help
+        # breakdown serving size right now approx. \d+{count} \(\d+ g(ram(s))\)
+        # breakdown price equation (rn. ct x $\d\.\d+/each) <= though price equation always accounts for only product_original_price
+            # can have count and weight, count or volume and count.
+                # ct. has many different forms ranging from bottles/cans/ct/each/pk/rolls/sq ft
+                # volume has fl oz/gal/pt/qt/L
+                # weight has oz/lb/Lb/Oz
+        # convert product size from imperial to metric
+        # calculate missing serving size by summing the available nutrient information. Should add up to the gram representation of serving size
+
+
     # reformat string numbers back to numbers (sans upc)
     
     client = MongoClient()
@@ -66,6 +66,7 @@ def parseUPC():
     additional_date_regex = re.compile(r'20[1-2][0-9]-[0-1][0-9]-[0-3][0-9]')
     reviews_regex = re.compile(r'(\d+) reviews with (\d{1}) stars\.')
     upcs = set()
+    grammer = {'g': 1, 'mg': 1000, 'mcg': 1_000_000}
     # address backup -> to checkout timestamp
     # standardize address backup by using order_number and gathering am/pm distinction (since the majority of purchases already have their times in military time use this format)
     nonfuel_orders = re.compile(r'In-store')
@@ -73,12 +74,48 @@ def parseUPC():
     # For fuel purchases and other nontime bound data, the last four digits of the order number match exactly to receipt times where we have available data
     # get rid of address backup
 
+    # items currently all have: _id, cart_number, item_index, image, product_name,
+            # item_link, UPC, price_equation, product_size, product_promotional_price, product_original_price
+                # 1043 have health_info and ingredients
+                # 363 have avg_ratings, reviews and ratings_distribution
+
     for r in results:
         upc = r.get('UPC')
+        # {'macros': {'measure': {$regex: /mcg/}}}
+        metric_re = re.compile(r'(\d+\.?\d*)(m?c?g|IU)')
         # get location id from cart number
         location = r['cart_number'].split('/')[-1].split('~')
         locationid = location[0]+location[1]
+        # place subnutrients inside macros (subnutrients for macros ) and remove joining columns
+        if 'health_info' in r:
+            remove_indices=[]
+            for i, nutrient in enumerate(r['health_info']['macros']):
+                sub = nutrient.pop('is_sub')
+                nutrient.pop('is_macro')
+                micro = nutrient.pop('is_micro')
+                joiner = nutrient.pop('nutrient_joiner')
+                nutrient['measure'] = nutrient['measure'].replace('International Unit', 'IU')
+                amount, measure = re.sub(metric_re, r'\1 \2', nutrient['measure']).split(' ')
+                if measure != 'IU':
+                    amount = float(amount) / grammer[measure]
+                    measure = 'g'
+                nutrient['measure'] = f"{amount} {measure}"
+                
 
+                if nutrient['daily_value']=='':
+                    nutrient['daily_value']="0%"
+                if sub:
+                    r['health_info']['macros'][joiner].setdefault('subnutrients', [])
+                    r['health_info']['macros'][joiner]['subnutrients'].append(nutrient)
+                    remove_indices.append(i)
+                elif micro:
+                    r['health_info'].setdefault('micros', [])
+                    r['health_info']['micros'].append(nutrient)
+                    remove_indices.append(i)
+            
+            r['health_info']['macros'] = [nutr for ind, nutr in enumerate(r['health_info']['macros']) if ind not in remove_indices]
+            
+        
         r['cart_number'] = hash(r.get('cart_number').replace('detail', 'image'))
         if upc != None:
             # upc is a link
@@ -97,8 +134,6 @@ def parseUPC():
         if ('health_info' in r ):
             if ('overall_health_score' in r.get('health_info')):
                 r['health_info']['overall_health_score'] = int(r['health_info']['overall_health_score'].replace('percentage', ''))
-
-        
 
     for _ in trips:
         # exact time of order is the trailing 4 digits of the order number
@@ -124,7 +159,6 @@ def parseUPC():
     
     with open('./data/collections/trips.json', 'w') as file:
         file.write(dumps(trips))
-
 
     return upcs
 
@@ -179,11 +213,25 @@ def getStoreLocation(ids):
     return None
 
 def getItemInfo(itemLocationPairs):
-    # TODO: call with location id f"https://api.kroger.com/v1/products/{ID}?filter.locationId={LOCATION_ID}"
+    # DOCS: https://developer.kroger.com/reference/#section/Refresh-Token-Grant
+    ### HEADERS ####
+    # Authorization: Basic {base64(client_id:client_secret)}
+    ### ROUTE ####
+    # for cilent id based operation (im guessing mostly cart and data about client)
+    # f"https://api.kroger.com/v1/connect/oauth2/authorize?scope={SCOPES}&response_type=code&client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}"
+    # for more basic information: 
+    # f"https://api.kroger.com/v1/connect/oauth2/token?scope=product.compact&response_type=code&client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}"
+
+    # When making an access token request, the authorization header must be in the following form, where your client_id and client_secret are joined by a single colon and base64 encoded.
+
     # bring in Bearer token in headers and Accept application/json
-    # critical item features require a LocationId filter such as, {aisleLocations, items, itemInformation, fulfillment, price, nationalPrice, size, soldBy} :: w/o it I am only getting a few of these features, most importantly not price
+    # critical item features require a LocationId filter such as, {aisleLocations, items, itemInformation, fulfillment, price, nationalPrice, size, soldBy}
+        # :: w/o it I am only getting a few of these features, most importantly not price
     # The product will return if the queried store currently sells the product (but this does not mean it is currently stocked at the store),
     # I will have to handle the control flow to call the generalized item id route if this certain one fails.
+        # API product calls did not end up failing, so will need to check these individual features associated with location to actually check if API call was successful
+        # such as fulfillment type or say aislelocation.
+
 
     # make upcSet come with location data from cart_number column that is never shown but is used for calling
 
@@ -191,20 +239,22 @@ def getItemInfo(itemLocationPairs):
 
     # I want to keep locationId to be cart specific
 
-    # EXPIRES:  2022-04-01 14:27:30.245842
+    # the price that i do get with API will always be bound to location and acquistion time.
+    # since 30 items of the 595, did not have price associated with them I still have some semblanance of price based on my concrete purchases
 
     # return item object:
         # query API for appropiate item @ store associated with the trip:
         # probably  static properties of item (not location bound thus can be added to the current item object in items collection)
-            # location-bound: aisleLocations<Array>, items<Array> {favorite, fulfillment, price{promo, regular}, size, soldBy}, itemInformation<Object> 
+            # location-bound: aisleLocations<Array>, items<Array> {favorite, fulfillment, price{promo, regular}, size, soldBy}, itemInformation<Object> {'depth', 'height', 'width'} <= spacial information, 
             # static: brand<String>, categories<Array>, countryOrigin<String>, description<String>, images<Array>, productId<String>, temperature<Object>, upc<String>, productId<String>
 
     # product_description = description, upc=UPC/productId
 
-    # API items currently all have: 'productId', 'upc', 'aisleLocations', 'categories', 'description', 'items', 'itemInformation', 'temperature'
-        # 508 have 'images'
-        # 490 have 'countryOrigin'
-        # 494 have 'brand'
+    # API items currently all have: 'productId', 'upc', 'aisleLocations', 'categories', 'description', 'items' {price and soldBy can be missing}, 'itemInformation', 'temperature'
+        # 591 have 'images'
+        # 576 have 'brand'
+        # 572 have 'countryOrigin'
+        
 
     # items currently all have: _id, cart_number, item_index, image, product_name, item_link, UPC, price_equation, product_size, product_promotional_price, product_original_price
         # 1043 have health_info and ingredients
@@ -243,9 +293,11 @@ def getItemInfo(itemLocationPairs):
 
     return None
 
-
-
-#workData()
 upcSET = parseUPC()
+# f = json.loads(open('./data/collections/items.json', 'r').read())
+# pprint.pprint(f[0])
+
+
+#upcSET = parseUPC()
 #getItemInfo(upcSET)
 # getStoreLocation({'01100482', '01100685', '01100438'})
