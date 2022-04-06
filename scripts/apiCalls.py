@@ -1,4 +1,4 @@
-import re, requests, datetime, time, json, pprint
+import re, requests, datetime, time, json, pprint, random
 from django.forms import ValidationError
 
 from base64 import b64encode
@@ -37,6 +37,39 @@ from api_keys import CLIENT_ID, CLIENT_SECRET
     # ...
     # The crucuial routes seem to map directly to my two routes as of now via. {Trips} => /Locations (One Trip of Many Items Occurs at One Location) 
 
+def parse_ingredients(ingredient_string):
+    # the important tokens are collection indicators and commas
+    ingredients_regex = re.compile(r'([\(\{\[,])?([^\]\}\)\{\[\(]+)([\)\}\],]+)?')
+    collection_parser = {'[': ']', '{': '}', "(": ")"}
+    objects = []
+    last_seen = ''
+    matches = re.findall(ingredients_regex, ingredient_string)
+    for leading_indicator, ingredients, trailing_indicator in matches:
+        trailing_indicator = trailing_indicator.replace(',', '')
+        leading_indicator = leading_indicator.replace(',', '')
+        if (leading_indicator=='') & (trailing_indicator==''):
+            for i in ingredients.split(','):
+                objects.append({'name': i.strip()})
+        elif (leading_indicator!='') & (trailing_indicator==collection_parser[leading_indicator]):
+            objects[-1].setdefault('subingredients', [])
+            ing = [{"name": i.strip()} for i in ingredients.split(',')]
+            if objects[-1].get('subingredients'):
+                objects[-1]['subingredients'][-1].setdefault('subingredients', [])
+                objects[-1]['subingredients'][-1]['subingredients'].extend(ing)
+            else:
+                objects[-1]['subingredients'].extend(ing)
+        elif (leading_indicator!='') & (trailing_indicator==''):
+            objects[-1].setdefault('subingredients', [])
+            objects[-1]['subingredients'].extend([{"name": i.strip(), "io": True} for i in ingredients.split(',')])
+            last_seen = leading_indicator
+        else:
+            objects[-1]['note'] = ingredients.split(',')
+    #pprint.pprint(objects)
+    return objects
+
+
+
+
 def parseUPC():
     # this method functionally deals with uneven scraping procedures and updated data handling since I have come to learn the data some more
     # these steps should be able to be reintegrated back into a refactored make_dataset.py
@@ -46,7 +79,7 @@ def parseUPC():
     # TODO:
         
         # reformat ingredients array (, ), [, & ] chars should help
-        # breakdown serving size right now approx. \d+{count} \(\d+ g(ram(s))\)
+        # breakdown serving size right now approx. \d+{count} \(\d+ g(ram(s))\) to metric equivalents (ml, L, mg, g, kg)
         # breakdown price equation (rn. ct x $\d\.\d+/each) <= though price equation always accounts for only product_original_price
             # can have count and weight, count or volume and count.
                 # ct. has many different forms ranging from bottles/cans/ct/each/pk/rolls/sq ft
@@ -63,6 +96,7 @@ def parseUPC():
     results = list(db.items.find({}))
     trips = list(db.trips.find({}))
     upc_re = re.compile(r"/\d+")
+    ingredients_regex = re.compile(r'((\(|\{|\[)(.+))|((.+)(\)|\}|\]))')
     additional_date_regex = re.compile(r'20[1-2][0-9]-[0-1][0-9]-[0-3][0-9]')
     reviews_regex = re.compile(r'(\d+) reviews with (\d{1}) stars\.')
     upcs = set()
@@ -115,7 +149,26 @@ def parseUPC():
             
             r['health_info']['macros'] = [nutr for ind, nutr in enumerate(r['health_info']['macros']) if ind not in remove_indices]
             
-        
+        # destructure ingredients
+        if 'ingredients' in r:
+            # check for collection like tokens \[ \{ \(
+            # tokens seem to be multifaceted in their representations of collections of combined food items in combined food items
+            # if collection indicator is closed within the single ingredient string the pointer points to an ingredient alias
+            # else the ingredients array must be searched until the next same token is found.
+            # Since array was created via a simple split on comma, there also appears to be rogue periods (\.) that indicate a line break that also must be parsed
+            # Other common phrases are Contains 2% or less of" 
+            
+            ingredients = r.get('ingredients')
+            ingredients_string = ", ".join(ingredients)
+            ingredients_string = ingredients_string.replace(';', ',').replace('.', ', ').replace('}]', ']]')
+            r['ingredients_string'] = ingredients_string
+
+            # for ing in r.get('ingredients'):
+            #     if re.findall(ingredients_regex, ing)!=[]:
+            #         print(re.findall(ingredients_regex,ing)[0])
+
+            
+
         r['cart_number'] = hash(r.get('cart_number').replace('detail', 'image'))
         if upc != None:
             # upc is a link
@@ -294,8 +347,10 @@ def getItemInfo(itemLocationPairs):
     return None
 
 upcSET = parseUPC()
-# f = json.loads(open('./data/collections/items.json', 'r').read())
-# pprint.pprint(f[0])
+f = json.loads(open('./data/collections/items.json', 'r').read())
+i = random.randint(0, len(f)-1)
+
+pprint.pprint(parse_ingredients(f[45].get('ingredients_string')))
 
 
 #upcSET = parseUPC()
