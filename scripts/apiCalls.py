@@ -1,6 +1,7 @@
 import re, requests, datetime, time, json, pprint, random
 from django.forms import ValidationError
 
+
 from base64 import b64encode
 # from requests_oauthlib import OAuth2Session
 from bson.json_util import dumps
@@ -47,23 +48,24 @@ def parse_ingredients(ingredient_string):
     for leading_indicator, ingredients, trailing_indicator in matches:
         trailing_indicator = trailing_indicator.replace(',', '')
         leading_indicator = leading_indicator.replace(',', '')
-        if (leading_indicator=='') & (trailing_indicator==''):
+        if (leading_indicator=='') and (trailing_indicator==''):
             for i in ingredients.split(','):
-                objects.append({'name': i.strip()})
-        elif (leading_indicator!='') & (trailing_indicator==collection_parser[leading_indicator]):
+                if i.strip()!='':
+                    objects.append({'name': i.strip().title()})
+        elif (leading_indicator!='') and (trailing_indicator!='') and (trailing_indicator==collection_parser[leading_indicator]):
             objects[-1].setdefault('subingredients', [])
-            ing = [{"name": i.strip()} for i in ingredients.split(',')]
+            ing = [{"name": i.strip().title()} for i in ingredients.split(',') if i.strip()!='']
             if objects[-1].get('subingredients'):
                 objects[-1]['subingredients'][-1].setdefault('subingredients', [])
                 objects[-1]['subingredients'][-1]['subingredients'].extend(ing)
             else:
                 objects[-1]['subingredients'].extend(ing)
-        elif (leading_indicator!='') & (trailing_indicator==''):
+        elif (leading_indicator!='') and (trailing_indicator==''):
             objects[-1].setdefault('subingredients', [])
-            objects[-1]['subingredients'].extend([{"name": i.strip(), "io": True} for i in ingredients.split(',')])
+            objects[-1]['subingredients'].extend([{"name": i.strip().title(), "io": True} for i in ingredients.split(',') if i.strip()!=''])
             last_seen = leading_indicator
         else:
-            objects[-1]['note'] = ingredients.split(',')
+            objects[-1]['note'] = list(map(str.title, ingredients.split(',')))
     #pprint.pprint(objects)
     return objects
 
@@ -90,7 +92,6 @@ def parseUPC():
 
 
     # reformat string numbers back to numbers (sans upc)
-    
     client = MongoClient()
     db = client.groceries # db
     results = list(db.items.find({}))
@@ -157,15 +158,14 @@ def parseUPC():
             # else the ingredients array must be searched until the next same token is found.
             # Since array was created via a simple split on comma, there also appears to be rogue periods (\.) that indicate a line break that also must be parsed
             # Other common phrases are Contains 2% or less of" 
-            
             ingredients = r.get('ingredients')
             ingredients_string = ", ".join(ingredients)
             ingredients_string = ingredients_string.replace(';', ',').replace('.', ', ').replace('}]', ']]')
-            r['ingredients_string'] = ingredients_string
+            r['ingredients_parsed'] = parse_ingredients(ingredients_string)
 
             # for ing in r.get('ingredients'):
             #     if re.findall(ingredients_regex, ing)!=[]:
-            #         print(re.findall(ingredients_regex,ing)[0])
+            #         print(re.findall(ingredients_regex,ing)[0]) 
 
             
 
@@ -180,7 +180,11 @@ def parseUPC():
         # parse ratings
         if 'ratings_distribution' in r:
             ratings_list =  re.findall(reviews_regex, r['ratings_distribution'])
-            r['ratings_distribution'] = {f"{v} stars":k for k, v in ratings_list}
+            temp_list = [0, 0, 0, 0, 0]
+            for k, v in ratings_list:
+                temp_list[int(v)-1] = int(k)
+
+            r['ratings_distribution'] = temp_list
             r['reviews'] = int(re.sub(r"\(|\)", '', r['reviews']))
             r['avg_rating'] = float(r['avg_rating'])
         
@@ -346,13 +350,85 @@ def getItemInfo(itemLocationPairs):
 
     return None
 
-upcSET = parseUPC()
-f = json.loads(open('./data/collections/items.json', 'r').read())
-i = random.randint(0, len(f)-1)
+def combineItems(api, scraped):
+    # Keys on all Objects
+    # productId<String>, upc<String>, description<String>, acquisition_timestamp<Float>, locationId<String>, 
+    # temperature<Object {'heatSensitive'<Bool>, 'indicator'<String>}>, categories<Array>,
+    # items<Array with Single Object  {'itemId'<String>, 'favorite'<Bool>, 'fulfillment'<{'curbside'<Bool>, 'delivery'<Bool>, 'inStore'<Bool>, 'shipToHome'<Bool>}>, 'size', '?price{'regular', 'promo'}', '?soldBy'}>
+        # -> for items w/o price or Sold fulfillment and size still matter
+        # favorite more corresponds to a customer auth api route {'upc': false}
+    
+    for product in scraped:
+        upc = product.get('upc')
+        if upc == None:
+            next
+        description = product.get('product_name')
+        # search API list for matching items:
+        matches = filter(lambda x: x.get('upc')==upc, api)
+        additional_attributes= {}
+        for match in matches:
+            # remove api upc, productId, description,
+            if match['description']!=description:
+                product['description']=match['description']
+            # keep calc vars on api: acquistion_timestamp, locationId
+        # destructure temperature, keep heatSensitive and indicator->Temperature
+            product['temperature'] = match['temperature']['indicator']
+            product['heatSensitive'] = match['temperature']['heatSensitive']
+        # destructure items
+            # remove itemId, favorite
+            # keep 1 of size or product_size
+            # if soldBy exist keep it
+            # if price exists: correspond "regular" and "promo" together w/ acquistion timestamp
+            if 'price' in match['items'][0]:
+                api_prices = match['items'][0]['price']
+                api_prices['locationId'] = match['locationId']
+                api_prices['as_of'] = match['acquistion_timestamp']
+                product['additional_price_info'] = api_prices
 
-pprint.pprint(parse_ingredients(f[45].get('ingredients_string')))
+        # Nearly-All:
+        # images<Array of Objects {'perspective'<String>, 'featured'<Bool>, 'sizes'<Array of Objects {'size', 'url'}>}>,
+            # if images exist: replace product image w/ image Array
+            if 'images' in match:
+                product['images'] = match['images']
+        # brand<String>,
+            # if brand exists: include brand in object
+        # countryOrigin<String (with ; seperator) >
+            # if countryOrigin exists: include brand in object
+            if 'countryOrigin' in match:
+                product['countryOrigin'] = match['countryOrigin'].split(';')
+        # Fewer:
+            # aisleLocations<Array of Objects {bayNumber, description, number, numberOfFacings, shelfNumber, shelfPositionInBay, side}> :: all strings
+            # if aisleLocations not empty: include in object w/ refernce to locationID
+            if match['aisleLocations']!=[]:
+                product['aisleLocations'] = match['aisleLocations']
+            # itemInformation<Object {depth, height, width}> :: all string 
+            if match['itemInformation']!={}:
+                # if itemInformation not empty: include in object as dimensions
+                product['dimensions'] = match['itemInformation']
+            
+    with open('./data/collections/combinedItems.json', 'w') as file:
+        file.write(dumps(scraped))
+
+    return None
 
 
-#upcSET = parseUPC()
+
+
+
+
+# upcSET = parseUPC()
+# scraped = json.loads(open('./data/collections/items.json', 'r').read())
+# api = json.loads(open('./data/API/itemsAPI.json', 'r').read())
+
+# combineItems(api=api, scraped=scraped)
+# print(dict(sorted(k.items(), key=lambda x: x[1], reverse=True)))
+apied = json.loads(open('./data/collections/combinedItems.json', 'r').read())
+i = random.randint(0, len(apied)-1)
+
+pprint.pprint(apied[i])
+# 1145
+# print(f.index(list(filter(lambda x: x['_id']['$oid'] == '6244083f3de7e1b0d3312a3b', f))[0]))
+
+#upcSET = parseUPC() {'ingredients': {$regex: /[{([]/}}
 #getItemInfo(upcSET)
 # getStoreLocation({'01100482', '01100685', '01100438'})
