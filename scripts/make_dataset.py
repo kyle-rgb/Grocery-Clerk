@@ -243,7 +243,7 @@ def getReceipt(link, driver):
     full_address_re= re.compile(r".+(GA$|GA\s+\d{5}$)") 
     
     # Wanted Bolded Texts
-    fuel_re = re.compile(r"Fuel Points Earned Today:")
+    fuel_re = re.compile(r"Fuel Points Earned Today:|Fuel Points This Order:")
     cumulative_fuel_re = re.compile(r"Total .+ Fuel Points:")
     last_month_fuel_re = re.compile(r"Remaining .+ Fuel Points:")
     street_address_re = re.compile(r"\d+.+(?:street|st|avenue|ave|road|rd|highway|hwy|square|sq|trail|trl|drive|dr|court|ct|parkway|pkwy|circle|cir|boulevard|blvd)+")
@@ -313,6 +313,7 @@ def getReceipt(link, driver):
         ## Reroute Specialized Trips that Fuel Based
         driver.get(link.replace('image', 'detail'))
         time.sleep(5)
+        payment_re = re.compile(r'AMEX|DEBIT|VISA')
         try:
             receipt_document['address'] = driver.find_element(By.CSS_SELECTOR, 'span.kds-Text--l.mb-0').text
             receipt_document['checkout_timestamp'] = driver.find_element(By.CSS_SELECTOR, 'h2.kds-Heading.kds-Heading--m').text.replace('Fuel', '').strip()
@@ -320,8 +321,15 @@ def getReceipt(link, driver):
             money_details = driver.find_element(By.CSS_SELECTOR, 'div.purchase-detail-footer')
             spans = money_details.find_elements(By.TAG_NAME, 'span')
             span_texts = list(map(lambda x: x.text, spans))
-            receipt_document['total_savings'] = [text for text in span_texts if text.startswith('-')]
+            payment = [s for s in span_texts if re.match(payment_re, s)]
+            savings = [text for text in span_texts if text.startswith('-')]
+            if savings==[]:
+                savings = "$0.00"
+            else:
+                savings = savings[0].replace('-', '')
+            receipt_document['total_savings'] = savings
             receipt_document['full_document'] = span_texts
+            receipt_document['payment_type'] = payment[0]
             # total
             receipt_document['total'] = driver.find_element(By.CSS_SELECTOR, 'span[data-test="payment-summary-total"]').text
             receipt_document['special_purchase_type'] = 'Fuel'

@@ -207,7 +207,7 @@ def parseUPC():
         location = _['order_number'].split('/')[-1].split('~')
         _['locationId'] = location[0]+location[1]
         # standard joining feature
-        _['cart_number'] = hash(_.get('order_number'))
+        _['cart_number'] = hash(_.get('order_number')) # , 
         _.pop('order_number')
         _['full_document'] = hash(_.get('full_document').__str__())
 
@@ -288,7 +288,8 @@ def getItemInfo(itemLocationPairs):
     # I will have to handle the control flow to call the generalized item id route if this certain one fails.
         # API product calls did not end up failing, so will need to check these individual features associated with location to actually check if API call was successful
         # such as fulfillment type or say aislelocation.
-
+        # 
+    # {}
 
     # make upcSet come with location data from cart_number column that is never shown but is used for calling
 
@@ -409,6 +410,8 @@ def combineItems(api, scraped):
     with open('./data/collections/combinedItems.json', 'w') as file:
         file.write(dumps(scraped))
 
+    pprint.pprint(scraped[1])
+
     return None
 
 
@@ -416,17 +419,44 @@ def combineItems(api, scraped):
 
 
 
-# upcSET = parseUPC()
-# scraped = json.loads(open('./data/collections/items.json', 'r').read())
-# api = json.loads(open('./data/API/itemsAPI.json', 'r').read())
+upcSET = parseUPC()
+scraped = json.loads(open('./data/API/itemsAPI.json', 'r').read())
+#scraped = scraped['data']
+#api = json.loads(open('./data/API/itemsAPI.json', 'r').read())
+i = random.randint(0, len(scraped)-1)
+j=0
+for s in scraped:
+    if (s.get('items')==[]) or (s.get('items')==None): # 
+        if s.get('items')[0].get('price')==None:
+            j+=1
+print(len(scraped)-j)
+#pprint.pprint(scraped[i])
+# k = {}
+# for s in scraped: 
+#     for key in s.keys(): # 
+#         if key in k:
+#             k[key]['count']+=1
+#         else:
+#             k[key]={}
+#             k[key]['count']=1
+#             k[key]['type']=type(s[key])
+#             if type(s[key])==list:
+#                 k[key]['contains'] = [type(ss) if type(ss)!=dict else ss.keys() for ss in s[key]]
+#             elif type(s[key])==dict:
+#                 k[key]['contains'] = s[key].keys()
+        
+# pprint.pprint(sorted(k.items(), key=lambda x: x[0], reverse=False))
 
-# combineItems(api=api, scraped=scraped)
+
+# print(sorted(k.items(), key=lambda x: x[0], reverse=False))
+
+#combineItems(api=api, scraped=scraped)
 # print(dict(sorted(k.items(), key=lambda x: x[1], reverse=True)))
-apied = json.loads(open('./data/collections/combinedItems.json', 'r').read())
-i = random.randint(0, len(apied)-1)
+# apied = json.loads(open('./data/collections/combinedItems.json', 'r').read())
+# i = random.randint(0, len(apied)-1)
 
-pprint.pprint(apied[i])
-# 1145
+# pprint.pprint(apied[i])
+# # 1145
 # print(f.index(list(filter(lambda x: x['_id']['$oid'] == '6244083f3de7e1b0d3312a3b', f))[0]))
 
 #upcSET = parseUPC() {'ingredients': {$regex: /[{([]/}}
