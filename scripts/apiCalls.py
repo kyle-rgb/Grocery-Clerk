@@ -1,6 +1,6 @@
 import re, requests, datetime, time, json, pprint, random
 from django.forms import ValidationError
-
+from fuzzywuzzy import fuzz, process
 
 from base64 import b64encode
 # from requests_oauthlib import OAuth2Session
@@ -99,7 +99,7 @@ def parseUPC():
     upc_re = re.compile(r"/\d+")
     ingredients_regex = re.compile(r'((\(|\{|\[)(.+))|((.+)(\)|\}|\]))')
     additional_date_regex = re.compile(r'20[1-2][0-9]-[0-1][0-9]-[0-3][0-9]')
-    reviews_regex = re.compile(r'(\d+) reviews with (\d{1}) stars\.')
+    reviews_regex = re.compile(r'(\d+) reviews with (\d{1}) star[s]?\.')
     upcs = set()
     grammer = {'g': 1, 'mg': 1000, 'mcg': 1_000_000}
     # address backup -> to checkout timestamp
@@ -179,6 +179,7 @@ def parseUPC():
             r.pop("UPC")
         # parse ratings
         if 'ratings_distribution' in r:
+            
             ratings_list =  re.findall(reviews_regex, r['ratings_distribution'])
             temp_list = [0, 0, 0, 0, 0]
             for k, v in ratings_list:
@@ -391,6 +392,8 @@ def combineItems(api, scraped):
             # if images exist: replace product image w/ image Array
             if 'images' in match:
                 product['images'] = match['images']
+            if 'description' in match:
+                product['description'] = match['description']
         # brand<String>,
             # if brand exists: include brand in object
         # countryOrigin<String (with ; seperator) >
@@ -406,51 +409,69 @@ def combineItems(api, scraped):
             if match['itemInformation']!={}:
                 # if itemInformation not empty: include in object as dimensions
                 product['dimensions'] = match['itemInformation']
+            if 'items' not in product:
+                product['items'] = match['items']
+            else:
+                product['items'].append(match['items'])
             
     with open('./data/collections/combinedItems.json', 'w') as file:
         file.write(dumps(scraped))
 
     pprint.pprint(scraped[1])
 
+    return scraped
+
+
+
+def extract_nested_values(it):
+    if isinstance(it, list):
+        for sub_it in it:
+            yield from extract_nested_values(sub_it)
+    elif isinstance(it, dict):
+        for key, value in it.items():
+            yield {key: list(extract_nested_values(value)), "count":1, 'type': type(value)}
+    else:
+        yield {'count':1, 'type': type(it)}
+    
+
+def getFuzzyMatch(items, trips):
+    removePriceRegex = r'\d+\.\d+.+'
+    countRegex = r'^(\d)+.+\s*x'
+    for t in trips:
+        matches = list(filter(lambda x: x.get('cart_number')==t.get('cart_number'), items))
+        choices = [x.get('product_name').lower() for x in matches]
+        prices = [(x.get('product_promotional_price'), x.get('product_original_price')) for x in matches]
+        receiptItems = sorted([i.get('item') for i in t.get('items')])
+        counts = [int(re.findall(countRegex, x.get('price_equation'))[0]) for x in matches]
+        choicesX = []
+        for string, count in zip(choices, counts):
+            for i in range(count):
+                choicesX.append(string)
+        for recItem in receiptItems:
+            price = re.findall(removePriceRegex, recItem)[0]
+            price = re.sub(re.compile(r'[^\d\.]'), '', price)
+            price = f"${price}"
+            product = re.sub(removePriceRegex, '', recItem)
+            product = product.lower()
+            fuzz_match = process.extractOne(product, choicesX)
+            choicesX.pop(choicesX.index(fuzz_match[0]))
+            print(fuzz_match[0], '>>>>>>', product)
+            
     return None
 
 
-
-
-
-
 upcSET = parseUPC()
-scraped = json.loads(open('./data/API/itemsAPI.json', 'r').read())
-#scraped = scraped['data']
-#api = json.loads(open('./data/API/itemsAPI.json', 'r').read())
-i = random.randint(0, len(scraped)-1)
-j=0
-for s in scraped:
-    if (s.get('items')==[]) or (s.get('items')==None): # 
-        if s.get('items')[0].get('price')==None:
-            j+=1
-print(len(scraped)-j)
-#pprint.pprint(scraped[i])
-# k = {}
-# for s in scraped: 
-#     for key in s.keys(): # 
-#         if key in k:
-#             k[key]['count']+=1
-#         else:
-#             k[key]={}
-#             k[key]['count']=1
-#             k[key]['type']=type(s[key])
-#             if type(s[key])==list:
-#                 k[key]['contains'] = [type(ss) if type(ss)!=dict else ss.keys() for ss in s[key]]
-#             elif type(s[key])==dict:
-#                 k[key]['contains'] = s[key].keys()
-        
-# pprint.pprint(sorted(k.items(), key=lambda x: x[0], reverse=False))
+items = json.loads(open('./data/collections/items.json', 'r').read())
+# #scraped = scraped['data']
+trips = json.loads(open('./data/collections/trips.json', 'r').read())
+
+getFuzzyMatch(items=items, trips=[trips[12]])
 
 
-# print(sorted(k.items(), key=lambda x: x[0], reverse=False))
+#i = random.randint(0, len(scraped)-1)
 
-#combineItems(api=api, scraped=scraped)
+
+
 # print(dict(sorted(k.items(), key=lambda x: x[1], reverse=True)))
 # apied = json.loads(open('./data/collections/combinedItems.json', 'r').read())
 # i = random.randint(0, len(apied)-1)
