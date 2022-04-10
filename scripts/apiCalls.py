@@ -79,8 +79,6 @@ def parseUPC():
     # the items collection itself and the api items should now have a date_scraped feature to better pair a specific price to a specific location at a set instance in time.
     # ???: the api calls for a specific product can be filtered by the specific locationId, where the response will return the information iff the product is currently available @ that location.
     # TODO:
-        
-        # reformat ingredients array (, ), [, & ] chars should help
         # breakdown serving size right now approx. \d+{count} \(\d+ g(ram(s))\) to metric equivalents (ml, L, mg, g, kg)
         # breakdown price equation (rn. ct x $\d\.\d+/each) <= though price equation always accounts for only product_original_price
             # can have count and weight, count or volume and count.
@@ -94,8 +92,9 @@ def parseUPC():
     # reformat string numbers back to numbers (sans upc)
     client = MongoClient()
     db = client.groceries # db
-    results = list(db.items.find({}))
-    trips = list(db.trips.find({}))
+    # skip repeats of first page scrape
+    results = list(db.items.find({}, skip=92))
+    trips = list(db.trips.find({}, skip=5))
     upc_re = re.compile(r"/\d+")
     ingredients_regex = re.compile(r'((\(|\{|\[)(.+))|((.+)(\)|\}|\]))')
     additional_date_regex = re.compile(r'20[1-2][0-9]-[0-1][0-9]-[0-3][0-9]')
@@ -108,7 +107,7 @@ def parseUPC():
     # Fix checkout time stamps of Fuel purchases via additional_date_regex
     # For fuel purchases and other nontime bound data, the last four digits of the order number match exactly to receipt times where we have available data
     # get rid of address backup
-
+    price_collection = []
     # items currently all have: _id, cart_number, item_index, image, product_name,
             # item_link, UPC, price_equation, product_size, product_promotional_price, product_original_price
                 # 1043 have health_info and ingredients
@@ -121,6 +120,9 @@ def parseUPC():
         # get location id from cart number
         location = r['cart_number'].split('/')[-1].split('~')
         locationid = location[0]+location[1]
+        time = r['cart_number'][-4:]
+        timestamp = location[2] + " " + f"{time[:2]}:{time[2:]}"
+        timestamp = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%S").timestamp()
         # place subnutrients inside macros (subnutrients for macros ) and remove joining columns
         if 'health_info' in r:
             remove_indices=[]
@@ -147,9 +149,9 @@ def parseUPC():
                     r['health_info'].setdefault('micros', [])
                     r['health_info']['micros'].append(nutrient)
                     remove_indices.append(i)
-            
             r['health_info']['macros'] = [nutr for ind, nutr in enumerate(r['health_info']['macros']) if ind not in remove_indices]
-            
+    
+        
         # destructure ingredients
         if 'ingredients' in r:
             # check for collection like tokens \[ \{ \(
@@ -161,15 +163,11 @@ def parseUPC():
             ingredients = r.get('ingredients')
             ingredients_string = ", ".join(ingredients)
             ingredients_string = ingredients_string.replace(';', ',').replace('.', ', ').replace('}]', ']]')
-            r['ingredients_parsed'] = parse_ingredients(ingredients_string)
-
-            # for ing in r.get('ingredients'):
-            #     if re.findall(ingredients_regex, ing)!=[]:
-            #         print(re.findall(ingredients_regex,ing)[0]) 
-
-            
+            r['health_info']['ingredients'] = parse_ingredients(ingredients_string)
+            r.pop('ingredients')            
 
         r['cart_number'] = hash(r.get('cart_number').replace('detail', 'image'))
+
         if upc != None:
             # upc is a link
             if len(re.findall(upc_re, upc)) > 0:
@@ -177,6 +175,18 @@ def parseUPC():
             upcs.add(f"{r['UPC']};{locationid}")
             r['upc'] = r['UPC']
             r.pop("UPC")
+
+        equation = r.get('price_equation')
+        equation = [e.strip() for e in equation.split('x')]
+
+        price_collection.append({"promo": r['product_promotional_price'],\
+            "regular": r['product_original_price'],\
+                "upc": r.get('upc'),\
+                    'locationId': locationid,\
+                    "acquistion_timestamp": timestamp,\
+                        'isPurchase': True,
+                        "quantity": equation[0]
+        })            
         # parse ratings
         if 'ratings_distribution' in r:
             
@@ -211,12 +221,16 @@ def parseUPC():
         _['cart_number'] = hash(_.get('order_number')) # , 
         _.pop('order_number')
         _['full_document'] = hash(_.get('full_document').__str__())
-
+    
     with open('./data/collections/items.json', 'w') as file:
         file.write(dumps(results))
     
     with open('./data/collections/trips.json', 'w') as file:
         file.write(dumps(trips))
+
+    with open('./data/collections/prices.json', 'w') as file:
+        file.write(dumps(price_collection))
+    
 
     return upcs
 
@@ -447,6 +461,7 @@ def getFuzzyMatch(items, trips):
         for string, count in zip(choices, counts):
             for i in range(count):
                 choicesX.append(string)
+        chx=[]
         for recItem in receiptItems:
             price = re.findall(removePriceRegex, recItem)[0]
             price = re.sub(re.compile(r'[^\d\.]'), '', price)
@@ -455,30 +470,47 @@ def getFuzzyMatch(items, trips):
             product = product.lower()
             fuzz_match = process.extractOne(product, choicesX)
             choicesX.pop(choicesX.index(fuzz_match[0]))
-            print(fuzz_match[0], '>>>>>>', product)
+            chx.append((fuzz_match[0], '>>>>>>', product, "====", fuzz_match[1], ))
+        
+        pprint.pprint(sorted(chx, key=lambda x: x[4]))
             
     return None
 
 
+def getPrices(api):
+    more_prices = []
+    for a in api:
+        price_data = a.get('items')[0]
+        if 'price' in price_data:
+            more_prices.append({"promo": price_data['price'].get('promo'),\
+            "regular": price_data['price'].get('regular'),\
+                "upc": a.get('upc'),\
+                    'locationId': a.get('locationId'),\
+                    "acquistion_timestamp": a.get('acquistion_timestamp'),\
+                        'isPurchase': False,
+                        "quantity": price_data.get('size'),
+            })      
+    current_prices = json.loads(open('./data/collections/prices.json', 'r').read())
+    current_prices.extend(more_prices)
+    with open('./data/collections/prices.json', 'w') as f:
+        f.write(json.dumps(current_prices))
+    
+    return None
+
+
+
+
 upcSET = parseUPC()
-items = json.loads(open('./data/collections/items.json', 'r').read())
-# #scraped = scraped['data']
-trips = json.loads(open('./data/collections/trips.json', 'r').read())
-
-getFuzzyMatch(items=items, trips=[trips[12]])
-
-
-#i = random.randint(0, len(scraped)-1)
+#items = json.loads(open('./data/collections/items.json', 'r').read())
+#trips = json.loads(open('./data/collections/trips.json', 'r').read())
+apiItems = json.loads(open('./data/API/itemsAPI.json', 'r').read())
+getPrices(apiItems)
 
 
+#apiTrips = json.loads(open('./data/API/myStoresAPI.json', 'r').read())
 
-# print(dict(sorted(k.items(), key=lambda x: x[1], reverse=True)))
-# apied = json.loads(open('./data/collections/combinedItems.json', 'r').read())
-# i = random.randint(0, len(apied)-1)
-
-# pprint.pprint(apied[i])
-# # 1145
-# print(f.index(list(filter(lambda x: x['_id']['$oid'] == '6244083f3de7e1b0d3312a3b', f))[0]))
+# combineItems(api=apiItems, scraped=items)
+# getFuzzyMatch(items=items, trips=trips)
 
 #upcSET = parseUPC() {'ingredients': {$regex: /[{([]/}}
 #getItemInfo(upcSET)

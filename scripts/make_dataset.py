@@ -257,7 +257,7 @@ def getReceipt(link, driver):
     last_item_index = 0
     checkout_time_re = re.compile(r"Time:")
     checkout_date_re = re.compile(r"Date:")
-    item_re = re.compile(r".+(B$|T$)")
+    item_re = re.compile(r".+(B$|T$|X$)")
     # Get Receipt Image
     try:
         receipt = driver.find_element(By.CSS_SELECTOR, 'div.imageContainer')
