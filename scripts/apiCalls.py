@@ -178,7 +178,7 @@ def parseUPC():
 
         equation = r.get('price_equation')
         equation = [e.strip() for e in equation.split('x')]
-
+        r['price_equation'] = {'quantity': equation[0].replace('/each', ''), 'price': equation[1]}
         price_collection.append({"promo": r['product_promotional_price'],\
             "regular": r['product_original_price'],\
                 "upc": r.get('upc'),\
@@ -186,7 +186,9 @@ def parseUPC():
                     "acquistion_timestamp": timestamp,\
                         'isPurchase': True,
                         "quantity": equation[0]
-        })            
+        })
+        r['acquistion_timestamp'] = timestamp
+        r['locationId'] = locationid            
         # parse ratings
         if 'ratings_distribution' in r:
             
@@ -374,66 +376,144 @@ def combineItems(api, scraped):
         # -> for items w/o price or Sold fulfillment and size still matter
         # favorite more corresponds to a customer auth api route {'upc': false}
     
-    for product in scraped:
+    # Reversed so that single items that have only a few meaningful nonstatic/variable, time-based attributes are updated while the bulk of the object stay the same 
+    # set to determine presence of updating collection
+    parsedItemsSet = set()
+    final_product_array = []
+    prices_array = []
+    for product in api:
         upc = product.get('upc')
-        if upc == None:
-            next
-        description = product.get('product_name')
+        if upc in parsedItemsSet:
+            # get location specific data: aisleLocations, fullfillment and connect it back to existing object
+            # find matching object
+            locationId = product.get('locationId')
+            apiMatch = filter(lambda x: x.get('upc') == upc, final_product_array)
+            for a in apiMatch:
+                item_data = product.get('items')[0]
+                if 'aisleLocations' in product: 
+                    a['locationsData'].append({locationId: {"located": product.get('aisleLocations'), 'fulfillment': item_data.get('fulfillment'), "acquistion_timestamp": product.get('acquistion_timestamp')}})
+                else:
+                    a['locationsData'].append({locationId: {"located": None, 'fulfillment': item_data.get('fulfillment'), "acquistion_timestamp": product.get('acquistion_timestamp')}})
+                
+                if 'price' in item_data:
+                    prices = item_data.get('price')
+                    if prices.get('promo')==0:
+                        prices['promo'] = prices['regular']
+                    prices_array.append({
+                        "promo": prices.get('promo'), "regular": prices.get('regular'), "upc": upc,\
+                            'locationId': locationId, "acquistion_timestamp": product.get('acquistion_timestamp'),'isPurchase': False, "quantity": item_data.get('size')
+                    })
+                else:
+                    prices_array.append({
+                        "promo": None, "regular": None, "upc": upc,\
+                        'locationId': locationId, "acquistion_timestamp": product.get('acquistion_timestamp'),'isPurchase': False, "quantity": item_data.get('size'),
+                    })
+        else:
+            final_item_object = {}
+            locationId = product.get('locationId')
+            final_item_object["upc"] = upc
+            final_item_object["categories"] = product.get('categories')
+            final_item_object["names"] = [product.get('description')]
+            final_item_object["temperatureClass"] = product.get('temperature').get('indicator')
+            final_item_object["heatSensitive"] = product.get('temperature').get('heatSensitive')
+            item_data = product.get("items")[0]
+            final_item_object['sizes'] = [item_data.get('size')]
+
+            if 'brand' in product:
+                final_item_object['brands'] = product.get('brand')
+            if 'countryOrigin' in product:
+                final_item_object['countryOrigin'] = product.get('countryOrigin').split(';')
+            if 'images' in product:
+                final_item_object["images"] = product.get('images')
+            if 'itemInformation' in product: 
+                final_item_object["dimensions"] = product.get("itemInformation")
+
+            if 'soldBy' in item_data:
+                final_item_object['priceUnits'] = item_data.get('soldBy')
+
+            if 'aisleLocations' in product: 
+                final_item_object['locationsData'] = [{locationId: {"located": product.get('aisleLocations'), 'fulfillment': item_data.get('fulfillment'), "acquistion_timestamp": product.get('acquistion_timestamp')}}]
+            else:
+                final_item_object['locationsData'] = [{locationId: {"located": None, 'fulfillment': item_data.get('fulfillment'), "acquistion_timestamp": product.get('acquistion_timestamp')}}]
+
+            if 'price' in item_data:
+                prices = item_data.get('price')
+                if prices.get('promo')==0:
+                    prices['promo'] = prices['regular']
+                prices_array.append({
+                    "promo": prices.get('promo'), "regular": prices.get('regular'), "upc": upc,\
+                        'locationId': locationId, "acquistion_timestamp": product.get('acquistion_timestamp'),'isPurchase': False, "quantity": item_data.get('size')
+                })
+            else:
+                prices_array.append({
+                    "promo": None, "regular": None, "upc": upc,\
+                    'locationId': locationId, "acquistion_timestamp": product.get('acquistion_timestamp'),'isPurchase': False, "quantity": item_data.get('size'),
+                })
+
+            matches = filter(lambda x: x.get('upc')==upc, scraped)
+            final_item_object.setdefault('carts', [])
+            for match in matches:
+                final_item_object['carts'].append(match.get('cart_number'))
+                final_item_object['health_info'] = match.get('health_info')
+                
+                nameAlias = match.get('product_name')
+                sizeAlias = match.get('product_size')
+                if nameAlias not in final_item_object.get('names'):
+                    final_item_object['names'].append(nameAlias)
+                if sizeAlias not in final_item_object.get('sizes'):
+                    final_item_object['sizes'].append(sizeAlias)
+                matchId = match.get('locationId')
+                matchUPC = match.get('upc')
+                prices_array.append({
+                    "promo": match.get('product_promotional_price'), "regular": match.get('product_original_price'), "upc": matchUPC,\
+                        'locationId': matchId, "acquistion_timestamp": match.get('acquistion_timestamp'),'isPurchase': True, "quantity": match.get('price_equation').get('quantity')
+                })
+
+
+            final_product_array.append(final_item_object)
+            parsedItemsSet.add(upc)
         # search API list for matching items:
-        matches = filter(lambda x: x.get('upc')==upc, api)
-        additional_attributes= {}
-        for match in matches:
+
             # remove api upc, productId, description,
-            if match['description']!=description:
-                product['description']=match['description']
+
             # keep calc vars on api: acquistion_timestamp, locationId
         # destructure temperature, keep heatSensitive and indicator->Temperature
-            product['temperature'] = match['temperature']['indicator']
-            product['heatSensitive'] = match['temperature']['heatSensitive']
+
         # destructure items
             # remove itemId, favorite
             # keep 1 of size or product_size
             # if soldBy exist keep it
             # if price exists: correspond "regular" and "promo" together w/ acquistion timestamp
-            if 'price' in match['items'][0]:
-                api_prices = match['items'][0]['price']
-                api_prices['locationId'] = match['locationId']
-                api_prices['as_of'] = match['acquistion_timestamp']
-                product['additional_price_info'] = api_prices
+
 
         # Nearly-All:
         # images<Array of Objects {'perspective'<String>, 'featured'<Bool>, 'sizes'<Array of Objects {'size', 'url'}>}>,
             # if images exist: replace product image w/ image Array
-            if 'images' in match:
-                product['images'] = match['images']
-            if 'description' in match:
-                product['description'] = match['description']
+
         # brand<String>,
             # if brand exists: include brand in object
         # countryOrigin<String (with ; seperator) >
             # if countryOrigin exists: include brand in object
-            if 'countryOrigin' in match:
-                product['countryOrigin'] = match['countryOrigin'].split(';')
+
         # Fewer:
             # aisleLocations<Array of Objects {bayNumber, description, number, numberOfFacings, shelfNumber, shelfPositionInBay, side}> :: all strings
             # if aisleLocations not empty: include in object w/ refernce to locationID
-            if match['aisleLocations']!=[]:
-                product['aisleLocations'] = match['aisleLocations']
+
             # itemInformation<Object {depth, height, width}> :: all string 
-            if match['itemInformation']!={}:
+
                 # if itemInformation not empty: include in object as dimensions
-                product['dimensions'] = match['itemInformation']
-            if 'items' not in product:
-                product['items'] = match['items']
-            else:
-                product['items'].append(match['items'])
+
+
             
     with open('./data/collections/combinedItems.json', 'w') as file:
-        file.write(dumps(scraped))
+        file.write(dumps(final_product_array))
 
-    pprint.pprint(scraped[1])
+    with open('./data/collections/combinedPrices.json', 'w') as file:
+        file.write(dumps(prices_array))
 
-    return scraped
+    pprint.pprint(final_product_array[1])
+
+    return final_product_array
 
 
 
@@ -501,15 +581,21 @@ def getPrices(api):
 
 
 upcSET = parseUPC()
-#items = json.loads(open('./data/collections/items.json', 'r').read())
+items = json.loads(open('./data/collections/items.json', 'r').read())
 #trips = json.loads(open('./data/collections/trips.json', 'r').read())
 apiItems = json.loads(open('./data/API/itemsAPI.json', 'r').read())
-getPrices(apiItems)
+#getPrices(apiItems)
+combineItems(api=apiItems, scraped=items)
+prices = json.loads(open('./data/collections/prices.json', 'r').read())
 
+pprint.pprint(prices[10])
 
 #apiTrips = json.loads(open('./data/API/myStoresAPI.json', 'r').read())
 
-# combineItems(api=apiItems, scraped=items)
+
+
+
+
 # getFuzzyMatch(items=items, trips=trips)
 
 #upcSET = parseUPC() {'ingredients': {$regex: /[{([]/}}
