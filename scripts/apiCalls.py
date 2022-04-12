@@ -88,7 +88,9 @@ def parseUPC():
         # convert product size from imperial to metric
         # calculate missing serving size by summing the available nutrient information. Should add up to the gram representation of serving size
 
-
+    # for restructuring full document
+    sales_re = re.compile(r'^SC\s*([A-z\s])+(\d+\.\d+)[\s-]*(B|T|X)?$')
+    item_re = re.compile(r"^\s*(.+)(\d+\.\d+)[\s|-](B|T|X)$")
     # reformat string numbers back to numbers (sans upc)
     client = MongoClient()
     db = client.groceries # db
@@ -106,7 +108,7 @@ def parseUPC():
     nonfuel_orders = re.compile(r'In-store')
     # Fix checkout time stamps of Fuel purchases via additional_date_regex
     # For fuel purchases and other nontime bound data, the last four digits of the order number match exactly to receipt times where we have available data
-    # get rid of address backup
+    # get rid of address backup 
     price_collection = []
     # items currently all have: _id, cart_number, item_index, image, product_name,
             # item_link, UPC, price_equation, product_size, product_promotional_price, product_original_price
@@ -160,7 +162,9 @@ def parseUPC():
             # else the ingredients array must be searched until the next same token is found.
             # Since array was created via a simple split on comma, there also appears to be rogue periods (\.) that indicate a line break that also must be parsed
             # Other common phrases are Contains 2% or less of" 
+            legalese_regex = re.compile(r"((contains)(\s2% or less of)?[^A-z]*)", re.IGNORECASE)
             ingredients = r.get('ingredients')
+            ingredients = [re.sub(legalese_regex, "", i).strip() for i in ingredients]
             ingredients_string = ", ".join(ingredients)
             ingredients_string = ingredients_string.replace(';', ',').replace('.', ', ').replace('}]', ']]')
             r['health_info']['ingredients'] = parse_ingredients(ingredients_string)
@@ -177,8 +181,11 @@ def parseUPC():
             r.pop("UPC")
 
         equation = r.get('price_equation')
-        equation = [e.strip() for e in equation.split('x')]
-        r['price_equation'] = {'quantity': equation[0].replace('/each', ''), 'price': equation[1]}
+        equation = [re.sub(r'[^\.\d]', '', e).strip() for e in equation.split('x')]
+        r['price_equation'] = {'quantity': float(equation[0]), 'price': float(equation[1])}
+        r['product_promotional_price'] = float(re.sub(r'[^\.\d]', '', r['product_promotional_price']))
+        r['product_original_price'] = float(re.sub(r'[^\.\d]', '', r['product_original_price']))
+
         price_collection.append({"promo": r['product_promotional_price'],\
             "regular": r['product_original_price'],\
                 "upc": r.get('upc'),\
@@ -222,8 +229,30 @@ def parseUPC():
         # standard joining feature
         _['cart_number'] = hash(_.get('order_number')) # , 
         _.pop('order_number')
+        # before hash search full document for (B|T|X)$ and fuzzy match
+        # break down items to by abbreviation, tax status, receipt_price
+        # and then of course selection of savings w/ status code  (SC), all string data and amount saved 
+        newItems = []
+        lastItem = 0
+        # sales_re = re.compile(r'^SC\s*([A-z\s]+)+(\d+\.\d+)[\s-]*(B|T|X)?$')
+        # item_re = re.compile(r"\s*([^\d]+)+(\d+\.\d+)[\s|-](B$|T$|X$)")
+        for i, docstring in enumerate(_['full_document']):
+            salesObject = {}
+            if re.findall(sales_re, docstring)!=[]:
+                name, cost, taxStatus = re.findall(sales_re, docstring)[0]
+                name = name.strip()
+                print(docstring)
+                newItems[lastItem].setdefault('sales', [])
+                newItems[lastItem]['sales'].append({'item': name, 'cost': float(cost), 'taxStatus': taxStatus})
+            elif re.findall(item_re, docstring)!=[]:
+                name, cost, taxStatus = re.findall(item_re, docstring)[0]
+                name = name.strip()
+                newItems.append({'item': name, 'receipt_price': float(cost), 'taxStatus': taxStatus})
+                lastItem = newItems.index({'item': name, 'receipt_price': float(cost), 'taxStatus': taxStatus})     
+        _['items'] = newItems
         _['full_document'] = hash(_.get('full_document').__str__())
-    
+        
+
     with open('./data/collections/items.json', 'w') as file:
         file.write(dumps(results))
     
@@ -277,7 +306,7 @@ def getStoreLocation(ids):
         if response.ok:
             array.append(json.loads(response.text)['data'])
 
-    array.append({'meta': {'data_acquired': (datetime.datetime.now()).timestamp()}})
+    array.append({'meta': {'acquistion_timestamp': (datetime.datetime.now()).timestamp()}})
 
     with open('./data/API/myStoresAPI.json', 'w') as file:
         file.write(json.dumps(array))
@@ -351,18 +380,30 @@ def getItemInfo(itemLocationPairs):
         params = f'/{upc}' # ?filter.locationId={LOCATION_ID}
         req = endpoint+params+"?filter.locationId={}".format(location)
         response = requests.get(req, headers=headers)
-        object = json.loads(response.text)
-        object = object.get('data')
-        # add the implicit queried location id to response
-        object['locationId'] = location
-        # add timestamp of scrape for future data analysis
-        object['acquistion_timestamp'] = datetime.datetime.now().timestamp()
-        data.append(object)
+        try:
+            object = json.loads(response.text)
+            object = object.get('data')
+            # add the implicit queried location id to response
+            object['locationId'] = location
+            # add timestamp of scrape for future data analysis
+            object['acquistion_timestamp'] = datetime.datetime.now().timestamp()
+            data.append(object)
+            time.sleep(1)
+        except json.decoder.JSONDecodeError:
+            print(i)
+            print(response)
+            time.sleep(12)
+        if i % 10 == 0:
+            print(f"DONE WITH {i}. {len(itemLocationPairs)-i} TO GO @ {datetime.datetime.now()}")
 
             
 
+    with open('./data/API/itemsAPI.json', 'r+') as file:
+        prev_objs_list = json.loads(file.read())
+        prev_objs_list.extend(data)
+
     with open('./data/API/itemsAPI.json', 'w') as file:
-        file.write(json.dumps(data))
+        file.write(json.dumps(prev_objs_list))
 
     print(f'{len(data)} items written to disk')
 
@@ -401,12 +442,12 @@ def combineItems(api, scraped):
                         prices['promo'] = prices['regular']
                     prices_array.append({
                         "promo": prices.get('promo'), "regular": prices.get('regular'), "upc": upc,\
-                            'locationId': locationId, "acquistion_timestamp": product.get('acquistion_timestamp'),'isPurchase': False, "quantity": item_data.get('size')
+                            'locationId': locationId, "acquistion_timestamp": product.get('acquistion_timestamp'),'isPurchase': False, "quantity": 1
                     })
                 else:
                     prices_array.append({
                         "promo": None, "regular": None, "upc": upc,\
-                        'locationId': locationId, "acquistion_timestamp": product.get('acquistion_timestamp'),'isPurchase': False, "quantity": item_data.get('size'),
+                        'locationId': locationId, "acquistion_timestamp": product.get('acquistion_timestamp'),'isPurchase': False, "quantity": 0,
                     })
         else:
             final_item_object = {}
@@ -442,12 +483,12 @@ def combineItems(api, scraped):
                     prices['promo'] = prices['regular']
                 prices_array.append({
                     "promo": prices.get('promo'), "regular": prices.get('regular'), "upc": upc,\
-                        'locationId': locationId, "acquistion_timestamp": product.get('acquistion_timestamp'),'isPurchase': False, "quantity": item_data.get('size')
+                        'locationId': locationId, "acquistion_timestamp": product.get('acquistion_timestamp'),'isPurchase': False, "quantity": 1,
                 })
             else:
                 prices_array.append({
                     "promo": None, "regular": None, "upc": upc,\
-                    'locationId': locationId, "acquistion_timestamp": product.get('acquistion_timestamp'),'isPurchase': False, "quantity": item_data.get('size'),
+                    'locationId': locationId, "acquistion_timestamp": product.get('acquistion_timestamp'),'isPurchase': False, "quantity": 1,
                 })
 
             matches = filter(lambda x: x.get('upc')==upc, scraped)
@@ -510,8 +551,6 @@ def combineItems(api, scraped):
 
     with open('./data/collections/combinedPrices.json', 'w') as file:
         file.write(dumps(prices_array))
-
-    pprint.pprint(final_product_array[1])
 
     return final_product_array
 
@@ -580,24 +619,80 @@ def getPrices(api):
 
 
 
+
+# # # # # # API CALLS # # # # # # 
+# getItemInfo(upcSET)
+# getStoreLocation({'01100482', '01100685', '01100438'})
+# # # # # # # # # # ## # # # # #
+#trips = json.loads(open('./data/collections/trips.json', 'r').read())
+# # # # # MATCH RECEIPTS TO ITEMS # #  # # # #
+# getFuzzyMatch(items=items, trips=trips)
+# # # # # # # # # # ## # # # # # # # # # # # #
+# # # # # CREATE PRICE COLLECTIONS # # # # # #
+#getPrices(apiItems)
+#combineItems(api=apiItems, scraped=items)
+# # # # # # # # # # ## # # # # # # # # # # # #
 upcSET = parseUPC()
 items = json.loads(open('./data/collections/items.json', 'r').read())
-#trips = json.loads(open('./data/collections/trips.json', 'r').read())
 apiItems = json.loads(open('./data/API/itemsAPI.json', 'r').read())
-#getPrices(apiItems)
 combineItems(api=apiItems, scraped=items)
-prices = json.loads(open('./data/collections/prices.json', 'r').read())
+# getItemInfo(upcSET) # LAST API CALL @ 9:40 PM 4/11/2022
 
-pprint.pprint(prices[10])
+prices = json.loads(open('./data/collections/combinedPrices.json', 'r').read())
+combinedItems = json.loads(open('./data/collections/combinedItems.json', 'r').read())
 
-#apiTrips = json.loads(open('./data/API/myStoresAPI.json', 'r').read())
+storesAPI = json.loads(open('./data/API/myStoresAPI.json', 'r').read())
+trips = json.loads(open('./data/collections/trips.json', 'r').read())
+
+def counter(JSON):
+    keyer = {}
+
+    for j in JSON:
+        if isinstance(j, dict):
+            for key in j.keys():
+                if key in keyer:
+                    keyer[key]+=1
+                    if isinstance(j[key], str) and (j[key]==''):
+                        keyer[key]-=1
+                    elif isinstance(j[key], list) and (j[key]==[]):
+                        keyer[key]-=1
+                    elif isinstance(j[key], dict) and (j[key]=={}):
+                        keyer[key]-=1
+                else:
+                    keyer[key]=1
+                    if isinstance(j[key], str) and (j[key]==''):
+                        keyer[key]-=1
+                    elif isinstance(j[key], list) and (j[key]==[]):
+                        keyer[key]-=1
+                    elif isinstance(j[key], dict) and (j[key]=={}):
+                        keyer[key]-=1
+        else:
+            for key in j:
+                if key in keyer:
+                    keyer[key]+=1
+                    if isinstance(key, str) and (key==''):
+                        keyer[key]-=1
+                    elif isinstance(key, list) and (key==[]):
+                        keyer[key]-=1
+                    elif isinstance(key, dict) and (key=={}):
+                        keyer[key]-=1
+                else:
+                    keyer[key]=1
+                    if isinstance(key, str) and (key==''):
+                        keyer[key]-=1
+                    elif isinstance(key, list) and (key==[]):
+                        keyer[key]-=1
+                    elif isinstance(key, dict) and (key=={}):
+                        keyer[key]-=1 
+    pprint.pprint(sorted(keyer.items(), key=lambda  x: x[1], reverse=True))
+    # all_keys = list(filter(lambda x: len(x.keys())>2, JSON))
+    #all_keys = list(filter(lambda x: x.keys()==keyer.keys(), JSON))
+    #pprint.pprint(all_keys[0])
+    return None
+
+# counter(filter(lambda x: x!=None, map(lambda x: x.get('categories'), combinedItems)))
+# print(len(combinedItems))
 
 
 
 
-
-# getFuzzyMatch(items=items, trips=trips)
-
-#upcSET = parseUPC() {'ingredients': {$regex: /[{([]/}}
-#getItemInfo(upcSET)
-# getStoreLocation({'01100482', '01100685', '01100438'})
