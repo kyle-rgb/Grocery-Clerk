@@ -89,8 +89,11 @@ def parseUPC():
         # calculate missing serving size by summing the available nutrient information. Should add up to the gram representation of serving size
 
     # for restructuring full document
-    sales_re = re.compile(r'^SC\s*([A-z\s])+(\d+\.\d+)[\s-]*(B|T|X)?$')
+    sales_re = re.compile(r'^SC\s*([A-z0-9\s]+)\s*(\d+\.\d+)[\s-]*(B|T|X)?$')
     item_re = re.compile(r"^\s*(.+)(\d+\.\d+)[\s|-](B|T|X)$")
+    receipt_total_re = re.compile(r'TOTAL NUMBER OF ITEMS SOLD\s*=(\d+)')
+    receipt_calculation_re = re.compile(r'((\d)(\.\d+)?(\D+)?)\s*@\s*(\d+)?\/?(\d+\.\d+)(\/\D+)?') # 1: full quantity string {fullstring, wholeUnits, partialUnits, unitSignifier} @ {quantityprice}]}
+
     # reformat string numbers back to numbers (sans upc)
     client = MongoClient()
     db = client.groceries # db
@@ -114,7 +117,7 @@ def parseUPC():
             # item_link, UPC, price_equation, product_size, product_promotional_price, product_original_price
                 # 1043 have health_info and ingredients
                 # 363 have avg_ratings, reviews and ratings_distribution
-
+    
     for r in results:
         upc = r.get('UPC')
         # {'macros': {'measure': {$regex: /mcg/}}}
@@ -183,16 +186,17 @@ def parseUPC():
         equation = r.get('price_equation')
         equation = [re.sub(r'[^\.\d]', '', e).strip() for e in equation.split('x')]
         r['price_equation'] = {'quantity': float(equation[0]), 'price': float(equation[1])}
-        r['product_promotional_price'] = float(re.sub(r'[^\.\d]', '', r['product_promotional_price']))
-        r['product_original_price'] = float(re.sub(r'[^\.\d]', '', r['product_original_price']))
+        r['product_promotional_price'] = float(re.sub(r'[^\.\d]', '', r['product_promotional_price']))#/r['price_equation']['quantity']
+        r['product_original_price'] = float(re.sub(r'[^\.\d]', '', r['product_original_price']))#/r['price_equation']['quantity']
 
-        price_collection.append({"promo": r['product_promotional_price'],\
-            "regular": r['product_original_price'],\
+        price_collection.append({"promo": round(r['product_promotional_price'], 3),\
+            "regular": round(r['product_original_price'], 3),\
                 "upc": r.get('upc'),\
                     'locationId': locationid,\
                     "acquistion_timestamp": timestamp,\
-                        'isPurchase': True,
-                        "quantity": equation[0]
+                        'isPurchase': True, 
+                        "quantity": equation[0],
+                        "cart_number": r.get('cart_number'),
         })
         r['acquistion_timestamp'] = timestamp
         r['locationId'] = locationid            
@@ -234,6 +238,7 @@ def parseUPC():
         # and then of course selection of savings w/ status code  (SC), all string data and amount saved 
         newItems = []
         lastItem = 0
+        weight_switch = ''
         # sales_re = re.compile(r'^SC\s*([A-z\s]+)+(\d+\.\d+)[\s-]*(B|T|X)?$')
         # item_re = re.compile(r"\s*([^\d]+)+(\d+\.\d+)[\s|-](B$|T$|X$)")
         for i, docstring in enumerate(_['full_document']):
@@ -241,14 +246,28 @@ def parseUPC():
             if re.findall(sales_re, docstring)!=[]:
                 name, cost, taxStatus = re.findall(sales_re, docstring)[0]
                 name = name.strip()
-                print(docstring)
                 newItems[lastItem].setdefault('sales', [])
-                newItems[lastItem]['sales'].append({'item': name, 'cost': float(cost), 'taxStatus': taxStatus})
+                if taxStatus=='':
+                    newItems[lastItem]['sales'].append({'item': name, 'cost': float(cost)})
+                else:
+                    newItems[lastItem]['sales'].append({'item': name, 'cost': float(cost), 'taxStatus': taxStatus})
             elif re.findall(item_re, docstring)!=[]:
                 name, cost, taxStatus = re.findall(item_re, docstring)[0]
                 name = name.strip()
-                newItems.append({'item': name, 'receipt_price': float(cost), 'taxStatus': taxStatus})
-                lastItem = newItems.index({'item': name, 'receipt_price': float(cost), 'taxStatus': taxStatus})     
+                if re.findall(r"\d", name[-1])!=[]:
+                    cost = name[-1] + cost
+                    name =  name[:-1].strip()
+                rec_obj = {'item': name, 'receipt_price': float(cost), 'taxStatus': taxStatus}
+                if weight_switch:
+                    rec_obj['weight_amount'] = float(weight_switch)
+                    weight_switch = ''
+                newItems.append(rec_obj)
+                lastItem = newItems.index(rec_obj)
+            elif re.findall(receipt_calculation_re, docstring)!=[]:
+                matches = re.findall(receipt_calculation_re, docstring)[0]
+                weight_receipt = matches[1] + matches[2]
+                weight_switch = weight_receipt
+
         _['items'] = newItems
         _['full_document'] = hash(_.get('full_document').__str__())
         
@@ -442,12 +461,12 @@ def combineItems(api, scraped):
                         prices['promo'] = prices['regular']
                     prices_array.append({
                         "promo": prices.get('promo'), "regular": prices.get('regular'), "upc": upc,\
-                            'locationId': locationId, "acquistion_timestamp": product.get('acquistion_timestamp'),'isPurchase': False, "quantity": 1
+                            'locationId': locationId, "acquistion_timestamp": product.get('acquistion_timestamp'),'isPurchase': False, "quantity": 1, "cart_number": None,
                     })
                 else:
                     prices_array.append({
                         "promo": None, "regular": None, "upc": upc,\
-                        'locationId': locationId, "acquistion_timestamp": product.get('acquistion_timestamp'),'isPurchase': False, "quantity": 0,
+                        'locationId': locationId, "acquistion_timestamp": product.get('acquistion_timestamp'),'isPurchase': False, "quantity": 0, "cart_number": None,
                     })
         else:
             final_item_object = {}
@@ -483,12 +502,12 @@ def combineItems(api, scraped):
                     prices['promo'] = prices['regular']
                 prices_array.append({
                     "promo": prices.get('promo'), "regular": prices.get('regular'), "upc": upc,\
-                        'locationId': locationId, "acquistion_timestamp": product.get('acquistion_timestamp'),'isPurchase': False, "quantity": 1,
+                        'locationId': locationId, "acquistion_timestamp": product.get('acquistion_timestamp'),'isPurchase': False, "quantity": 1, "cart_number": None,
                 })
             else:
                 prices_array.append({
                     "promo": None, "regular": None, "upc": upc,\
-                    'locationId': locationId, "acquistion_timestamp": product.get('acquistion_timestamp'),'isPurchase': False, "quantity": 1,
+                    'locationId': locationId, "acquistion_timestamp": product.get('acquistion_timestamp'),'isPurchase': False, "quantity": 1, "cart_number": None,
                 })
 
             matches = filter(lambda x: x.get('upc')==upc, scraped)
@@ -505,9 +524,11 @@ def combineItems(api, scraped):
                     final_item_object['sizes'].append(sizeAlias)
                 matchId = match.get('locationId')
                 matchUPC = match.get('upc')
+                quantity = match.get('price_equation').get('quantity')
                 prices_array.append({
-                    "promo": match.get('product_promotional_price'), "regular": match.get('product_original_price'), "upc": matchUPC,\
-                        'locationId': matchId, "acquistion_timestamp": match.get('acquistion_timestamp'),'isPurchase': True, "quantity": match.get('price_equation').get('quantity')
+                    "promo": round(match.get('product_promotional_price')/quantity, 3), "regular": round(match.get('product_original_price')/quantity, 3), "upc": matchUPC,\
+                        'locationId': matchId, "acquistion_timestamp": match.get('acquistion_timestamp'),'isPurchase': True, "quantity": match.get('price_equation').get('quantity'),\
+                            'cart_number':match.get('cart_number')
                 })
 
 
@@ -566,31 +587,32 @@ def extract_nested_values(it):
     else:
         yield {'count':1, 'type': type(it)}
     
+# now with combined items 
 
 def getFuzzyMatch(items, trips):
     removePriceRegex = r'\d+\.\d+.+'
     countRegex = r'^(\d)+.+\s*x'
     for t in trips:
-        matches = list(filter(lambda x: x.get('cart_number')==t.get('cart_number'), items))
-        choices = [x.get('product_name').lower() for x in matches]
-        prices = [(x.get('product_promotional_price'), x.get('product_original_price')) for x in matches]
-        receiptItems = sorted([i.get('item') for i in t.get('items')])
-        counts = [int(re.findall(countRegex, x.get('price_equation'))[0]) for x in matches]
+        matches = items
+        receiptItems = sorted([i for i in t.get('items')], key=lambda x: x.get('item'))
         choicesX = []
-        for string, count in zip(choices, counts):
-            for i in range(count):
-                choicesX.append(string)
+        counts = [choicesX.extend(int(x.get('quantity'))*[x.get('name')]) for x in matches]
+        print(len(choicesX))
         chx=[]
         for recItem in receiptItems:
-            price = re.findall(removePriceRegex, recItem)[0]
-            price = re.sub(re.compile(r'[^\d\.]'), '', price)
-            price = f"${price}"
-            product = re.sub(removePriceRegex, '', recItem)
-            product = product.lower()
+            price = recItem.get('receipt_price')
+            product = recItem.get('item')
+            weight_switch = recItem.get('weight_amount')
             fuzz_match = process.extractOne(product, choicesX)
-            choicesX.pop(choicesX.index(fuzz_match[0]))
+            iterations = 1
+            if weight_switch:
+                iterations = int(weight_switch)
+            for i in range(iterations):
+                choicesX.pop(choicesX.index(fuzz_match[0]))
             chx.append((fuzz_match[0], '>>>>>>', product, "====", fuzz_match[1], ))
+            print(choicesX)
         
+        print(len(chx))
         pprint.pprint(sorted(chx, key=lambda x: x[4]))
             
     return None
@@ -607,7 +629,8 @@ def getPrices(api):
                     'locationId': a.get('locationId'),\
                     "acquistion_timestamp": a.get('acquistion_timestamp'),\
                         'isPurchase': False,
-                        "quantity": price_data.get('size'),
+                        "quantity": price_data.get('size'),\
+                            "cart_number": None,
             })      
     current_prices = json.loads(open('./data/collections/prices.json', 'r').read())
     current_prices.extend(more_prices)
@@ -632,17 +655,44 @@ def getPrices(api):
 #getPrices(apiItems)
 #combineItems(api=apiItems, scraped=items)
 # # # # # # # # # # ## # # # # # # # # # # # #
-upcSET = parseUPC()
+# upcSET = parseUPC()
 items = json.loads(open('./data/collections/items.json', 'r').read())
 apiItems = json.loads(open('./data/API/itemsAPI.json', 'r').read())
-combineItems(api=apiItems, scraped=items)
+# combineItems(api=apiItems, scraped=items)
 # getItemInfo(upcSET) # LAST API CALL @ 9:40 PM 4/11/2022
 
 prices = json.loads(open('./data/collections/combinedPrices.json', 'r').read())
 combinedItems = json.loads(open('./data/collections/combinedItems.json', 'r').read())
-
 storesAPI = json.loads(open('./data/API/myStoresAPI.json', 'r').read())
 trips = json.loads(open('./data/collections/trips.json', 'r').read())
+
+# pprint.pprint(prices[12])
+
+atrip = -3781217424472137818
+afil = list(filter(lambda x: atrip in x.get('carts'), combinedItems))
+atri =list(filter(lambda x: atrip==x.get('cart_number'), trips))
+# print("len of filtered items", len(afil))
+# print("len of receipt items", len(atri))
+
+cpus = {v for v in map(lambda x: x.get('upc'), afil)}
+# match on upc and cart_number
+matching_prices = list(filter(lambda x: ((x.get('upc') in cpus)and(x.get('cart_number')==atrip)), prices))
+print("len of price entries", len(matching_prices))
+matching_prices = sorted(matching_prices, key=lambda x: x['upc'])
+afil = sorted(afil, key=lambda x: x['upc'])
+priced = []
+for pr, it in zip(matching_prices, afil):
+    it.update(pr)
+    it['name'] = it['names'][0]
+    priced.append({k:v for k,v in it.items() if k in ['promo', 'quantity', 'regular', 'name', 'upc', 'categories']})
+    
+# print(priced[1])
+
+getFuzzyMatch(items=priced, trips=atri)
+
+# return items and price (as quant * promo) to help fuzzy matching
+
+#pprint.pprint([l.get('upc') for l in afil])
 
 def counter(JSON):
     keyer = {}
