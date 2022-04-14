@@ -1,4 +1,5 @@
-import re, requests, datetime, time, json, pprint, random
+import re, requests, datetime, time, json, pprint, random, math
+import numpy as np
 from django.forms import ValidationError
 from fuzzywuzzy import fuzz, process
 
@@ -117,7 +118,7 @@ def parseUPC():
             # item_link, UPC, price_equation, product_size, product_promotional_price, product_original_price
                 # 1043 have health_info and ingredients
                 # 363 have avg_ratings, reviews and ratings_distribution
-    
+    upcLessItems = {}
     for r in results:
         upc = r.get('UPC')
         # {'macros': {'measure': {$regex: /mcg/}}}
@@ -128,6 +129,26 @@ def parseUPC():
         time = r['cart_number'][-4:]
         timestamp = location[2] + " " + f"{time[:2]}:{time[2:]}"
         timestamp = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%S").timestamp()
+        if upc==None:
+            if r.get('product_name').strip() not in upcLessItems.keys():
+                upc = str(hash(r.get('product_name').strip()))
+                upc = re.sub(r'[^\d]', '', upc)[:13]
+                upcLessItems[r.get('product_name').strip()] = upc
+                r['UPC'] = upc
+            else:
+                r['UPC'] = upcLessItems[r.get('product_name').strip()] 
+                upc = upcLessItems[r.get('product_name').strip()] 
+
+        
+
+        if upc not in upcLessItems.keys():
+            # upc is a link
+            if len(re.findall(upc_re, upc)) > 0:
+                r['UPC'] = ''.join(re.findall(upc_re, upc)).replace('/', '')
+            upcs.add(f"{r['UPC']};{locationid}")
+        r['upc'] = r['UPC']
+        r.pop("UPC")
+
         # place subnutrients inside macros (subnutrients for macros ) and remove joining columns
         if 'health_info' in r:
             remove_indices=[]
@@ -174,14 +195,6 @@ def parseUPC():
             r.pop('ingredients')            
 
         r['cart_number'] = hash(r.get('cart_number').replace('detail', 'image'))
-
-        if upc != None:
-            # upc is a link
-            if len(re.findall(upc_re, upc)) > 0:
-                r['UPC'] = ''.join(re.findall(upc_re, upc)).replace('/', '')
-            upcs.add(f"{r['UPC']};{locationid}")
-            r['upc'] = r['UPC']
-            r.pop("UPC")
 
         equation = r.get('price_equation')
         equation = [re.sub(r'[^\.\d]', '', e).strip() for e in equation.split('x')]
@@ -565,13 +578,49 @@ def combineItems(api, scraped):
 
                 # if itemInformation not empty: include in object as dimensions
 
+    sparseItemSet = {s.get('upc') for s in scraped}.difference(parsedItemsSet)
+    remainingItems = filter(lambda s: s.get('upc') in sparseItemSet, scraped)
 
-            
+    for item in remainingItems:
+        item_obj = {}
+        if item.get('upc') not in parsedItemsSet:
+            # adds available data of nonimage/non-upc purchases to combinedItems collection 
+            item_obj['names'] = [item.get('product_name')]
+            item_obj['sizes'] = [item.get('product_size')]
+            item_obj['priceUnits'] = 'UNIT'
+            item_obj['carts'] = [item.get('cart_number')]
+            item_obj['brands'] = 'Kroger'
+            item_obj['upc'] = item.get('upc')
+            # adds item initial price entry into prices collections
+            quantity = item.get('price_equation').get('quantity')
+            prices_array.append({
+                    "promo": round(item.get('product_promotional_price')/quantity, 3), "regular": round(item.get('product_original_price')/quantity, 3), "upc": item.get('upc'),\
+                        'locationId': item.get('locationId'), "acquistion_timestamp": item.get('acquistion_timestamp'),'isPurchase': True, "quantity": quantity,\
+                            'cart_number':item.get('cart_number')
+                })
+            final_product_array.append(item_obj)
+        else:
+            # get parsed item
+            parsedItem = filter(lambda x: item.get('upc'), final_product_array)
+            for pi in parsedItem:
+                pi.get('carts').append(item.get('cart_number'))
+            quantity = item.get('price_equation').get('quantity')
+            prices_array.append({
+                    "promo": round(item.get('product_promotional_price')/quantity, 3), "regular": round(item.get('product_original_price')/quantity, 3), "upc": item.get('upc'),\
+                        'locationId': item.get('locationId'), "acquistion_timestamp": item.get('acquistion_timestamp'),'isPurchase': True, "quantity": quantity,\
+                            'cart_number':item.get('cart_number')
+                })
+
+
+
+
     with open('./data/collections/combinedItems.json', 'w') as file:
         file.write(dumps(final_product_array))
 
     with open('./data/collections/combinedPrices.json', 'w') as file:
         file.write(dumps(prices_array))
+
+
 
     return final_product_array
 
@@ -594,26 +643,62 @@ def getFuzzyMatch(items, trips):
     countRegex = r'^(\d)+.+\s*x'
     for t in trips:
         matches = items
-        receiptItems = sorted([i for i in t.get('items')], key=lambda x: x.get('item'))
-        choicesX = []
-        counts = [choicesX.extend(int(x.get('quantity'))*[x.get('name')]) for x in matches]
+        receiptItems = sorted(t.get('items'), key=lambda x: x.get('item'))
+        choicesX = [x.get("name") for x in matches]
+        #counts = [choicesX.extend(int(x.get('quantity'))*[x.get('name')]) for x in matches]
         print(len(choicesX))
         chx=[]
         for recItem in receiptItems:
+            # need a check to see if lbs in quantity measurement
             price = recItem.get('receipt_price')
             product = recItem.get('item')
             weight_switch = recItem.get('weight_amount')
-            fuzz_match = process.extractOne(product, choicesX)
-            iterations = 1
-            if weight_switch:
-                iterations = int(weight_switch)
-            for i in range(iterations):
-                choicesX.pop(choicesX.index(fuzz_match[0]))
-            chx.append((fuzz_match[0], '>>>>>>', product, "====", fuzz_match[1], ))
-            print(choicesX)
-        
+            if 'sales' in recItem:
+                for s in recItem.get('sales'):
+                    price += s['cost']
+            fuzz_matches = process.extract(product, choicesX, limit=15)
+            matchObjects = list(filter(lambda x: x.get('name') in map(lambda x: x[0], fuzz_matches), matches))
+            matchPrices = np.array([((price-(fuzzM.get('quantity') * fuzzM.get('promo') ))**2)**.5 for fuzzM in matchObjects])
+            matchPrices = np.concatenate((matchPrices,np.array([((price-(fuzzM.get('quantity') * fuzzM.get('regular') ))**2)**.5 for fuzzM in matchObjects])))# 
+            matchPrices = np.concatenate((matchPrices, np.array([((price-(1*fuzzM.get('regular') ))**2)**.5 for fuzzM in matchObjects])))
+            matchObjects = matchObjects * 3
+            fuzz_matches = fuzz_matches * 3
+            
+            matchGuess = [matchObjects[i] for i, p  in enumerate ( matchPrices ) if p < 0.01]
+            if len(matchGuess)>1:
+                name = process.extractOne(product, list(map(lambda y: y.get('name'), matchGuess)))
+                matchGuess = list(filter(lambda d: d.get('name')==name[0], matchGuess))
+                if len(matchGuess)>1:# print(matchGuess, product)
+                    matchGuess=matchGuess[0]
+            elif len(matchGuess)==1:
+                matchGuess=matchGuess[0]
+                
+            print(product)
+
+            # print(product, "==> ", matchGuess, '===$ ', matchPrice)
+            # fuzz_match = fuzz_matches[np.argmin(matchPrice)]
+            # print('FUZZMATCH::', fuzz_match, matchPrice, matchGuess)
+            # iterations = 1
+            # if weight_switch:
+            #     iterations = int(weight_switch)
+            # try:
+            #     float_quantity = list(filter(lambda x: x.get('name')==matchGuess.get('name'), matches))[0].get('quantity')
+            # except TypeError:
+            #     print('fuzz', matchGuess.get('name')) # 
+            #     raise ValueError
+            # if float_quantity % 1 > 0:
+            #     iterations = int(float_quantity)
+            # for i in range(iterations):
+            #     choicesX.pop(choicesX.index(matchGuess['name']))
+            chx.append((product, '>>>>>>', matchGuess['name'], "====", f"{price}:::::{matchGuess['promo']}", matchGuess['promo'],))
+            
+
+
         print(len(chx))
-        pprint.pprint(sorted(chx, key=lambda x: x[4]))
+        for c in sorted(chx, key=lambda v: v[5], reverse=True):
+            print('\n')
+            print(c)
+            print('\n')
             
     return None
 
@@ -666,9 +751,9 @@ combinedItems = json.loads(open('./data/collections/combinedItems.json', 'r').re
 storesAPI = json.loads(open('./data/API/myStoresAPI.json', 'r').read())
 trips = json.loads(open('./data/collections/trips.json', 'r').read())
 
-# pprint.pprint(prices[12])
+# pprint.pprint(combinedItems[12])
 
-atrip = -3781217424472137818
+atrip = -1056238256466118559
 afil = list(filter(lambda x: atrip in x.get('carts'), combinedItems))
 atri =list(filter(lambda x: atrip==x.get('cart_number'), trips))
 # print("len of filtered items", len(afil))
@@ -687,7 +772,7 @@ for pr, it in zip(matching_prices, afil):
     priced.append({k:v for k,v in it.items() if k in ['promo', 'quantity', 'regular', 'name', 'upc', 'categories']})
     
 # print(priced[1])
-
+# pprint.pprint(list(filter(lambda x: x.get('upc') in {'0021077300000', '0001111004519'}, afil)))
 getFuzzyMatch(items=priced, trips=atri)
 
 # return items and price (as quant * promo) to help fuzzy matching
