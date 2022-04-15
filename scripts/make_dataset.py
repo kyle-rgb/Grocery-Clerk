@@ -1,10 +1,14 @@
-import time, re, random
+import time, re, random, datetime as dt
+from tkinter import Button
+from matplotlib.pyplot import title
+from matplotlib.style import available
 
 from pymongo import MongoClient
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException, InvalidArgumentException
+from selenium.webdriver.common.keys import Keys
 
 # Inside Will Find:
     # Trip Level Data: Total Cost of Purchases, Locations of Store, Order Number, Payment Method, Items/Coupons Together, Tax
@@ -376,7 +380,7 @@ def getMyData():
     driver = webdriver.Chrome("../../../Python/scraping/chromedriver99.exe", options=options)
     driver.implicitly_wait(3.5)
     driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-    driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36"})
+    driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36"})
     
     testBinary = True
     while testBinary:
@@ -417,6 +421,162 @@ def getMyData():
         print(f"Finished with Page {i}")
     driver.quit()
 
-getMyData() 
+def getDigitalPromotions():
+    # set up browser
+    options = webdriver.ChromeOptions() 
+    options.add_argument("start-maximized")
+    #options.add_argument("disable-blink-features=AutomationControlled")
+    # Load Credentials from Browser Profile
+    options.add_argument("user-data-dir=C:\\Users\\Kyle\\AppData\\Local\\Google\\Chrome\\User Data")
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
+    driver = webdriver.Chrome("../../../Python/scraping/chromedriver99.exe", options=options)
+    driver.implicitly_wait(3.5)
+    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36"})
+    
+    testBinary = True
+    while testBinary:
+        ans = input("press enter to continue")
+        if ans == '':
+            testBinary=False
+        else:
+            raise ValueError('No other response allowed')
+    
+    time.sleep(7)
+    url_base = 'https://www.kroger.com/savings/cl/coupons/'
+    driver.get(url_base)
+    time.sleep(6)
+    # ### Website SignIn ###
+    time.sleep(7)
+    # signInBtn = driver.find_element(By.ID, 'SignIn-submitButton')
+    # signInBtn.click()
+    # time.sleep(6.5)
+    current_year = ' 22'
+    # Use END btn to force lazy loaders
+    page = driver.find_element(By.TAG_NAME, 'body')
+    for i in range(30):
+        page.send_keys(Keys.END)
+        time.sleep(.25)
+
+    deals = driver.find_elements(By.CSS_SELECTOR, 'div.CouponCard-wrapper')
+    dealCollection = []
+    deals = deals[:3]
+    for deal in deals:
+        dealEntry = {}
+        promoType = "digital coupon"
+        dealEntry['type'] = promoType
+        # meta tags
+        meta_card = deal.find_element(By.CSS_SELECTOR, 'div.CouponCardNew')
+
+        brand = meta_card.get_attribute('data-brand')
+        dealEntry['brand'] = brand
+
+        savingsCategory = meta_card.get_attribute('data-category').split(',')
+        dealEntry['categories'] = savingsCategory
+
+        # activate focused modal
+        buttons = deal.find_elements(By.TAG_NAME, 'button')
+        print(buttons)
+        modal_button = buttons[0]
+        print(modal_button)
+        modal_button.click()
+
+        section = driver.find_element(By.CSS_SELECTOR, "section#modal-body")
+        expiration = section.find_element(By.CSS_SELECTOR, 'span.CouponExpiration-textDate').text
+        expiration += current_year
+        expiration = dt.datetime.strptime(expiration, '%b. %d %y')
+        expiration = expiration.timestamp()
+        dealEntry['expiration'] = expiration
+
+        # here remove Exp. and turn three-letter-month + \. + day into timestamp
+        conditions_btn = section.find_element(By.LINK_TEXT, 'More Details')
+        conditions_btn.click()
+
+        title = section.find_element(By.CSS_SELECTOR, "h2.CouponDetails-shortDescription")
+        dealEntry['title'] = title
+
+        conditions = section.find_element(By.CSS_SELECTOR, 'div.CouponDetails-description-new')
+        coupon_description = conditions.text
+        dealEntry['terms'] = coupon_description
+
+        
+        # get modal availability
+        availablity = section.find_element(By.CSS_SELECTOR, 'div[data-qa="modal-availability-banner"]')
+        for span in availablity:
+            dealEntry['availability'][span.text] = 'font_bold' in span.get_attribute('class')
+        # check to see if Qualifying Products exists
+        try:
+            qualifiers = section.find_elements(By.CSS_SELECTOR, "section.QualifyingProducts")
+            # item amount to qualify
+            ic_regex = re.compile(r'\s*(\d)+\s*Added')
+            item_count_qualify = qualifiers.find_element(By.CSS_SELECTOR, 'span[data-testid="CouponsProgressBar-productsCount"]').text
+            item_count_qualify = int(re.findall(ic_regex, item_count_qualify)[0])
+            dealEntry['amountThreshold'] = item_count_qualify 
+
+            # maximum redeeems  
+            redeem_re = re.compile(r'(\d+)\s*times')
+            redemption_exhaust = qualifiers.find_element(By.CSS_SELECTOR, "CouponsProgressBar-redeemedMessage")
+            redemption_exhaust = re.findall(redeem_re, redemption_exhaust.text)[0]
+            dealEntry['maxUses'] = redemption_exhaust
+            qualifying_items = qualifiers.find_elements(By.CSS_SELECTOR, 'img[data-qa="cart-page-item-image-loaded"]')
+            codes = []
+            for qualifier in qualifying_items:
+                img = qualifier.get_attribute('src')
+                codes.extend(re.findall(r'\d+', img))
+            dealEntry['qualifyingItems'] = codes
+
+        except:
+            raise ValueError
+
+        dealCollection.append(dealEntry)
+
+
+
+        
+
+        # get qualifying products  
+
+    # grab each digital promotion
+    # div.CouponCard-wrapper
+        # :: # purchase method availability ['In-store', 'Pickup', 'Delivery', 'Ship']
+        # :: ON CARD GET attributes = 'data-brand', 'data-category', 'data-testid'
+                # get h2['aria-label'] for amount off for promotion
+                # common expressions = 'Save {amount} on {quantity}? {product_names joined by commas or 'or's}'
+                # click More Details link
+                    # => get div.CouponDetails text for qualifications
+                        # => has inner divs with promotion restrictions 
+                # div[data-qa='modality-availability-banner']
+                    # spans show availability by purchase type with the presence of the class ".font-bold"
+                # if available a <section.Qualifying Products> appears
+                    # from here it will show brief information based on the items eligable for the sale
+                    # shows img, product_name, promotional price, regular price and size
+                    # to get each item select ul.ProductListView > li
+                    # inside select img attributes src (for upc) and alt (for name)
+                    # optional attributes: price promotional, sizing and regular price
+
+                # Promotions Collection: 
+                    # type: {digital-coupon, cash-back, six-for-three}
+                    # expiresAt: Midnight of expiration date EST
+                    # qualifyingPurchaseTypes: ['In-Store', 'Pickup', 'Delivery', 'Ship']
+                    # restrictions: ''
+                    # promotionCategory : ['categories of sale products']
+                    # amount
+
+                
+        # get amount off 
+
+
+    return None
+
+
+
+
+
+
+######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
+# getMyData() 
+
+getDigitalPromotions()
 
 

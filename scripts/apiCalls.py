@@ -414,7 +414,9 @@ def getItemInfo(itemLocationPairs):
         response = requests.get(req, headers=headers)
         try:
             object = json.loads(response.text)
+            print(object)
             object = object.get('data')
+            
             # add the implicit queried location id to response
             object['locationId'] = location
             # add timestamp of scrape for future data analysis
@@ -727,9 +729,9 @@ def getPrices(api):
 
 
 
-
+upcSET= set({'650233691;01100482'})
 # # # # # # API CALLS # # # # # # 
-# getItemInfo(upcSET)
+getItemInfo(upcSET)
 # getStoreLocation({'01100482', '01100685', '01100438'})
 # # # # # # # # # # ## # # # # #
 #trips = json.loads(open('./data/collections/trips.json', 'r').read())
@@ -740,40 +742,40 @@ def getPrices(api):
 #getPrices(apiItems)
 #combineItems(api=apiItems, scraped=items)
 # # # # # # # # # # ## # # # # # # # # # # # #
-# upcSET = parseUPC()
-items = json.loads(open('./data/collections/items.json', 'r').read())
-apiItems = json.loads(open('./data/API/itemsAPI.json', 'r').read())
-# combineItems(api=apiItems, scraped=items)
-# getItemInfo(upcSET) # LAST API CALL @ 9:40 PM 4/11/2022
+# # upcSET = parseUPC()
+# items = json.loads(open('./data/collections/items.json', 'r').read())
+# apiItems = json.loads(open('./data/API/itemsAPI.json', 'r').read())
+# # combineItems(api=apiItems, scraped=items)
+# # getItemInfo(upcSET) # LAST API CALL @ 9:40 PM 4/11/2022
 
-prices = json.loads(open('./data/collections/combinedPrices.json', 'r').read())
-combinedItems = json.loads(open('./data/collections/combinedItems.json', 'r').read())
-storesAPI = json.loads(open('./data/API/myStoresAPI.json', 'r').read())
-trips = json.loads(open('./data/collections/trips.json', 'r').read())
+# prices = json.loads(open('./data/collections/combinedPrices.json', 'r').read())
+# combinedItems = json.loads(open('./data/collections/combinedItems.json', 'r').read())
+# storesAPI = json.loads(open('./data/API/myStoresAPI.json', 'r').read())
+# trips = json.loads(open('./data/collections/trips.json', 'r').read())
 
 # pprint.pprint(combinedItems[12])
 
-atrip = -1056238256466118559
-afil = list(filter(lambda x: atrip in x.get('carts'), combinedItems))
-atri =list(filter(lambda x: atrip==x.get('cart_number'), trips))
-# print("len of filtered items", len(afil))
-# print("len of receipt items", len(atri))
+# atrip = -1056238256466118559
+# afil = list(filter(lambda x: atrip in x.get('carts'), combinedItems))
+# atri =list(filter(lambda x: atrip==x.get('cart_number'), trips))
+# # print("len of filtered items", len(afil))
+# # print("len of receipt items", len(atri))
 
-cpus = {v for v in map(lambda x: x.get('upc'), afil)}
-# match on upc and cart_number
-matching_prices = list(filter(lambda x: ((x.get('upc') in cpus)and(x.get('cart_number')==atrip)), prices))
-print("len of price entries", len(matching_prices))
-matching_prices = sorted(matching_prices, key=lambda x: x['upc'])
-afil = sorted(afil, key=lambda x: x['upc'])
-priced = []
-for pr, it in zip(matching_prices, afil):
-    it.update(pr)
-    it['name'] = it['names'][0]
-    priced.append({k:v for k,v in it.items() if k in ['promo', 'quantity', 'regular', 'name', 'upc', 'categories']})
+# cpus = {v for v in map(lambda x: x.get('upc'), afil)}
+# # match on upc and cart_number
+# matching_prices = list(filter(lambda x: ((x.get('upc') in cpus)and(x.get('cart_number')==atrip)), prices))
+# print("len of price entries", len(matching_prices))
+# matching_prices = sorted(matching_prices, key=lambda x: x['upc'])
+# afil = sorted(afil, key=lambda x: x['upc'])
+# priced = []
+# for pr, it in zip(matching_prices, afil):
+#     it.update(pr)
+#     it['name'] = it['names'][0]
+#     priced.append({k:v for k,v in it.items() if k in ['promo', 'quantity', 'regular', 'name', 'upc', 'categories']})
     
-# print(priced[1])
-# pprint.pprint(list(filter(lambda x: x.get('upc') in {'0021077300000', '0001111004519'}, afil)))
-getFuzzyMatch(items=priced, trips=atri)
+# # print(priced[1])
+# # pprint.pprint(list(filter(lambda x: x.get('upc') in {'0021077300000', '0001111004519'}, afil)))
+# getFuzzyMatch(items=priced, trips=atri)
 
 # return items and price (as quant * promo) to help fuzzy matching
 
