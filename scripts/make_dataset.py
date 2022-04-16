@@ -1,3 +1,4 @@
+from pprint import pprint
 import time, re, random, datetime as dt
 from tkinter import Button
 from matplotlib.pyplot import title
@@ -459,6 +460,11 @@ def getDigitalPromotions():
         page.send_keys(Keys.END)
         time.sleep(.25)
 
+    for i in range(5):
+        page.send_keys(Keys.HOME)
+        time.sleep(.25)
+
+
     deals = driver.find_elements(By.CSS_SELECTOR, 'div.CouponCard-wrapper')
     dealCollection = []
     deals = deals[:3]
@@ -530,6 +536,7 @@ def getDigitalPromotions():
             raise ValueError
 
         dealCollection.append(dealEntry)
+    pprint(dealCollection)
 
 
 
