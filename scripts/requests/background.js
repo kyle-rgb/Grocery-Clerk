@@ -1,13 +1,19 @@
-
 // Add the new header to the original array,
 // and return it.
+// var window = require('window-utils').activeWindow
+// var indexedDB = (window.indexedDB || window.mozIndexedDB)
+// var req = indexedDB.open('78zDB')
+
+var master = "";
+
 function setCookie(e) {
   let setMyCookie = {
     name: "Set-Cookie",
-    value: "my-cookie1=my-cookie-value1"
+    value: "my-cookie1=my-cookie-value1; SameSite=None; Secure"
   };
   e.responseHeaders.push(setMyCookie);
-  console.log('myResponseH', e.responseHeaders)
+  console.log('myResponseH', e.responseHeaders, browser.downloads)
+  // let download = browser.downloads.download({saveAs: true, url: "http://127.0.0.1:5000/docs"})
   return {responseHeaders: e.responseHeaders};
 }
 
@@ -22,7 +28,6 @@ function logURL(requestDetails) {
 
 function listener(details) {
     let filter = chrome.webRequest.filterResponseData(details.requestId);
-    console.log('filterv4', typeof(filter), Object.keys(filter))
     let decoder = new TextDecoder("utf-8");
     let encoder = new TextEncoder();
     console.log('fired')
@@ -31,9 +36,10 @@ function listener(details) {
       let str = decoder.decode(event.data, {stream: true});
       // Just change any instance of Example in the HTTP response
       // to WebExtension Example.
-
       str = str.replace(/Example/g, 'WebExtension Example');
-      console.log('string', details.requestId, typeof(str), str)
+      master += "|" + str
+      console.log(details.requestId, typeof(str), str)
+      console.log('master=', master)
       filter.write(encoder.encode(str));
       filter.disconnect();
     }
@@ -42,25 +48,38 @@ function listener(details) {
     return {};
   }
 
+browser.contextMenus.create({
+  id: 'eat-page',
+  title: "Eat this Page"
+})
+
+browser.contextMenus.onClicked.addListener(function(info, tab) {
+  let download = browser.downloads.download({saveAs: true, url: "http://127.0.0.1:5000/docs", body: master})
+  console.log('download', download)
+  // if (info.menuItemId == "eat-page"){
+  //   browser.tabs.executeScript({
+  //     file: "page-eater.js"
+  //   })
+  // }
+})
 
 
-
-chrome.webRequest.onBeforeRequest.addListener(
+browser.webRequest.onBeforeRequest.addListener(
     logURL,
-    {urls: ["<all_urls>"],  types: ["xmlhttprequest", "object"]}, // "*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas*"
+    {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas*"],  types: ["xmlhttprequest", "object"]},
     ['blocking']
   );
 
-chrome.webRequest.onBeforeRequest.addListener(
+browser.webRequest.onBeforeRequest.addListener(
   listener,
-  {urls:  ["<all_urls>"], types: ["xmlhttprequest", "object"]}, // "*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas*"
+  {urls:  ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas*"], types: ["xmlhttprequest", "object"]}, 
   ["blocking"]
 )
 
 // Listen for onHeaderReceived for the target page.
 // Set "blocking" and "responseHeaders".
-browser.webRequest.onHeadersReceived.addListener(
-  setCookie,
-  {urls: ["api/"]},
-  ["blocking", "responseHeaders"]
-);
+// browser.webRequest.onHeadersReceived.addListener(
+//   setCookie,
+//   {urls: ["<all_urls>"]},
+//   ["blocking", "responseHeaders"]
+// );

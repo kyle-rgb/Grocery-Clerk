@@ -7,11 +7,21 @@
     "permissions": [
       "webRequest",
       "webRequestBlocking",
+      "storage",
+      "tabs",
+      "notifications",
+      "activeTab",
+      "contextMenus",
+      "unlimitedStorage",
+      "clipboardRead",
+      "downloads",
+      "clipboardWrite",
       "<all_urls>"
     ],
   
     "background": {
-      "scripts": ["background.js"]
+      "scripts": ["background.js"],
+      "persistent": true
     }
   }
   
