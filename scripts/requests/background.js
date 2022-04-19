@@ -5,6 +5,8 @@
 // var req = indexedDB.open('78zDB')
 
 var master = "";
+var setMaster = new Set() 
+
 
 function setCookie(e) {
   let setMyCookie = {
@@ -12,8 +14,8 @@ function setCookie(e) {
     value: "my-cookie1=my-cookie-value1; SameSite=None; Secure"
   };
   e.responseHeaders.push(setMyCookie);
-  console.log('myResponseH', e.responseHeaders, browser.downloads)
-  // let download = browser.downloads.download({saveAs: true, url: "http://127.0.0.1:5000/docs"})
+  console.log('myResponseH', e.responseHeaders, chrome.downloads)
+  // let download = chrome.downloads.download({saveAs: true, url: "http://127.0.0.1:5000/docs"})
   return {responseHeaders: e.responseHeaders};
 }
 
@@ -30,55 +32,79 @@ function listener(details) {
     let filter = chrome.webRequest.filterResponseData(details.requestId);
     let decoder = new TextDecoder("utf-8");
     let encoder = new TextEncoder();
+    let i = 0;
     console.log('fired')
-  
+    filter.onstart = event => {
+      console.log(`${details.requestId} stream received, commence processing......`)
+      let originRegex = /api\/.*/g
+      let origin = decodeURI(details.url.match(originRegex))
+      master += "|" + origin + ":" 
+    }
     filter.ondata = event => {
       let str = decoder.decode(event.data, {stream: true});
-      // Just change any instance of Example in the HTTP response
-      // to WebExtension Example.
-      str = str.replace(/Example/g, 'WebExtension Example');
-      master += "|" + str
-      console.log(details.requestId, typeof(str), str)
-      console.log('master=', master)
-      filter.write(encoder.encode(str));
-      filter.disconnect();
+      console.log("event", details.requestId, 'chunkObtained', 'buffer', event.data)
+      console.log('str', str)
+      master += str
+      filter.write(encoder.encode(str))
+      console.log('filter reachEnd of first data stream:', filter.status)
     }
-    console.log('done listening........')
-    console.log('filter', typeof(filter), filter)
+
+    filter.onstop = event => {
+      getI(details.requestId).then((ii) => {
+        if (ii===0){
+          master += ", "
+        }
+        console.log('master=', master, i)
+      })
+      
+      filter.disconnect();
+      console.log(`filter disconnected ${details.requestId}`, filter.constructor.name, filter.status, setMaster)
+      
+    }
+
     return {};
   }
 
-browser.contextMenus.create({
+async function getI(i){
+  if (setMaster.has(i)){
+    return i
+  } else {
+    setMaster.add(i)
+    return 0
+  }
+}
+
+chrome.contextMenus.create({
   id: 'eat-page',
   title: "Eat this Page"
 })
 
-browser.contextMenus.onClicked.addListener(function(info, tab) {
-  let download = browser.downloads.download({saveAs: true, url: "http://127.0.0.1:5000/docs", body: master})
+chrome.contextMenus.onClicked.addListener(function(info, tab) {
+  let download = chrome.downloads.download({saveAs: true, url: "http://127.0.0.1:5000/docs", body: master})
   console.log('download', download)
   // if (info.menuItemId == "eat-page"){
-  //   browser.tabs.executeScript({
+  //   chrome.tabs.executeScript({
   //     file: "page-eater.js"
   //   })
   // }
 })
 
 
-browser.webRequest.onBeforeRequest.addListener(
+chrome.webRequest.onBeforeRequest.addListener(
     logURL,
-    {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas*"],  types: ["xmlhttprequest", "object"]},
+    {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas*"],  types: ["xmlhttprequest", "object"]}, // ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas*"]
     ['blocking']
   );
 
-browser.webRequest.onBeforeRequest.addListener(
+chrome.webRequest.onBeforeRequest.addListener(
   listener,
-  {urls:  ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas*"], types: ["xmlhttprequest", "object"]}, 
+  {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas*"], types: ["xmlhttprequest", "object"]}, // 
   ["blocking"]
 )
 
 // Listen for onHeaderReceived for the target page.
 // Set "blocking" and "responseHeaders".
-// browser.webRequest.onHeadersReceived.addListener(
+// chrome.webRequest.onHeadersReceived.addListener(
 //   setCookie,
 //   {urls: ["<all_urls>"]},
 //   ["blocking", "responseHeaders"]

@@ -1,8 +1,11 @@
+from math import remainder
 from pprint import pprint
 import time, re, random, datetime as dt
 from tkinter import Button
 from matplotlib.pyplot import title
 from matplotlib.style import available
+import pyautogui as pag
+
 
 from pymongo import MongoClient
 
@@ -577,13 +580,34 @@ def getDigitalPromotions():
     return None
 
 
+def simulateUser():
+    neededLinks = {'cashback': 152, 'digital': 305}
+    # browser up start will be setting user location, navigating to the page, and placing mouse on first object
+    # from here: the code will commence
+    starting_position = pag.position
+    iterations = (neededLinks['digital'] // 4)
+    remainder = ((neededLinks['digital'] / 4) - (neededLinks['digital'] // 4)) * 4
+    for i in range(iterations):
+        for j in range(4):
+            # open react modal portal to execute fetch query
+            # pag.click()
+            time.sleep(3)
+            # escape out of portal
+            pag.press('esc')
+            if j == 3:
+                pag.moveRel(400, 0, duration=1.3)
+            else:
+                pag.moveRel(-1200, 0, duration=2)
+        pag.scroll(-258)
+        print('finished row {}; {} to go; mouse currently @ {}'.format(i, iterations-i, pag.position))
 
+    return None
 
 
 
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
 # getMyData() 
 
-getDigitalPromotions()
+# getDigitalPromotions()
 
-
+simulateUser()
