@@ -8,7 +8,7 @@ app = Flask(__name__)
 def docs():
     data = request.get_data(as_text=True)
     length = request.content_length
-    with open('./cbk.txt', 'w', encoding='utf-8') as file:
+    with open('./digital.txt', 'w', encoding='utf-8') as file:
         file.write(data)
     print('successfly wrote')
     print('the requested data wanted in a file format was', length)

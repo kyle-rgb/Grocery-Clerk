@@ -581,24 +581,50 @@ def getDigitalPromotions():
 
 
 def simulateUser():
-    neededLinks = {'cashback': 152, 'digital': 305}
+    neededLinks = {'cashback': 152, 'digital': 307}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
     starting_position = pag.position
-    iterations = (neededLinks['digital'] // 4)
-    remainder = ((neededLinks['digital'] / 4) - (neededLinks['digital'] // 4)) * 4
+    # start at top of the screen 
+    # align all items
+    iterations = neededLinks['digital'] // 12
+    time.sleep(3)
+    # pag.scroll(-800)
+    time.sleep(2)
+    # find all buttons
     for i in range(iterations):
-        for j in range(4):
-            # open react modal portal to execute fetch query
-            # pag.click()
-            time.sleep(3)
+        buttons = list(pag.locateAllOnScreen("./requests/server/signIn.png", confidence=.67, grayscale=False))
+        # print(buttons)
+        buttons = [pag.center(y) for i, y in enumerate(buttons) if abs(buttons[i].left-buttons[i-1].left) > 2]
+        print(f"Located {len(buttons)} Items")
+        print(buttons)
+        if len(buttons)>12:
+            yaxis = list(map(lambda b: b.y, buttons))
+            buttons = [x for x in buttons if yaxis.count(x.y) >= 4]
+        print(buttons)
+        for b in buttons:
+            pag.moveTo(b)
+            x, y = pag.position()
+            X, Y = pag.position()
+            draws = 0
+            direction = 1
+            print(pag.position())
+            while pag.pixel(x, y) != (56, 83, 151):
+                pag.moveRel(0, 5*direction)
+                x, y = pag.position()
+                draws+= 1
+                if draws > 7:
+                    direction = -1
+
+            pag.moveRel(-186, 0, duration=1.5)
+            pag.click()
+            time.sleep(7)
             # escape out of portal
             pag.press('esc')
-            if j == 3:
-                pag.moveRel(400, 0, duration=1.3)
-            else:
-                pag.moveRel(-1200, 0, duration=2)
-        pag.scroll(-258)
+            pag.moveRel(186, 0, duration=2)
+            # pag.moveRel(-186, 0, duration=1.2)
+            
+        pag.scroll(-2004)
         print('finished row {}; {} to go; mouse currently @ {}'.format(i, iterations-i, pag.position))
 
     return None
