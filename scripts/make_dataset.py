@@ -1,9 +1,6 @@
-from math import remainder
+
 from pprint import pprint
 import time, re, random, datetime as dt
-from tkinter import Button
-from matplotlib.pyplot import title
-from matplotlib.style import available
 import pyautogui as pag
 
 
@@ -581,31 +578,30 @@ def getDigitalPromotions():
 
 
 def simulateUser():
-    neededLinks = {'cashback': 152, 'digital': 307}
+    time.perf_counter()
+    neededLinks = {'cashback': 158, 'digital': 589}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
-    starting_position = pag.position
     # start at top of the screen 
     # align all items
     iterations = neededLinks['digital'] // 12
+    iterations = iterations + 1
     time.sleep(3)
-    # pag.scroll(-800)
+    pag.scroll(-800)
     time.sleep(2)
     # find all buttons
     for i in range(iterations):
-        buttons = list(pag.locateAllOnScreen("./requests/server/signIn.png", confidence=.67, grayscale=False))
+        buttons = list(pag.locateAllOnScreen("./requests/server/signIn.png", confidence=.6, grayscale=False))
         # print(buttons)
-        buttons = [pag.center(y) for i, y in enumerate(buttons) if abs(buttons[i].left-buttons[i-1].left) > 2]
+        buttons = [pag.center(y) for i, y in enumerate(buttons) if abs(buttons[i].left-buttons[i-1].left) > 100] # > 2
         print(f"Located {len(buttons)} Items")
-        print(buttons)
         if len(buttons)>12:
             yaxis = list(map(lambda b: b.y, buttons))
             buttons = [x for x in buttons if yaxis.count(x.y) >= 4]
-        print(buttons)
+        print(len(buttons), "buttons", buttons)
         for b in buttons:
             pag.moveTo(b)
             x, y = pag.position()
-            X, Y = pag.position()
             draws = 0
             direction = 1
             print(pag.position())
@@ -613,20 +609,20 @@ def simulateUser():
                 pag.moveRel(0, 5*direction)
                 x, y = pag.position()
                 draws+= 1
-                if draws > 7:
+                if draws > 14:
                     direction = -1
-
             pag.moveRel(-186, 0, duration=1.5)
             pag.click()
-            time.sleep(7)
             # escape out of portal
+            time.sleep(7.5)
             pag.press('esc')
-            pag.moveRel(186, 0, duration=2)
-            # pag.moveRel(-186, 0, duration=1.2)
+            pag.moveRel(186, 0, duration=1.5)
             
         pag.scroll(-2004)
-        print('finished row {}; {} to go; mouse currently @ {}'.format(i, iterations-i, pag.position))
+        print('finished row {}; {} to go; mouse currently @ {} :: {} seconds left'.format(i, iterations-i, pag.position(), (time.perf_counter()/(i+1))*(iterations-i)))
+        time.sleep(2)
 
+    print(f"Processed {neededLinks['digital']} in {time.perf_counter()} seconds")
     return None
 
 

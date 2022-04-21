@@ -425,6 +425,7 @@ def getItemInfo(itemLocationPairs):
             time.sleep(1)
         except json.decoder.JSONDecodeError:
             print(i)
+            print(upc)
             print(response)
             time.sleep(12)
         if i % 10 == 0:
@@ -728,7 +729,7 @@ def getPrices(api):
 
 
 
-
+# # upcSET = parseUPC()
 upcSET= set({'650233691;01100482'})
 # # # # # # API CALLS # # # # # # 
 getItemInfo(upcSET)

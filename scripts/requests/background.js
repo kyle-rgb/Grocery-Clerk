@@ -32,11 +32,12 @@ function listener(details) {
     let filter = chrome.webRequest.filterResponseData(details.requestId);
     let decoder = new TextDecoder("utf-8");
     let encoder = new TextEncoder();
+    let originRegex = /api.*|atlas.*/g
     let i = 0;
     console.log('fired')
     filter.onstart = event => {
       console.log(`${details.requestId} stream received, commence processing......`)
-      let originRegex = /api\/.*/g
+      
       let origin = decodeURI(details.url.match(originRegex))
       master += "|" + origin + ":" 
     }
@@ -81,7 +82,9 @@ chrome.contextMenus.create({
 
 chrome.contextMenus.onClicked.addListener(function(info, tab) {
   let download = chrome.downloads.download({saveAs: true, url: "http://127.0.0.1:5000/docs", body: master})
-  console.log('download', download)
+  console.log(`download received && ${master.length} string cleared.`)
+  master= ''
+  console.log(`${master.length}`)
   // if (info.menuItemId == "eat-page"){
   //   chrome.tabs.executeScript({
   //     file: "page-eater.js"
