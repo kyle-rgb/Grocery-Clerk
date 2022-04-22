@@ -1,4 +1,5 @@
-import re, requests, datetime, time, json, pprint, random, math
+
+import re, requests, datetime, time, json, pprint, random, math, os
 import numpy as np
 from django.forms import ValidationError
 from fuzzywuzzy import fuzz, process
@@ -255,7 +256,6 @@ def parseUPC():
         # sales_re = re.compile(r'^SC\s*([A-z\s]+)+(\d+\.\d+)[\s-]*(B|T|X)?$')
         # item_re = re.compile(r"\s*([^\d]+)+(\d+\.\d+)[\s|-](B$|T$|X$)")
         for i, docstring in enumerate(_['full_document']):
-            salesObject = {}
             if re.findall(sales_re, docstring)!=[]:
                 name, cost, taxStatus = re.findall(sales_re, docstring)[0]
                 name = name.strip()
@@ -457,6 +457,24 @@ def combineItems(api, scraped):
     parsedItemsSet = set()
     final_product_array = []
     prices_array = []
+    if os.path.exists('./data/collections/combinedItems.json') and os.path.exists('./data/collections/combinedPrices.json'):
+        # load each file
+        with open('./data/collections/combinedItems.json', 'r') as file:
+            final_product_array = json.loads(file.read())
+            _upcs = list(map(lambda x: parsedItemsSet.add(x.get('upc')), final_product_array))
+            
+        
+        with open('./data/collections/combinedPrices.json', 'r') as file:
+            prices_array = json.loads(file.read())
+
+        # write upcs to parsedItemSet
+
+    print(len(prices_array))
+    print(len(final_product_array))
+    print(len(parsedItemsSet))
+
+    print(1 / 0)
+
     for product in api:
         upc = product.get('upc')
         if upc in parsedItemsSet:
@@ -730,9 +748,9 @@ def getPrices(api):
 
 
 # # upcSET = parseUPC()
-upcSET= set({'650233691;01100482'})
+# upcSET= set({'650233691;01100482'})
 # # # # # # API CALLS # # # # # # 
-getItemInfo(upcSET)
+# getItemInfo(upcSET)
 # getStoreLocation({'01100482', '01100685', '01100438'})
 # # # # # # # # # # ## # # # # #
 #trips = json.loads(open('./data/collections/trips.json', 'r').read())
@@ -744,9 +762,9 @@ getItemInfo(upcSET)
 #combineItems(api=apiItems, scraped=items)
 # # # # # # # # # # ## # # # # # # # # # # # #
 # # upcSET = parseUPC()
-# items = json.loads(open('./data/collections/items.json', 'r').read())
-# apiItems = json.loads(open('./data/API/itemsAPI.json', 'r').read())
-# # combineItems(api=apiItems, scraped=items)
+items = json.loads(open('./data/collections/items.json', 'r').read())
+apiItems = json.loads(open('./data/API/itemsAPI.json', 'r').read())
+combineItems(api=apiItems, scraped=items)
 # # getItemInfo(upcSET) # LAST API CALL @ 9:40 PM 4/11/2022
 
 # prices = json.loads(open('./data/collections/combinedPrices.json', 'r').read())

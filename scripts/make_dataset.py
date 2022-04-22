@@ -1,6 +1,6 @@
 
 from pprint import pprint
-import time, re, random, datetime as dt
+import time, re, random, datetime as dt, os, json
 import pyautogui as pag
 
 
@@ -267,7 +267,9 @@ def getReceipt(link, driver):
     try:
         receipt = driver.find_element(By.CSS_SELECTOR, 'div.imageContainer')
         nodes = receipt.find_elements(By.CSS_SELECTOR, 'div.imageTextLineCenter')
-        receipt_document['order_number'] = link
+        order = link.split('/')[-1]
+        receipt_document['order_number'] = order
+        receipt_document['checkout_timestamp'] = order.split('~')[2] + " " + order.split('~')[-1][-4:-2] + ":" + order.split('~')[-1][-2:]
         receipt_document['full_document'] = list(map(lambda x: x.text, nodes))
         for index, bn in enumerate(nodes):
         # FINISHED: Match Sales w/ Items (Could be Done Via Price Matching w/ Exceptions for Same Prices Since Receipt Names are abbreviations)
@@ -362,16 +364,16 @@ def getReceipt(link, driver):
     driver.switch_to.window(driver.window_handles[0]) # bring back to current dashboard page
     return None
 
-# Trip Level Data : Collection<Items>
-# Trip and Account Metadata and More Precise Data on the Sales 
+# Trip Level Data : Collection<Items> https://www.kroger.com/mypurchases/api/v1/receipt/details https://www.kroger.com/atlas/v1/purchase-history/details
+# Trip and Account Metadata and More Precise Data on the Sales  
 # More Precise Item information (UPC to join to receipt), ingredients, ratings, health_info, etc. 
 
 
-def getMyData():
+def getMyData(): # https://www.kroger.com/products/api/products/recommendations
     # Process Flow: Setup Browser -> Get Purchases Dashboard -> Collect Cart URLS -> foreach cart getCart(cart_page){contains GetItems} and getReceipt(reciept_page) 
     # Purchase Dashboard, Acquire links for each trip on the page and buttons to next page, get links for each item and finish with receipt acquistion
     # Setup Driver
-    options = webdriver.ChromeOptions() 
+    options = webdriver.ChromeOptions()  # https://www.kroger.com/atlas/v1/recommendations/v1/better-for-you?filter.gtin13=0007022100718&page.offset=0&page.size=1903
     options.add_argument("start-maximized")
     options.add_argument("disable-blink-features=AutomationControlled")
     # Load Credentials from Browser Profile
@@ -391,6 +393,13 @@ def getMyData():
         else:
             raise ValueError('No other response allowed')
     
+    if True:
+        break
+    # if trips (a previous selenium scraping operation has been performed), thus a file exists
+        #
+
+
+
     time.sleep(7)
     dashboard_url_base = 'https://www.kroger.com/mypurchases?tab=purchases&page='
     dashboard_index = 2
@@ -578,7 +587,6 @@ def getDigitalPromotions():
 
 
 def simulateUser():
-    time.perf_counter()
     neededLinks = {'cashback': 158, 'digital': 589}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
@@ -625,11 +633,32 @@ def simulateUser():
     print(f"Processed {neededLinks['digital']} in {time.perf_counter()} seconds")
     return None
 
+def newOperation():
+    if os.path.exists('./data/collections/trips.json'):
+        with open('./data/collections/trips.json') as file: 
+            trips = json.loads(file.read())
+            latest_trip_date = max(list(map(lambda f: dt.datetime.strptime(f.get('checkout_timestamp'), "%Y/%m/%d %H:%M"), trips)))
 
+        with open('./data/API/myStoresAPI.json') as file: 
+            stores = json.loads(file.read())
+        
+        print(latest_trip_date, type(latest_trip_date))
+    o = {}
+    for t in trips:
+        for k in t.keys():
+            if k in o:
+                o[k]+=1
+            else:
+                o[k]=1
+    pprint(sorted(o.items(), key=lambda x: x[1]))
+    pprint(stores)
+
+    # need to then break down [the see order details link]
+
+    return None
 
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
 # getMyData() 
-
 # getDigitalPromotions()
-
-simulateUser()
+# simulateUser()
+newOperation()
