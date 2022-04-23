@@ -463,15 +463,10 @@ def combineItems(api, scraped):
             final_product_array = json.loads(file.read())
             _upcs = list(map(lambda x: parsedItemsSet.add(x.get('upc')), final_product_array))
             
-        
         with open('./data/collections/combinedPrices.json', 'r') as file:
             prices_array = json.loads(file.read())
 
         # write upcs to parsedItemSet
-
-    print(len(prices_array))
-    print(len(final_product_array))
-    print(len(parsedItemsSet))
 
     print(1 / 0)
 

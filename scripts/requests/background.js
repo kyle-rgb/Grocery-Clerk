@@ -3,10 +3,8 @@
 // var window = require('window-utils').activeWindow
 // var indexedDB = (window.indexedDB || window.mozIndexedDB)
 // var req = indexedDB.open('78zDB')
-
 var master = "";
 var setMaster = new Set() 
-
 
 function setCookie(e) {
   let setMyCookie = {
@@ -55,7 +53,7 @@ function listener(details) {
         if (ii===0){
           master += ", "
         }
-        console.log('master=', master, i)
+        console.log('master=', master, master.length)
       })
       
       filter.disconnect();
@@ -107,8 +105,15 @@ chrome.webRequest.onBeforeRequest.addListener(
 
 // Listen for onHeaderReceived for the target page.
 // Set "blocking" and "responseHeaders".
-// chrome.webRequest.onHeadersReceived.addListener(
-//   setCookie,
-//   {urls: ["<all_urls>"]},
-//   ["blocking", "responseHeaders"]
-// );
+chrome.webRequest.onHeadersReceived.addListener(
+  setCookie,
+  {urls: ["<all_urls>"]},
+  ["blocking", "responseHeaders"]
+);
+
+chrome.webRequest.onHeadersReceived.addListener(
+  logURL,
+  {urls: ["<all_urls>"]},
+  ["blocking", "responseHeaders"]
+);
+

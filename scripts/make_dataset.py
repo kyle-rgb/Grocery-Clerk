@@ -3,7 +3,7 @@ from pprint import pprint
 import time, re, random, datetime as dt, os, json
 import pyautogui as pag
 
-
+from apiCalls import parse_ingredients
 from pymongo import MongoClient
 
 from selenium import webdriver
@@ -45,6 +45,9 @@ def insertData(entries, collection_name):
     elif collection_name == 'items':
         res = db.items.insert_many(entries)
         res = len(res.inserted_ids)
+    elif collection_name == 'prices':
+        res = db.prices.insert_many(entries)
+        res = len(res.inserted_ids)
     else:
         client.close()
         raise ValueError
@@ -65,6 +68,9 @@ def getItemInfo(link, driver):
     # /product?<search terms> :: productID<String>,UPC<String>,aisleLocations<Array>,brand<String>,categories<Array>,countryOrigin<String>,description<String>,items<Array>,itemInformation<Object of 3D Points>,temperature<Object>, images<Array of Objects w/[id, perspective, default=true/false, sizes<Array of Objects w/[id, size, url]>]> 
     # /product/id
     item_details = {}
+    reviews_regex = re.compile(r'(\d+) reviews with (\d{1}) star[s]?\.')
+    legalese_regex = re.compile(r"((contains)(\s2% or less of)?[^A-z]*)", re.IGNORECASE)
+    grammer = {'g': 1, 'mg': 1000, 'mcg': 1_000_000}
     driver.switch_to.new_window("tab")
     time.sleep(4)
     try:
@@ -74,15 +80,9 @@ def getItemInfo(link, driver):
         return item_details
     # UPC
     try: 
-        item_details['UPC'] = driver.find_element(By.CSS_SELECTOR, "span.ProductDetails-upc").text.replace("UPC:", "").strip()
-    except NoSuchElementException:
-        # will be only number in link
-        code_re = re.compile(r"/\d+")
-        fallback_code = "".join(re.findall(code_re, link))
-        item_details['UPC'] = fallback_code.replace('/', "")
-    finally:
-        item_details['UPC'] = link
-        
+        item_details['upc'] = driver.find_element(By.CSS_SELECTOR, "span.ProductDetails-upc").text.replace("UPC:", "").strip()
+    except:
+        item_details['upc'] = link.split('/')[-1]
         # Get Nutritional Inforamtion
         # Parse Out Nutritional Information housed in items_info [calories, health_rating, Tags:['Kosher', 'NonGMO', 'Organic'], info: {'Ingredients': '', 'Allergen Info': '', 'Disclaimer'},
         # serving_size, nutrients: {"name", "type":['macro', 'sub', 'micro'], "subnutrients": [{}, {}], values: ['DV%', 'Weight']}]]
@@ -100,25 +100,27 @@ def getItemInfo(link, driver):
         for x, n in enumerate(nutrients):
             
             title_and_amount = n.find_element(By.CSS_SELECTOR, 'span.NutrientDetail-TitleAndAmount')
+            title_and_amount = title_and_amount.text.replace("\n", ": ").replace("Number of International Units", "IU")
+            title, amt = re.sub(r"([A-Za-z]+)(\d\.?\d*){1}", r"\1:\2", title_and_amount).split(':')
             is_macro = "is-macronutrient" in title_and_amount.find_element(By.CSS_SELECTOR, 'span').get_attribute('class')
             is_micro = "is-micronutrient" in title_and_amount.find_element(By.CSS_SELECTOR, 'span').get_attribute('class')
             is_sub = "is-subnutrient" in title_and_amount.find_element(By.CSS_SELECTOR, 'span').get_attribute('class')
+            daily_value = n.find_element(By.CSS_SELECTOR, 'span.NutrientDetail-DailyValue').text.replace("\n", ": ").replace("Number of International Units", "IU")
             if ((is_macro) & (~is_sub)):
                 hierarchy_switch = x
+                item_details['health_info']['macros'].append({'name': title, 'measure': amt,'daily_value': daily_value, "subnutrients": []})
+            elif((is_macro) & (is_sub)):
+                item_details['health_info']['macros'][hierarchy_switch]['subnutrients'].append({'name': title, 'measure': amt,'daily_value': daily_value})
             else:
-                hierarchy_switch = hierarchy_switch
-            title_and_amount = title_and_amount.text.replace("\n", ": ").replace("Number of International Units", "IU")
-            title_and_amount = re.sub(r"([A-Za-z]+)(\d\.?\d*){1}", r"\1:\2", title_and_amount).split(':')
-            daily_value = n.find_element(By.CSS_SELECTOR, 'span.NutrientDetail-DailyValue').text.replace("\n", ": ").replace("Number of International Units", "IU")
-            try:      
-                item_details['health_info']['macros'].append({'name': title_and_amount[0], 'measure': title_and_amount[1],'daily_value': daily_value, 'is_macro': is_macro, 'is_micro': is_micro, 'is_sub': is_sub, 'nutrient_joiner': hierarchy_switch})
-            except:
-                # BUG: Micronutrients with no amount listed by still given a percentage mess-up title and amount
-                item_details['health_info']['macros'].append({'title_and_amount': str(title_and_amount),'daily_value': daily_value, 'is_macro': is_macro, 'is_micro': is_micro, 'is_sub': is_sub, 'nutrient_joiner': hierarchy_switch})
+                item_details['health_info']['micros'].append({'name': title, 'measure': amt,'daily_value': daily_value, "subnutrients": []})
 
         ingredients_info = nutrition_we.find_elements(By.CSS_SELECTOR, 'p.NutritionIngredients-Ingredients')
         for p in ingredients_info:
-            item_details['ingredients'] = list(map(str.strip, p.text.replace("Ingredients\n", "").split(",")))
+            txt = p.strip()
+            txt = p.text.replace("Ingredients\n", "")
+            txt = txt.replace(';', ',').replace('.', ', ').replace('}]', ']]')
+            txt = re.sub(legalese_regex, '', txt)
+            item_details['health_info']['ingredients'] = parse_ingredients(txt)
 
         try:
             ratings = nutrition_we.find_elements(By.CSS_SELECTOR, 'div.NutritionIndicators-wrapper')
@@ -133,7 +135,7 @@ def getItemInfo(link, driver):
             try:
                 nutrition_rating_container =  nutrition_we.find_element(By.CSS_SELECTOR, 'div.Nutrition-Rating-Container')
                 health_rating = nutrition_rating_container.find_element(By.TAG_NAME, 'svg').get_attribute('aria-label')
-                item_details['health_info']['overall_health_score'] = health_rating
+                item_details['health_info']['overall_health_score'] = int(health_rating.replace('percentage', ''))
             except :
                 item_details=item_details
             finally:
@@ -145,24 +147,29 @@ def getItemInfo(link, driver):
     finally:
         item_details = item_details
     try:
-        # nonfood product rating
-        item_details['avg_rating'] = driver.find_element(By.CSS_SELECTOR, "div.bv_avgRating_component_container").text
-        # Number of Reviews
-        item_details['reviews'] = driver.find_element(By.CSS_SELECTOR, "div.bv_numReviews_text").text
+        not_loaded_check = driver.find_element(By.CSS_SELECTOR, "div.bv_avgRating_component_container").text
         # Ratings Distribution
-        item_details['ratings_distribution'] = driver.find_element(By.CSS_SELECTOR, "div.bv-inline-histogram-ratings").text
-
-        if item_details['avg_rating'].strip() == '':
+        if not_loaded_check.strip() == '':
             time.sleep(3)
             # nonfood product rating
-            item_details['avg_rating'] = driver.find_element(By.CSS_SELECTOR, "div.bv_avgRating_component_container").text
-            # Number of Reviews
-            item_details['reviews'] = driver.find_element(By.CSS_SELECTOR, "div.bv_numReviews_text").text
-            # Ratings Distribution
-            item_details['ratings_distribution'] = driver.find_element(By.CSS_SELECTOR, "div.bv-inline-histogram-ratings").text
+            ratings_text = driver.find_element(By.CSS_SELECTOR, "div.bv-inline-histogram-ratings").text
+        else:
+            ratings_text = driver.find_element(By.CSS_SELECTOR, "div.bv-inline-histogram-ratings").text
+
+        
+        ratings_list =  re.findall(reviews_regex, ratings_text)
+        temp_list = [0, 0, 0, 0, 0]
+        for k, v in ratings_list:
+            temp_list[int(v)-1] = int(k)
+
+        item_details['ratings_distribution'] = temp_list
+        # nonfood product rating
+        
 
     except NoSuchElementException:
         item_details=item_details
+
+
     driver.close() # close item page
     driver.switch_to.window(driver.window_handles[1]) # brings you back to trip page
     return item_details
@@ -176,12 +183,16 @@ def getCart(url, driver):
     driver.get(url)
     time.sleep(8)
     data = []
+    prices = []
     items = driver.find_elements(By.CSS_SELECTOR, 'div.PH-ProductCard-productInfo')
     # Find all products as List
-    for scan_number, we in enumerate(items):
+    for we in items:
         document = {}
-        document['cart_number'] = url
-        document['item_index'] = scan_number
+        # trip identfier
+        locate_data = url.split('/')[-1]
+        document['cart_number'] = locate_data
+        locationId = "".join(locate_data.split('~')[:2])
+        acquistion_timestamp = dt.datetime.strptime(locate_data.split('~')[2] + " " + locate_data.split('~')[-1][-4:], "%Y-%m-%d %H%S").timestamp()
         # dict.setdefault() <- Use for no IMG svgs
             # Image of Product (beware of svgs for products with no images)
         try:
@@ -196,20 +207,26 @@ def getCart(url, driver):
             # Link to Product :: Link to Item Ends with UPC which Can Help Compare Same Items Across Different Stores for Future Price Watching
             item_link= we.find_element(By.CSS_SELECTOR, 'span.kds-Text--m.PH-ProductCard-item-description.font-secondary.heading-s.mb-4 > a').get_attribute('href')
             document['item_link'] = item_link
-            document["UPC"] = re.findall(r"\d+", item_link)[0]
+            document["upc"] = re.findall(r"\d+", item_link)[0]
         except NoSuchElementException:
             document['product_name'] = we.find_element(By.CSS_SELECTOR, 'span.kds-Text--m.PH-ProductCard-item-description.font-secondary.heading-s.mb-4').text
             document['item_link'] = ''
             # Item Quantity and   # Price per Item
-        document['price_equation'] = we.find_element(By.CSS_SELECTOR, 'span.kds-Text--s').text
-            # shortDescription of Volume / Ct / Weight
         document['product_size'] = we.find_element(By.CSS_SELECTOR, 'span.kds-Text--xs.PH-ProductCard-item-description-size.text-default-500.mb-4').text
+        price_equation =  we.find_element(By.CSS_SELECTOR, 'span.kds-Text--s').text
+        price_equation = price_equation.split('x')
+        quantity = float(re.sub(r'[^\d\.]', "", price_equation[0]))
+        unitPrice = float(re.sub(r'[^\d\.]', "", price_equation[1]))
+        #document['price_equation'] =
+            # shortDescription of Volume / Ct / Weight
+        
         try:
             # Promotional Price {span class="kds-Price-promotional-dropCaps"}
-            document['product_promotional_price'] = we.find_element(By.CSS_SELECTOR, 'mark.kds-Price-promotional').text.replace('\n', '')
-            document['product_original_price'] = we.find_element(By.CSS_SELECTOR, 's.kds-Price-original').text.replace('\n', '')
+            promo_price = we.find_element(By.CSS_SELECTOR, 'mark.kds-Price-promotional').text.replace('\n', '')
+            orig_price = we.find_element(By.CSS_SELECTOR, 's.kds-Price-original').text.replace('\n', '')
         except NoSuchElementException:
-            document['product_original_price'] = we.find_element(By.CSS_SELECTOR, 'mark.kds-Price-promotional').text.replace('\n', '')
+            orig_price = we.find_element(By.CSS_SELECTOR, 'mark.kds-Price-promotional').text.replace('\n', '')
+
 
         if document['image'] != '': # No Image indicates a functionally dead webpage with no data
             time.sleep(1)
@@ -218,8 +235,18 @@ def getCart(url, driver):
             time.sleep(1.5)
             
         data.append(document)
+        prices.append({"promo": promo_price,\
+            "regular": orig_price,\
+                "upc":document['upc'],\
+                    'locationId': locationId,\
+                    "acquistion_timestamp": acquistion_timestamp,\
+                        'isPurchase': True,
+                        "quantity": quantity,\
+                            "cart_number": None,
+            }) 
 
     insertData(data, 'items')
+    insertData(prices, 'prices')
     driver.close()
     driver.switch_to.window(driver.window_handles[0]) 
     return None
@@ -393,16 +420,11 @@ def getMyData(): # https://www.kroger.com/products/api/products/recommendations
         else:
             raise ValueError('No other response allowed')
     
-    if True:
-        break
     # if trips (a previous selenium scraping operation has been performed), thus a file exists
         #
-
-
-
     time.sleep(7)
     dashboard_url_base = 'https://www.kroger.com/mypurchases?tab=purchases&page='
-    dashboard_index = 2
+    dashboard_index = 1
     driver.get(dashboard_url_base + f"{dashboard_index}")
     ### Website SignIn ###
     time.sleep(7)
@@ -635,14 +657,14 @@ def simulateUser():
 
 def newOperation():
     if os.path.exists('./data/collections/trips.json'):
-        with open('./data/collections/trips.json') as file: 
+        with open('./data/collections/combinedPrices.json') as file: 
             trips = json.loads(file.read())
-            latest_trip_date = max(list(map(lambda f: dt.datetime.strptime(f.get('checkout_timestamp'), "%Y/%m/%d %H:%M"), trips)))
+            #latest_trip_date = max(list(map(lambda f: dt.datetime.strptime(f.get('checkout_timestamp'), "%Y/%m/%d %H:%M"), trips)))
 
         with open('./data/API/myStoresAPI.json') as file: 
             stores = json.loads(file.read())
         
-        print(latest_trip_date, type(latest_trip_date))
+        #print(latest_trip_date, type(latest_trip_date))
     o = {}
     for t in trips:
         for k in t.keys():
@@ -651,7 +673,6 @@ def newOperation():
             else:
                 o[k]=1
     pprint(sorted(o.items(), key=lambda x: x[1]))
-    pprint(stores)
 
     # need to then break down [the see order details link]
 
