@@ -3,7 +3,7 @@ from pprint import pprint
 import time, re, random, datetime as dt, os, json
 import pyautogui as pag
 
-from apiCalls import parse_ingredients
+from apiCalls import parse_ingredients, getFuzzyMatch
 from pymongo import MongoClient
 
 from selenium import webdriver
@@ -223,9 +223,12 @@ def getCart(url, driver):
         try:
             # Promotional Price {span class="kds-Price-promotional-dropCaps"}
             promo_price = we.find_element(By.CSS_SELECTOR, 'mark.kds-Price-promotional').text.replace('\n', '')
+            promo_price = round(float(re.sub(r"[^\.\d]", "", promo_price)) / quantity, 2)
             orig_price = we.find_element(By.CSS_SELECTOR, 's.kds-Price-original').text.replace('\n', '')
+            orig_price = round(float(re.sub(r"[^\.\d]", "", orig_price)) / quantity, 2)
         except NoSuchElementException:
             orig_price = we.find_element(By.CSS_SELECTOR, 'mark.kds-Price-promotional').text.replace('\n', '')
+            orig_price = round(float(re.sub(r"[^\.\d]", "", orig_price)) / quantity, 2)
 
 
         if document['image'] != '': # No Image indicates a functionally dead webpage with no data
@@ -235,7 +238,9 @@ def getCart(url, driver):
             time.sleep(1.5)
             
         data.append(document)
-        prices.append({"promo": promo_price,\
+        prices.append({
+            "name": document.get('product_name'),
+            "promo": promo_price,\
             "regular": orig_price,\
                 "upc":document['upc'],\
                     'locationId': locationId,\
@@ -245,11 +250,10 @@ def getCart(url, driver):
                             "cart_number": None,
             }) 
 
-    insertData(data, 'items')
-    insertData(prices, 'prices')
+    
     driver.close()
     driver.switch_to.window(driver.window_handles[0]) 
-    return None
+    return data, prices
 
 
 
@@ -272,31 +276,31 @@ def getReceipt(link, driver):
     receipt_document={} 
     # Wanted Not Bolded Text
     payment_type_re= re.compile(r".+Purchase\s*")
-    full_address_re= re.compile(r".+(GA$|GA\s+\d{5}$)") 
+    ## full_address_re= re.compile(r".+(GA$|GA\s+\d{5}$)") 
     
     # Wanted Bolded Texts
     fuel_re = re.compile(r"Fuel Points Earned Today:|Fuel Points This Order:")
     cumulative_fuel_re = re.compile(r"Total .+ Fuel Points:")
     last_month_fuel_re = re.compile(r"Remaining .+ Fuel Points:")
-    street_address_re = re.compile(r"\d+.+(?:street|st|avenue|ave|road|rd|highway|hwy|square|sq|trail|trl|drive|dr|court|ct|parkway|pkwy|circle|cir|boulevard|blvd)+")
     cashier_re = re.compile(r"Your cashier was")
-    sales_re = re.compile(r'^SC')
     tax_re = re.compile(r"TAX")
     savings_total_re = re.compile(r"TOTAL SAVINGS \(.+\)")
     sales_total_re = re.compile(r".+BALANCE")
-    time_re = re.compile(r"\d{2}/\d{2}/\d{2} \d{2}:\d{2}")
+
 
     last_item_index = 0
-    checkout_time_re = re.compile(r"Time:")
-    checkout_date_re = re.compile(r"Date:")
-    item_re = re.compile(r".+(B$|T$|X$)")
+    weight_switch = ''
+    item_re = re.compile(r"^\s*(.+)(\d+\.\d+)[\s|-](B|T|X)$")
+    sales_re = re.compile(r'^SC\s*([A-z0-9\s]+)\s*(\d+\.\d+)[\s-]*(B|T|X)?$')
+    receipt_calculation_re = re.compile(r'((\d)(\.\d+)?(\D+)?)\s*@\s*(\d+)?\/?(\d+\.\d+)(\/\D+)?')
+    order = link.split('/')[-1]
+    receipt_document['cart_number'] = order
+    receipt_document['checkout_timestamp'] = order.split('~')[2] + " " + order.split('~')[-1][-4:-2] + ":" + order.split('~')[-1][-2:]
+    receipt_document['locationId'] = "".join(order.split('~')[:2])
     # Get Receipt Image
     try:
         receipt = driver.find_element(By.CSS_SELECTOR, 'div.imageContainer')
         nodes = receipt.find_elements(By.CSS_SELECTOR, 'div.imageTextLineCenter')
-        order = link.split('/')[-1]
-        receipt_document['order_number'] = order
-        receipt_document['checkout_timestamp'] = order.split('~')[2] + " " + order.split('~')[-1][-4:-2] + ":" + order.split('~')[-1][-2:]
         receipt_document['full_document'] = list(map(lambda x: x.text, nodes))
         for index, bn in enumerate(nodes):
         # FINISHED: Match Sales w/ Items (Could be Done Via Price Matching w/ Exceptions for Same Prices Since Receipt Names are abbreviations)
@@ -310,19 +314,10 @@ def getReceipt(link, driver):
                 receipt_document['fuel_points_earned'] = re.sub(fuel_re, "", text).strip()
             elif re.match(cumulative_fuel_re, text) != None:
                 receipt_document['fuel_points_month'] = re.sub(cumulative_fuel_re, "", text).strip()
-            elif re.match(checkout_date_re, text) != None:
-                receipt_document['checkout_timestamp'] += re.sub(checkout_date_re, "" , text)
-            elif re.match(checkout_time_re, text) != None:
-                receipt_document['checkout_timestamp'] += re.sub(checkout_time_re, "" , text)
-                receipt_document['checkout_timestamp'] = receipt_document['checkout_timestamp'].strip()
-            elif re.match(full_address_re, text) != None:
-                receipt_document['address'] = receipt_document['address'] + " " + text
-            elif re.match(time_re, text) != None:
-                receipt_document['address_backup'] = re.match(time_re, text)[0]
-            elif re.match(street_address_re, text.lower()) != None:
-                receipt_document['address'] =  text + " " + receipt_document['address']
             elif re.match(cashier_re, text ) != None:
                 receipt_document['cashier'] = re.sub(cashier_re, "", text).strip()
+            elif re.match(last_month_fuel_re, text) != None:
+                receipt_document['last_month_fuel_points'] = re.sub(last_month_fuel_re, "", text)
             elif re.match(payment_type_re,text) != None:
                 receipt_document['payment_type'] = text
             elif re.match(savings_total_re, text ) != None:
@@ -331,26 +326,40 @@ def getReceipt(link, driver):
                 receipt_document['total'] = re.sub(sales_total_re, "", text).strip()
             elif re.match(tax_re,text) != None:
                 receipt_document['tax'] = re.sub(tax_re, "", text).strip()
-            elif re.match(last_month_fuel_re, text) != None:
-                receipt_document['last_month_fuel_points'] = re.sub(last_month_fuel_re, "", text)
             else:
                 if re.match(sales_re, text) != None:
-                    if receipt_document['items'][last_item_index].get('savings') == None:
-                        receipt_document['items'][last_item_index]['savings'] = [text]
-                    else:
-                        receipt_document['items'][last_item_index]['savings'].append(text)
+                    if receipt_document['items'][last_item_index].get('sales') == None:
+                        name, cost, taxStatus = re.findall(sales_re, text)[0]
+                        name = name.strip()
+                        receipt_document['items'][last_item_index].setdefault('sales', [])
+                        if taxStatus=='':
+                            receipt_document[last_item_index]['sales'].append({'item': name, 'cost': float(cost)})
+                        else:
+                            receipt_document[last_item_index]['sales'].append({'item': name, 'cost': float(cost), 'taxStatus': taxStatus})
                 elif re.match(item_re, text)!=None:
-                    receipt_document['items'].append({"item": bn.text.strip()})
-                    last_item_index = receipt_document['items'].index({"item": bn.text.strip()}) 
-        
+                    name, cost, taxStatus = re.findall(item_re, text)[0]
+                    name = name.strip()
+                    if re.findall(r"\d", name[-1])!=[]:
+                        cost = name[-1] + cost
+                        name =  name[:-1].strip()
+                    rec_obj = {'item': name, 'cost': float(cost), 'taxStatus': taxStatus}
+                    if weight_switch:
+                        rec_obj['weight_amount'] = float(weight_switch)
+                        weight_switch = ''
+                    receipt_document['items'].append(rec_obj)
+                    last_item_index = receipt_document.index(rec_obj)
+                elif re.findall(receipt_calculation_re, text)!=[]:
+                    matches = re.findall(receipt_calculation_re, text)[0]
+                    weight_receipt = matches[1] + matches[2]
+                    weight_switch = weight_receipt    
     except NoSuchElementException:
         ## Reroute Specialized Trips that Fuel Based
         driver.get(link.replace('image', 'detail'))
         time.sleep(5)
         payment_re = re.compile(r'AMEX|DEBIT|VISA')
         try:
-            receipt_document['address'] = driver.find_element(By.CSS_SELECTOR, 'span.kds-Text--l.mb-0').text
-            receipt_document['checkout_timestamp'] = driver.find_element(By.CSS_SELECTOR, 'h2.kds-Heading.kds-Heading--m').text.replace('Fuel', '').strip()
+            #receipt_document['address'] = driver.find_element(By.CSS_SELECTOR, 'span.kds-Text--l.mb-0').text
+            #receipt_document['checkout_timestamp'] = driver.find_element(By.CSS_SELECTOR, 'h2.kds-Heading.kds-Heading--m').text.replace('Fuel', '').strip()
             # total savings in a span with a negative sign
             money_details = driver.find_element(By.CSS_SELECTOR, 'div.purchase-detail-footer')
             spans = money_details.find_elements(By.TAG_NAME, 'span')
@@ -367,7 +376,7 @@ def getReceipt(link, driver):
             # total
             receipt_document['total'] = driver.find_element(By.CSS_SELECTOR, 'span[data-test="payment-summary-total"]').text
             receipt_document['special_purchase_type'] = 'Fuel'
-            receipt_document['order_number'] = link
+            # receipt_document['cart_number'] = link
 
             insertData(receipt_document, 'trips')
             driver.close()
@@ -386,10 +395,10 @@ def getReceipt(link, driver):
 
     #nodes= nodes[:10]
     
-    insertData(receipt_document, 'trips')
+    
     driver.close()
     driver.switch_to.window(driver.window_handles[0]) # bring back to current dashboard page
-    return None
+    return receipt_document
 
 # Trip Level Data : Collection<Items> https://www.kroger.com/mypurchases/api/v1/receipt/details https://www.kroger.com/atlas/v1/purchase-history/details
 # Trip and Account Metadata and More Precise Data on the Sales  
@@ -447,134 +456,18 @@ def getMyData(): # https://www.kroger.com/products/api/products/recommendations
             ### receipt is the same url with detail replaced with image (of receipt)
             receipt_url = trip.get_attribute('href').replace('detail', 'image')
             time.sleep(wait)
-            getCart(starting_url, driver)
-            getReceipt(receipt_url, driver)
+            data, prices = getCart(starting_url, driver)
+            receipt_document = getReceipt(receipt_url, driver)
+            
+            getFuzzyMatch(prices, [receipt_document])
+            insertData(data, 'items')
+            insertData(prices, 'prices')
+            insertData(receipt_document, 'trips')
             time.sleep(random.randint(20, 50)/10)
         print(f"Finished with Page {i}")
     driver.quit()
 
 def getDigitalPromotions():
-    # set up browser
-    options = webdriver.ChromeOptions() 
-    options.add_argument("start-maximized")
-    #options.add_argument("disable-blink-features=AutomationControlled")
-    # Load Credentials from Browser Profile
-    options.add_argument("user-data-dir=C:\\Users\\Kyle\\AppData\\Local\\Google\\Chrome\\User Data")
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option('useAutomationExtension', False)
-    driver = webdriver.Chrome("../../../Python/scraping/chromedriver99.exe", options=options)
-    driver.implicitly_wait(3.5)
-    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-    driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36"})
-    
-    testBinary = True
-    while testBinary:
-        ans = input("press enter to continue")
-        if ans == '':
-            testBinary=False
-        else:
-            raise ValueError('No other response allowed')
-    
-    time.sleep(7)
-    url_base = 'https://www.kroger.com/savings/cl/coupons/'
-    driver.get(url_base)
-    time.sleep(6)
-    # ### Website SignIn ###
-    time.sleep(7)
-    # signInBtn = driver.find_element(By.ID, 'SignIn-submitButton')
-    # signInBtn.click()
-    # time.sleep(6.5)
-    current_year = ' 22'
-    # Use END btn to force lazy loaders
-    page = driver.find_element(By.TAG_NAME, 'body')
-    for i in range(30):
-        page.send_keys(Keys.END)
-        time.sleep(.25)
-
-    for i in range(5):
-        page.send_keys(Keys.HOME)
-        time.sleep(.25)
-
-
-    deals = driver.find_elements(By.CSS_SELECTOR, 'div.CouponCard-wrapper')
-    dealCollection = []
-    deals = deals[:3]
-    for deal in deals:
-        dealEntry = {}
-        promoType = "digital coupon"
-        dealEntry['type'] = promoType
-        # meta tags
-        meta_card = deal.find_element(By.CSS_SELECTOR, 'div.CouponCardNew')
-
-        brand = meta_card.get_attribute('data-brand')
-        dealEntry['brand'] = brand
-
-        savingsCategory = meta_card.get_attribute('data-category').split(',')
-        dealEntry['categories'] = savingsCategory
-
-        # activate focused modal
-        buttons = deal.find_elements(By.TAG_NAME, 'button')
-        print(buttons)
-        modal_button = buttons[0]
-        print(modal_button)
-        modal_button.click()
-
-        section = driver.find_element(By.CSS_SELECTOR, "section#modal-body")
-        expiration = section.find_element(By.CSS_SELECTOR, 'span.CouponExpiration-textDate').text
-        expiration += current_year
-        expiration = dt.datetime.strptime(expiration, '%b. %d %y')
-        expiration = expiration.timestamp()
-        dealEntry['expiration'] = expiration
-
-        # here remove Exp. and turn three-letter-month + \. + day into timestamp
-        conditions_btn = section.find_element(By.LINK_TEXT, 'More Details')
-        conditions_btn.click()
-
-        title = section.find_element(By.CSS_SELECTOR, "h2.CouponDetails-shortDescription")
-        dealEntry['title'] = title
-
-        conditions = section.find_element(By.CSS_SELECTOR, 'div.CouponDetails-description-new')
-        coupon_description = conditions.text
-        dealEntry['terms'] = coupon_description
-
-        
-        # get modal availability
-        availablity = section.find_element(By.CSS_SELECTOR, 'div[data-qa="modal-availability-banner"]')
-        for span in availablity:
-            dealEntry['availability'][span.text] = 'font_bold' in span.get_attribute('class')
-        # check to see if Qualifying Products exists
-        try:
-            qualifiers = section.find_elements(By.CSS_SELECTOR, "section.QualifyingProducts")
-            # item amount to qualify
-            ic_regex = re.compile(r'\s*(\d)+\s*Added')
-            item_count_qualify = qualifiers.find_element(By.CSS_SELECTOR, 'span[data-testid="CouponsProgressBar-productsCount"]').text
-            item_count_qualify = int(re.findall(ic_regex, item_count_qualify)[0])
-            dealEntry['amountThreshold'] = item_count_qualify 
-
-            # maximum redeeems  
-            redeem_re = re.compile(r'(\d+)\s*times')
-            redemption_exhaust = qualifiers.find_element(By.CSS_SELECTOR, "CouponsProgressBar-redeemedMessage")
-            redemption_exhaust = re.findall(redeem_re, redemption_exhaust.text)[0]
-            dealEntry['maxUses'] = redemption_exhaust
-            qualifying_items = qualifiers.find_elements(By.CSS_SELECTOR, 'img[data-qa="cart-page-item-image-loaded"]')
-            codes = []
-            for qualifier in qualifying_items:
-                img = qualifier.get_attribute('src')
-                codes.extend(re.findall(r'\d+', img))
-            dealEntry['qualifyingItems'] = codes
-
-        except:
-            raise ValueError
-
-        dealCollection.append(dealEntry)
-    pprint(dealCollection)
-
-
-
-        
-
-        # get qualifying products  
-
     # grab each digital promotion
     # div.CouponCard-wrapper
         # :: # purchase method availability ['In-store', 'Pickup', 'Delivery', 'Ship']

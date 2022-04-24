@@ -666,7 +666,7 @@ def getFuzzyMatch(items, trips):
         chx=[]
         for recItem in receiptItems:
             # need a check to see if lbs in quantity measurement
-            price = recItem.get('receipt_price')
+            price = recItem.get('cost')
             product = recItem.get('item')
             weight_switch = recItem.get('weight_amount')
             if 'sales' in recItem:
@@ -716,7 +716,7 @@ def getFuzzyMatch(items, trips):
             print(c)
             print('\n')
             
-    return None
+    return chx
 
 
 def getPrices(api):

@@ -16,7 +16,7 @@ def docs():
     print('successfly wrote')
     print('the requested data wanted in a file format was', length)
     
-    return({"data": {"socks": 14}})
+    return({"data": {"length": length}})
 
 
 if __name__ == "__main__":
