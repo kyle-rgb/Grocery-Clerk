@@ -1,4 +1,5 @@
 
+from enum import unique
 import re, requests, datetime, time, json, pprint, random, math, os
 import numpy as np
 from django.forms import ValidationError
@@ -395,7 +396,7 @@ def getItemInfo(itemLocationPairs):
     # items currently all have: _id, cart_number, item_index, image, product_name, item_link, UPC, price_equation, product_size, product_promotional_price, product_original_price
         # 1043 have health_info and ingredients
         # 363 have avg_ratings, reviews and ratings_distribution
-
+    
     token = getToken()
     headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/json'}
     # endpoint
@@ -414,31 +415,37 @@ def getItemInfo(itemLocationPairs):
         response = requests.get(req, headers=headers)
         try:
             object = json.loads(response.text)
-            print(object)
             object = object.get('data')
-            
+            object = object.get('items')[0] 
             # add the implicit queried location id to response
-            object['locationId'] = location
+            if 'price' in object:
+                price = object.get('price')
+                if price.get('promo')==0:
+                    price['promo'] = price['regular']
+                data.append({'locationId': location, 'acquistion_timestamp': datetime.datetime.now().timestamp(), "isPurchase": False, "cart_number": None, "upc": upc,
+                "quantity": 1, "promo": price.get('promo'), "regular": price.get('regular')
+                })
             # add timestamp of scrape for future data analysis
-            object['acquistion_timestamp'] = datetime.datetime.now().timestamp()
-            data.append(object)
             time.sleep(1)
         except json.decoder.JSONDecodeError:
             print(i)
-            print(upc)
+            print(f"{upc};{location}")
             print(response)
             time.sleep(12)
         if i % 10 == 0:
-            print(f"DONE WITH {i}. {len(itemLocationPairs)-i} TO GO @ {datetime.datetime.now()}")
+            print(f"DONE WITH {i}. {len(itemLocationPairs)-i} TO GO @ {datetime.datetime.now()}. LEN: {len(data)}")
 
             
-
-    with open('./data/API/itemsAPI.json', 'r+') as file:
-        prev_objs_list = json.loads(file.read())
-        prev_objs_list.extend(data)
-
-    with open('./data/API/itemsAPI.json', 'w') as file:
-        file.write(json.dumps(prev_objs_list))
+    if os.path.exists('./data/collections/combinedPrices.json'):
+        with open('./data/collections/combinedPrices.json', 'r') as file:
+            prev_object_list = json.loads(file.read())
+            prev_object_list.extend(data)
+        with open('./data/collections/combinedPrices.json', 'w') as file:
+            file.write(json.dumps(prev_object_list))
+    else:
+        with open('./data/API/prices.json', 'w') as file:
+            file.write(json.dumps(data))
+    
 
     print(f'{len(data)} items written to disk')
 
@@ -745,6 +752,22 @@ def getPrices(api):
 # # upcSET = parseUPC()
 # upcSET= set({'650233691;01100482'})
 # # # # # # API CALLS # # # # # # 
+upcSET = set()
+
+with open('./data/collections/uniqueUPCs.json', 'r') as file:
+    unique_upcs = json.loads(file.read())
+    unique_upcs = set(map(lambda x: x.get('upc'), unique_upcs))
+
+with open('./data/collections/combinedItems.json', 'r') as file:
+    items = json.loads(file.read())
+    items = list(filter(lambda x: x.get('upc') not in unique_upcs, items))
+    stores = list(map(lambda x: x.get('locationsData'), items))
+    stores = list(map(lambda x: set(list(k.keys())[0] for k in x), stores))
+    for store, item in zip(stores, items):
+        for s in store:
+            upcSET.add(f"{item.get('upc')};{s}")
+
+getItemInfo({"0084013430050;01100482", "0018685200107;01100482"})
 # getItemInfo(upcSET)
 # getStoreLocation({'01100482', '01100685', '01100438'})
 # # # # # # # # # # ## # # # # #
@@ -757,9 +780,9 @@ def getPrices(api):
 #combineItems(api=apiItems, scraped=items)
 # # # # # # # # # # ## # # # # # # # # # # # #
 # # upcSET = parseUPC()
-items = json.loads(open('./data/collections/items.json', 'r').read())
-apiItems = json.loads(open('./data/API/itemsAPI.json', 'r').read())
-combineItems(api=apiItems, scraped=items)
+# items = json.loads(open('./data/collections/items.json', 'r').read())
+# apiItems = json.loads(open('./data/API/itemsAPI.json', 'r').read())
+# combineItems(api=apiItems, scraped=items)
 # # getItemInfo(upcSET) # LAST API CALL @ 9:40 PM 4/11/2022
 
 # prices = json.loads(open('./data/collections/combinedPrices.json', 'r').read())
