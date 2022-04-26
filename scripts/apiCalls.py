@@ -667,9 +667,9 @@ def getFuzzyMatch(items, trips):
     for t in trips:
         matches = items
         receiptItems = sorted(t.get('items'), key=lambda x: x.get('item'))
-        choicesX = [x.get("name") for x in matches]
+        choicesX = [x.get("names")[0].get('names')[0] for x in matches]
         #counts = [choicesX.extend(int(x.get('quantity'))*[x.get('name')]) for x in matches]
-        print(len(choicesX))
+        print(len(choicesX), sorted(choicesX))
         chx=[]
         for recItem in receiptItems:
             # need a check to see if lbs in quantity measurement
@@ -680,24 +680,25 @@ def getFuzzyMatch(items, trips):
                 for s in recItem.get('sales'):
                     price += s['cost']
             fuzz_matches = process.extract(product, choicesX, limit=15)
-            matchObjects = list(filter(lambda x: x.get('name') in map(lambda x: x[0], fuzz_matches), matches))
+            matchObjects = list(filter(lambda x: x.get('names')[0].get('names')[0] in map(lambda x: x[0], fuzz_matches), matches))
             matchPrices = np.array([((price-(fuzzM.get('quantity') * fuzzM.get('promo') ))**2)**.5 for fuzzM in matchObjects])
             matchPrices = np.concatenate((matchPrices,np.array([((price-(fuzzM.get('quantity') * fuzzM.get('regular') ))**2)**.5 for fuzzM in matchObjects])))# 
             matchPrices = np.concatenate((matchPrices, np.array([((price-(1*fuzzM.get('regular') ))**2)**.5 for fuzzM in matchObjects])))
             matchObjects = matchObjects * 3
             fuzz_matches = fuzz_matches * 3
-            
-            matchGuess = [matchObjects[i] for i, p  in enumerate ( matchPrices ) if p < 0.01]
+            matchGuess = [matchObjects[i] for i, p  in enumerate ( matchPrices ) if p <= 0.1]
+
             if len(matchGuess)>1:
-                name = process.extractOne(product, list(map(lambda y: y.get('name'), matchGuess)))
-                matchGuess = list(filter(lambda d: d.get('name')==name[0], matchGuess))
+                name = process.extractOne(product, list(map(lambda y: y.get('names')[0].get('names')[0], matchGuess)))
+                matchGuess = list(filter(lambda d: d.get('names')[0].get('names')[0]==name[0], matchGuess))
                 if len(matchGuess)>1:# print(matchGuess, product)
                     matchGuess=matchGuess[0]
             elif len(matchGuess)==1:
                 matchGuess=matchGuess[0]
-                
-            print(product)
 
+            print(recItem)
+
+            # print("matches : ", matchGuess)
             # print(product, "==> ", matchGuess, '===$ ', matchPrice)
             # fuzz_match = fuzz_matches[np.argmin(matchPrice)]
             # print('FUZZMATCH::', fuzz_match, matchPrice, matchGuess)
@@ -713,7 +714,9 @@ def getFuzzyMatch(items, trips):
             #     iterations = int(float_quantity)
             # for i in range(iterations):
             #     choicesX.pop(choicesX.index(matchGuess['name']))
-            chx.append((product, '>>>>>>', matchGuess['name'], "====", f"{price}:::::{matchGuess['promo']}", matchGuess['promo'],))
+            chx.append((product, '==========>>>>>>', matchGuess['names'][0]['names'][0], "====", f"{price}:::::{matchGuess['promo']}", matchGuess['promo'],))
+            print(chx[-1])
+            
             
 
 
@@ -767,7 +770,7 @@ with open('./data/collections/combinedItems.json', 'r') as file:
         for s in store:
             upcSET.add(f"{item.get('upc')};{s}")
 
-getItemInfo({"0084013430050;01100482", "0018685200107;01100482"})
+# getItemInfo({"0084013430050;01100482", "0018685200107;01100482"})
 # getItemInfo(upcSET)
 # getStoreLocation({'01100482', '01100685', '01100438'})
 # # # # # # # # # # ## # # # # #

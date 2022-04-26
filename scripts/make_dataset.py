@@ -4,7 +4,7 @@ import time, re, random, datetime as dt, os, json
 import pyautogui as pag
 
 from apiCalls import parse_ingredients, getFuzzyMatch
-from pymongo import MongoClient
+from pymongo import MongoClient, ASCENDING, DESCENDING
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -96,28 +96,30 @@ def getItemInfo(link, driver):
         item_details['health_info']['calories'] = nutrition_we.find_element(By.CSS_SELECTOR, 'div.NutritionLabel-Calories').text.replace("Calories\n", "")
             # Macronutrients and Subnutrients
         nutrients = nutrition_we.find_elements(By.CSS_SELECTOR, 'div.NutrientDetail')
-        hierarchy_switch = 0
+        hierarchy_switch = -1
         for x, n in enumerate(nutrients):
             
             title_and_amount = n.find_element(By.CSS_SELECTOR, 'span.NutrientDetail-TitleAndAmount')
-            title_and_amount = title_and_amount.text.replace("\n", ": ").replace("Number of International Units", "IU")
-            title, amt = re.sub(r"([A-Za-z]+)(\d\.?\d*){1}", r"\1:\2", title_and_amount).split(':')
             is_macro = "is-macronutrient" in title_and_amount.find_element(By.CSS_SELECTOR, 'span').get_attribute('class')
             is_micro = "is-micronutrient" in title_and_amount.find_element(By.CSS_SELECTOR, 'span').get_attribute('class')
             is_sub = "is-subnutrient" in title_and_amount.find_element(By.CSS_SELECTOR, 'span').get_attribute('class')
+            title_and_amount = title_and_amount.text.replace("\n", ": ").replace("Number of International Units", "IU")
+            title, amt = re.sub(r"([A-Za-z]+)(\d\.?\d*){1}", r"\1:\2", title_and_amount).split(':')
             daily_value = n.find_element(By.CSS_SELECTOR, 'span.NutrientDetail-DailyValue').text.replace("\n", ": ").replace("Number of International Units", "IU")
+            daily_value = '0%' if daily_value == '' else daily_value 
             if ((is_macro) & (~is_sub)):
-                hierarchy_switch = x
+                hierarchy_switch += 1
                 item_details['health_info']['macros'].append({'name': title, 'measure': amt,'daily_value': daily_value, "subnutrients": []})
             elif((is_macro) & (is_sub)):
                 item_details['health_info']['macros'][hierarchy_switch]['subnutrients'].append({'name': title, 'measure': amt,'daily_value': daily_value})
             else:
+                item_details['health_info'].setdefault('micros', [])
                 item_details['health_info']['micros'].append({'name': title, 'measure': amt,'daily_value': daily_value, "subnutrients": []})
 
         ingredients_info = nutrition_we.find_elements(By.CSS_SELECTOR, 'p.NutritionIngredients-Ingredients')
         for p in ingredients_info:
-            txt = p.strip()
-            txt = p.text.replace("Ingredients\n", "")
+            txt = p.text.strip()
+            txt = txt.replace("Ingredients\n", "")
             txt = txt.replace(';', ',').replace('.', ', ').replace('}]', ']]')
             txt = re.sub(legalese_regex, '', txt)
             item_details['health_info']['ingredients'] = parse_ingredients(txt)
@@ -169,7 +171,6 @@ def getItemInfo(link, driver):
     except NoSuchElementException:
         item_details=item_details
 
-
     driver.close() # close item page
     driver.switch_to.window(driver.window_handles[1]) # brings you back to trip page
     return item_details
@@ -186,11 +187,12 @@ def getCart(url, driver):
     prices = []
     items = driver.find_elements(By.CSS_SELECTOR, 'div.PH-ProductCard-productInfo')
     # Find all products as List
-    for we in items:
+    for we in items[:3]:
         document = {}
         # trip identfier
-        locate_data = url.split('/')[-1]
+        locate_data = url.split('/')[-1][:-6]
         document['cart_number'] = locate_data
+        document['bin'] = True
         locationId = "".join(locate_data.split('~')[:2])
         acquistion_timestamp = dt.datetime.strptime(locate_data.split('~')[2] + " " + locate_data.split('~')[-1][-4:], "%Y-%m-%d %H%S").timestamp()
         # dict.setdefault() <- Use for no IMG svgs
@@ -230,7 +232,7 @@ def getCart(url, driver):
             orig_price = we.find_element(By.CSS_SELECTOR, 'mark.kds-Price-promotional').text.replace('\n', '')
             orig_price = round(float(re.sub(r"[^\.\d]", "", orig_price)) / quantity, 2)
 
-
+        
         if document['image'] != '': # No Image indicates a functionally dead webpage with no data
             time.sleep(1)
             moreInfo = getItemInfo(document['item_link'], driver) # Change this to item_link
@@ -247,9 +249,11 @@ def getCart(url, driver):
                     "acquistion_timestamp": acquistion_timestamp,\
                         'isPurchase': True,
                         "quantity": quantity,\
-                            "cart_number": None,
+                            "cart_number": document.get('cart_number'),
             }) 
 
+        pprint(document)
+        pprint(prices[-1])
     
     driver.close()
     driver.switch_to.window(driver.window_handles[0]) 
@@ -291,9 +295,9 @@ def getReceipt(link, driver):
     last_item_index = 0
     weight_switch = ''
     item_re = re.compile(r"^\s*(.+)(\d+\.\d+)[\s|-](B|T|X)$")
-    sales_re = re.compile(r'^SC\s*([A-z0-9\s]+)\s*(\d+\.\d+)[\s-]*(B|T|X)?$')
+    sales_re = re.compile(r'^SC\s+([A-z0-9\s]+)\s*(\d+\.\d+)[\s-]*(B|T|X)?$')
     receipt_calculation_re = re.compile(r'((\d)(\.\d+)?(\D+)?)\s*@\s*(\d+)?\/?(\d+\.\d+)(\/\D+)?')
-    order = link.split('/')[-1]
+    order = link[:-6]# .split('/')[-1]
     receipt_document['cart_number'] = order
     receipt_document['checkout_timestamp'] = order.split('~')[2] + " " + order.split('~')[-1][-4:-2] + ":" + order.split('~')[-1][-2:]
     receipt_document['locationId'] = "".join(order.split('~')[:2])
@@ -301,6 +305,7 @@ def getReceipt(link, driver):
     try:
         receipt = driver.find_element(By.CSS_SELECTOR, 'div.imageContainer')
         nodes = receipt.find_elements(By.CSS_SELECTOR, 'div.imageTextLineCenter')
+        receipt_document["bin"] = True
         receipt_document['full_document'] = list(map(lambda x: x.text, nodes))
         for index, bn in enumerate(nodes):
         # FINISHED: Match Sales w/ Items (Could be Done Via Price Matching w/ Exceptions for Same Prices Since Receipt Names are abbreviations)
@@ -333,9 +338,9 @@ def getReceipt(link, driver):
                         name = name.strip()
                         receipt_document['items'][last_item_index].setdefault('sales', [])
                         if taxStatus=='':
-                            receipt_document[last_item_index]['sales'].append({'item': name, 'cost': float(cost)})
+                            receipt_document['items'][last_item_index]['sales'].append({'item': name, 'cost': float(cost)})
                         else:
-                            receipt_document[last_item_index]['sales'].append({'item': name, 'cost': float(cost), 'taxStatus': taxStatus})
+                            receipt_document['items'][last_item_index]['sales'].append({'item': name, 'cost': float(cost), 'taxStatus': taxStatus})
                 elif re.match(item_re, text)!=None:
                     name, cost, taxStatus = re.findall(item_re, text)[0]
                     name = name.strip()
@@ -347,7 +352,7 @@ def getReceipt(link, driver):
                         rec_obj['weight_amount'] = float(weight_switch)
                         weight_switch = ''
                     receipt_document['items'].append(rec_obj)
-                    last_item_index = receipt_document.index(rec_obj)
+                    last_item_index = receipt_document['items'].index(rec_obj)
                 elif re.findall(receipt_calculation_re, text)!=[]:
                     matches = re.findall(receipt_calculation_re, text)[0]
                     weight_receipt = matches[1] + matches[2]
@@ -394,7 +399,7 @@ def getReceipt(link, driver):
     # Get TAX and TOTAL Savings
 
     #nodes= nodes[:10]
-    
+    pprint(receipt_document)
     
     driver.close()
     driver.switch_to.window(driver.window_handles[0]) # bring back to current dashboard page
@@ -409,6 +414,10 @@ def getMyData(): # https://www.kroger.com/products/api/products/recommendations
     # Process Flow: Setup Browser -> Get Purchases Dashboard -> Collect Cart URLS -> foreach cart getCart(cart_page){contains GetItems} and getReceipt(reciept_page) 
     # Purchase Dashboard, Acquire links for each trip on the page and buttons to next page, get links for each item and finish with receipt acquistion
     # Setup Driver
+    client = MongoClient()
+    db = client.groceries
+    last_scrape = db.prices.find({'isPurchase': True}).sort("acquisition_timestamp")
+    last_scrape = dt.datetime.fromtimestamp(max(map(lambda x: x.get('acquistion_timestamp') , last_scrape)))
     options = webdriver.ChromeOptions()  # https://www.kroger.com/atlas/v1/recommendations/v1/better-for-you?filter.gtin13=0007022100718&page.offset=0&page.size=1903
     options.add_argument("start-maximized")
     options.add_argument("disable-blink-features=AutomationControlled")
@@ -428,23 +437,20 @@ def getMyData(): # https://www.kroger.com/products/api/products/recommendations
             testBinary=False
         else:
             raise ValueError('No other response allowed')
-    
-    # if trips (a previous selenium scraping operation has been performed), thus a file exists
-        #
-    time.sleep(7)
+    time.sleep(5)
     dashboard_url_base = 'https://www.kroger.com/mypurchases?tab=purchases&page='
     dashboard_index = 1
     driver.get(dashboard_url_base + f"{dashboard_index}")
     ### Website SignIn ###
-    time.sleep(7)
+    time.sleep(10.25)
     signInBtn = driver.find_element(By.ID, 'SignIn-submitButton')
     signInBtn.click()
-    time.sleep(6.5)
+    time.sleep(9.5)
     pages = driver.find_elements(By.CSS_SELECTOR, "nav.kds-Pagination > a")
     last_page = [p.text for p in pages][-1]
     last_page = int(last_page)
 
-    for i in range(dashboard_index, last_page+1):
+    for i in range(1, last_page):
         ##### Trip Selection #####
         driver.get(dashboard_url_base+str(i))
         time.sleep(9)
@@ -453,13 +459,15 @@ def getMyData(): # https://www.kroger.com/products/api/products/recommendations
         time.sleep(wait)
         for trip in trips:
             starting_url = trip.get_attribute('href')
+            date = starting_url.split('/')[-1].split("~")[2]
+            date = dt.datetime.strptime(date, "%Y-%m-%d")
+            if date <= last_scrape:
+                break
             ### receipt is the same url with detail replaced with image (of receipt)
             receipt_url = trip.get_attribute('href').replace('detail', 'image')
             time.sleep(wait)
             data, prices = getCart(starting_url, driver)
             receipt_document = getReceipt(receipt_url, driver)
-            
-            getFuzzyMatch(prices, [receipt_document])
             insertData(data, 'items')
             insertData(prices, 'prices')
             insertData(receipt_document, 'trips')
@@ -572,7 +580,7 @@ def newOperation():
     return None
 
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
-# getMyData() 
+getMyData() 
 # getDigitalPromotions()
 # simulateUser()
-newOperation()
+# newOperation()
