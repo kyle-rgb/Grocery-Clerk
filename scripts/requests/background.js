@@ -1,8 +1,3 @@
-// Add the new header to the original array,
-// and return it.
-// var window = require('window-utils').activeWindow
-// var indexedDB = (window.indexedDB || window.mozIndexedDB)
-// var req = indexedDB.open('78zDB')
 var master = "";
 var setMaster = new Set() 
 
@@ -117,3 +112,24 @@ chrome.webRequest.onHeadersReceived.addListener(
   ["blocking", "responseHeaders"]
 );
 
+// my-purchases dashboard -> GETs: /mypurchases/api/v1/receipt/details <list of receipts from purchases> :: /mypurchases/api/v1/receipt/details
+  // contains all prices, quantities, coupons
+  // all items even w/o picture -> Items have coupons in priceModifiers Array
+  // in scan order except for those with a monetizationID <ie. currently featured>
+  // contains savings, price and brief information
+  // ********* HAS PERSONAL PAYMENT INFORMATION **********************
+
+// hands off unique UPCs to products API that contains all important information <prices, inventory and item data, including nutrition> :: /atlas/v1/product/v2/products
+  // will only return items with valid UPCs
+
+//// Individual Trip Page
+
+  // Queries Product API for available UPCs for that trip /atlas/v1/product/v2/products
+
+  // Get Receipt Image /mypurchases/api/v1/receipt-image/get-image
+
+//// Individual Receipt Page
+
+  // Get Data Representation of Receipt w/ purchase amounts, store, payment_info and item information :: /atlas/v1/purchase-history/details
+
+    // does not contain every item / takes time to generate post purchase (~5 Hours), only has catalogueData and purchaseData
