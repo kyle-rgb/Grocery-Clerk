@@ -510,11 +510,11 @@ def getDigitalPromotions():
 
 
 def simulateUser():
-    neededLinks = {'cashback': 158, 'digital': 589}
+    neededLinks = {'cashback': 151, 'digital': 570}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
     # start at top of the screen 
-    # align all items
+    # align all items https://www.kroger.com/savings/cl/coupons/
     iterations = neededLinks['digital'] // 12
     iterations = iterations + 1
     time.sleep(3)
@@ -580,7 +580,7 @@ def newOperation():
     return None
 
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
-getMyData() 
+# getMyData() 
 # getDigitalPromotions()
-# simulateUser()
+simulateUser()
 # newOperation()
