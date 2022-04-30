@@ -515,6 +515,7 @@ def simulateUser():
     # from here: the code will commence
     # start at top of the screen 
     # align all items https://www.kroger.com/savings/cl/coupons/
+    re.compile(r"\".+\"\:\s*\".+\"")
     iterations = neededLinks['digital'] // 12
     iterations = iterations + 1
     time.sleep(3)
