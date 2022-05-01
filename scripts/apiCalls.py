@@ -750,27 +750,74 @@ def getPrices(api):
     
     return None
 
-def getRecipes(ingredients, route="recipes/findByIngredients", limit=10):
+def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, generalInfo=True):
     # pork, beef, chicken, salmon, eggs, lettuce, jalapenos, flour, sugar,  
-    recipes = []
+    recipes_current = []
     if not route:
         raise ValueError("You must enter a route")
 
-    for ingredient in ingredients:
-        req_url = recipe_base_url + route + "?" + f"ingredients={ingredient}" + f"&number={limit}&apiKey={RECIPE_KEY}"
-        print(req_url)
-        req = requests.get(req_url)
-        headers = req.headers
-        try:
-            headers_response = json.loads(str(headers))
-            pprint.pprint(headers_response)
-        except:
-            pprint.pprint(headers)
-        text = req.text
-        recipes.append(json.loads(text))
-        time.sleep(1.5)
-
     
+
+    if generalInfo:
+        recipes = []
+        for ingredient in ingredients:
+            req_url = recipe_base_url + route + "?" + f"ingredients={ingredient}" + f"&number={limit}&apiKey={RECIPE_KEY}"
+            print(req_url)
+            req = requests.get(req_url)
+            headers = req.headers
+            try:
+                headers_response = json.loads(str(headers))
+                pprint.pprint(headers_response)
+            except:
+                pprint.pprint(headers)
+            text = req.text
+            recipes.append(json.loads(text))
+            time.sleep(1.5)
+        [recipes_current.append(x) for x in past_recipes]
+        [recipes_current.extend(y) for y in recipes]
+
+        
+    else:
+        recSet = set()
+        [recSet.add(x.get('id')) for x in past_recipes]
+        recArray = list(recSet)
+        recipes = []
+        last_index = 0
+        amountLeft = 150 - 116.51
+        amountUsed = 116.51
+        lastQuery = True
+        stringfy = ''
+
+        
+
+        for j in range(243, len(recArray), limit):
+            if amountLeft < amountUsed:
+                remainder = amountLeft // .5
+                remainder -= 1
+                limit = math.floor(remainder)
+                lastQuery = True
+            params = [str(x) for x in recArray[j:j+limit]]
+            params = ",".join(params)
+            req_url = recipe_base_url + route + "?" + f"ids={params}&apiKey={RECIPE_KEY}"
+            req = requests.get(req_url)
+            headers = req.headers
+            print(headers)
+            text = req.text
+            recipes.append(json.loads(text))
+            last_index = j+limit
+            try:
+                amountUsed = float(headers.get('X-API-Quota-Request'))
+                amountLeft = 150 - float(headers.get('X-API-Quota-Used'))
+            except:
+                print('error')
+            if lastQuery:
+                print(amountLeft)
+                print(amountUsed)
+                break
+            time.sleep(1.5)
+
+        
+
 
 
     return None
@@ -801,8 +848,8 @@ def getRecipes(ingredients, route="recipes/findByIngredients", limit=10):
 # # # # # # API CALLS # # # # # # 
 # getItemInfo(upcSET)
 # getStoreLocation({'01100482', '01100685', '01100438'})
-getRecipes(['pork', 'beef', 'chicken', 'salmon', 'shrimp', 'eggs', 'flour', 'lettuce', 'sugar', 'butter'], limit=100)
-
+getRecipes(ingredients=['pork', 'beef', 'chicken', 'salmon', 'shrimp', 'eggs', 'flour', 'lettuce', 'sugar', 'butter'], limit=100)
+getRecipes(route="recipes/informationBulk", limit=50, generalInfo=False)
 # # # # # # # # # # ## # # # # #
 #trips = json.loads(open('./data/collections/trips.json', 'r').read())
 # # # # # MATCH RECEIPTS TO ITEMS # #  # # # #
