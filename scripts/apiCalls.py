@@ -750,24 +750,27 @@ def getPrices(api):
     
     return None
 
-def getRecipes(params, route="recipes/findByIngredients", limit=10):
+def getRecipes(ingredients, route="recipes/findByIngredients", limit=10):
     # pork, beef, chicken, salmon, eggs, lettuce, jalapenos, flour, sugar,  
     recipes = []
-    wanted_items = ['pork', 'beef', 'chicken', 'salmon', 'shrimp', 'eggs', 'jalapenos', 'lettuce', 'sugar']
     if not route:
         raise ValueError("You must enter a route")
-    params = [f"{key}={value}" if type(value)!=list else f"{key}={','.join([x for x in value])}" for key, value in params.items()]
-    for wi in wanted_items:
-        req_url = recipe_base_url + route + "?" + f"ingredients={wi}" + f"&number=15&apiKey={RECIPE_KEY}"
+
+    for ingredient in ingredients:
+        req_url = recipe_base_url + route + "?" + f"ingredients={ingredient}" + f"&number={limit}&apiKey={RECIPE_KEY}"
+        print(req_url)
         req = requests.get(req_url)
-        headers_response = req.headers
-        print("Amount Used: ", headers_response.get('X-API-Quota-Used'), "Amount Left: ", headers_response.get('X-API-Quota-Left'))
+        headers = req.headers
+        try:
+            headers_response = json.loads(str(headers))
+            pprint.pprint(headers_response)
+        except:
+            pprint.pprint(headers)
         text = req.text
         recipes.append(json.loads(text))
         time.sleep(1.5)
 
-    with open("./requests/server/collections/recipes/recipes.json", "w") as file:
-        file.write(json.dumps(recipes))
+    
 
 
     return None
@@ -798,7 +801,7 @@ def getRecipes(params, route="recipes/findByIngredients", limit=10):
 # # # # # # API CALLS # # # # # # 
 # getItemInfo(upcSET)
 # getStoreLocation({'01100482', '01100685', '01100438'})
-getRecipes(params={"number": 1, "ingredients": ['pork']})
+getRecipes(['pork', 'beef', 'chicken', 'salmon', 'shrimp', 'eggs', 'flour', 'lettuce', 'sugar', 'butter'], limit=100)
 
 # # # # # # # # # # ## # # # # #
 #trips = json.loads(open('./data/collections/trips.json', 'r').read())
