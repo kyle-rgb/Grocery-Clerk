@@ -785,20 +785,17 @@ def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, ge
         [recSet.add(x.get('id')) for x in past_recipes]
         recArray = list(recSet)
         recipes = []
-        amountLeft = 97.50 # 632778
-        amountUsed = 52.50
+        amountLeft = 150.0 # 632778
+        amountUsed = 0
         lastQuery = False
-        stringfy = ''
 
         if os.path.exists("./requests/server/collections/recipes/recipesInvolved.json"):
             with open("./requests/server/collections/recipes/recipesInvolved.json", "r", encoding="utf-8") as file:
                 oldrecipes = json.loads(file.read())
                 recipes.extend(oldrecipes)
                 alreadyScraped = set([x.get("id") for x in recipes])
-                recArray = list(recSet.difference(alreadyScraped)) 
-
-            with open("./requests/server/collections/recipes/recipesInvolved.txt", "r", encoding="utf-8") as file:
-                stringfy = file.read()
+                recArray = list(recSet.difference(alreadyScraped))
+                print(f"CURRENT RECIPES LEFT TO ACQUIRE {len(recArray)}") 
 
         for j in range(0, len(recArray), limit):
             if amountLeft < ((limit+1)*.5):
@@ -818,13 +815,14 @@ def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, ge
             try:
                 amountUsed = float(headers.get('X-API-Quota-Request'))
                 amountLeft = 150 - float(headers.get('X-API-Quota-Used'))
+                print("HEADERS RECEIVED")
             except:
                 amountUsed = (limit+1)*.5
                 amountLeft -= amountUsed
             print("\nAMT USED : ", amountUsed)
             print("AMT-LEFT : ", amountLeft)
             print("LIMIT: ", limit, "\n")
-            print("RECIPE LN: ", len(recipes))
+            print("RECIPE LN: ", len(recipes), "\n")
             if lastQuery:
                 break
             time.sleep(65.5)
@@ -866,7 +864,7 @@ def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, ge
 # getItemInfo(upcSET)
 # getStoreLocation({'01100482', '01100685', '01100438'})
 # getRecipes(ingredients=['pork', 'beef', 'chicken', 'salmon', 'shrimp', 'eggs', 'flour', 'lettuce', 'sugar', 'butter'], limit=100)
-getRecipes(route="recipes/informationBulk", limit=50, generalInfo=False)
+# getRecipes(route="recipes/informationBulk", limit=50, generalInfo=False)
 # # # # # # # # # # ## # # # # #
 #trips = json.loads(open('./data/collections/trips.json', 'r').read())
 # # # # # MATCH RECEIPTS TO ITEMS # #  # # # #
