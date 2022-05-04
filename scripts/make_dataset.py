@@ -510,7 +510,7 @@ def getDigitalPromotions():
 
 
 def simulateUser():
-    neededLinks = {'cashback': 151, 'digital': 570}
+    neededLinks = {'cashback': 139, 'digital': 622}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
     # start at top of the screen 
@@ -523,9 +523,9 @@ def simulateUser():
     time.sleep(2)
     # find all buttons
     for i in range(iterations):
-        buttons = list(pag.locateAllOnScreen("./requests/server/signIn.png", confidence=.6, grayscale=False))
+        buttons = list(pag.locateAllOnScreen("./requests/server/cashback.png", confidence=.6, grayscale=False))
         # print(buttons)
-        buttons = [pag.center(y) for i, y in enumerate(buttons) if abs(buttons[i].left-buttons[i-1].left) > 100] # > 2
+        buttons = [pag.center(y) for i, y in enumerate(buttons) if (abs(buttons[i].left-buttons[i-1].left) > 100) or (abs(buttons[i].top-buttons[i-1].top)>100)] # > 2
         print(f"Located {len(buttons)} Items")
         if len(buttons)>12:
             yaxis = list(map(lambda b: b.y, buttons))

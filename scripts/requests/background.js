@@ -48,6 +48,11 @@ function listener(details) {
           new_obj.url = details.url
           new_obj.acquisition_timestamp = Date.now()
           masterArray.push(new_obj)
+          console.log("B4", masterArray)
+          masterArray = pruneArray(masterArray)
+          console.log("AF4", masterArray)
+        } else{
+          console.log(`${details.requestId} fired > 1x`)
         }
         console.log('masterArray', masterArray)
       })
@@ -69,21 +74,23 @@ async function getI(i){
   }
 }
 
+function pruneArray(array){
+  if (array.length >=25){
+    response = fetch(`http://127.0.0.1:5000/docs`, {method: "POST", body: JSON.stringify(array)})
+    return []
+  } else {
+    return array
+  }
+}
+
 chrome.contextMenus.create({
   id: 'eat-page',
   title: "Eat this Page"
 })
 
 chrome.contextMenus.onClicked.addListener(function(info, tab) {
-  let download = chrome.downloads.download({saveAs: true, url: "http://127.0.0.1:5000/docs", body: JSON.stringify(masterArray)})
-  console.log(`download received && ${master.length} string cleared.`)
-  master= ''
-  console.log(`${master.length}`)
-  // if (info.menuItemId == "eat-page"){
-  //   chrome.tabs.executeScript({
-  //     file: "page-eater.js"
-  //   })
-  // }
+  response = fetch(`http://127.0.0.1:5000/docs`, {method: "POST", body: JSON.stringify(masterArray)})
+  console.log(`download received && ${masterArray.length} length array cleared.`)
 })
 
 
