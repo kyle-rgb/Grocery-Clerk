@@ -1,6 +1,7 @@
 
 from enum import unique
 import re, requests, datetime, time, json, pprint, random, math, os
+from urllib.parse import quote
 import numpy as np
 from django.forms import ValidationError
 from fuzzywuzzy import fuzz, process
@@ -751,42 +752,84 @@ def getPrices(api):
     return None
 
 def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, generalInfo=True):
-    # pork, beef, chicken, salmon, eggs, lettuce, jalapenos, flour, sugar,  
-    recipes_current = []
+    # pork, beef, chicken, salmon, eggs, lettuce, jalapenos, flour, sugar, 
+    types = ["main course", "side dish", "dessert", "appetizer", "salad", "bread", "breakfast", "soup", "beverage", "sauce", "marinade", "fingerfood", "snack", "drink"]
+    recipes = []
+    amountLeft = 142.875 # 632778
+    amountUsed = 150.0-amountLeft
+
     if not route:
         raise ValueError("You must enter a route")
 
-    with open("./requests/server/collections/recipes/recipes.json", "r", encoding="utf-8") as file:
-        past_recipes = json.loads(file.read())
+    if os.path.exists("./requests/server/collections/recipes/recipes.json"):
+        with open("./requests/server/collections/recipes/recipes.json", "r", encoding="utf-8") as file:
+            recipes.extend(json.loads(file.read()))
 
     if generalInfo:
-        recipes = []
-        for ingredient in ingredients:
-            req_url = recipe_base_url + route + "?" + f"ingredients={ingredient}" + f"&number={limit}&apiKey={RECIPE_KEY}"
-            print(req_url)
-            req = requests.get(req_url)
-            headers = req.headers
-            try:
-                headers_response = json.loads(str(headers))
-                pprint.pprint(headers_response)
-            except:
-                pprint.pprint(headers)
-            text = req.text
-            recipes.append(json.loads(text))
-            time.sleep(1.5)
-        [recipes_current.append(x) for x in past_recipes]
-        [recipes_current.extend(y) for y in recipes]
 
-        with open("./requests/server/collections/recipes/recipes.json", "w", encoding="utf-8") as file:
-            file.write(json.dumps(recipes_current))
+        if isinstance(ingredients, list):
+            for ingredient in ingredients:
+                req_url = recipe_base_url + route + "?" + f"ingredients={ingredient}" + f"&number={limit}&apiKey={RECIPE_KEY}"
+                print(req_url)
+                req = requests.get(req_url)
+                headers = req.headers
+                try:
+                    headers_response = json.loads(str(headers))
+                    pprint.pprint(headers_response)
+                except:
+                    pprint.pprint(headers)
+                text = req.text
+                recipes.extend(json.loads(text))
+                time.sleep(1.5)
+        elif isinstance(ingredients, dict):
+            # ingredients["number"] = limit
+            # ingredients["apiKey"] = RECIPE_KEY
+            
+            for type in types:
+                queryAmount = 1 + (.01*limit)
+                offset = 0
+                #params = "&".join([f"{key}={','.join(value)}" if isinstance(value, list) else f"{key}={value}" for key, value in ingredients.items()])
+                req_url = recipe_base_url + route + "?" + f"offset={offset}&type={type}&number={limit}&apiKey={RECIPE_KEY}"
+                print(req_url)
+                req = requests.get(req_url)
+                headers = req.headers
+                try:
+                    headers_response = json.loads(str(headers))
+                    pprint.pprint(headers_response)
+                except:
+                    pprint.pprint(headers)
+                print("\n")
+                text = req.text
+                data = json.loads(text)
+                if isinstance(data, dict):
+                    offset = data.get("number") + data.get("offset")
+                    entries = data.get("totalResults")
+                    if (offset+limit)>entries:
+                        offset = entries-limit
+                    recipes.extend(data["results"])
+                else:
+                    recipes.extend(data)
+
+                amountUsed = float(headers.get('X-API-Quota-Request'))
+                amountLeft = float(headers.get('X-API-Quota-Left'))
+                print("AMT LEFT : ", amountLeft)
+                print("\nAMT USED : ", amountUsed)
+                print("\nTOTALS : ", entries)
+                if amountUsed>amountLeft:
+                    break
+                time.sleep(3)
+
+        try:
+            with open("./requests/server/collections/recipes/recipes.json", "w", encoding="utf-8") as file:
+                file.write(json.dumps(recipes))
+        except:
+            with open("./requests/server/collections/recipes/recipesErr.txt", "w", encoding="utf-8") as file:
+                file.write(str(recipes))
     else:
         recSet = set()
         # has all ids of recipes based on the calls to the above route
-        [recSet.add(x.get('id')) for x in past_recipes]
+        [recSet.add(x.get('id')) for x in recipes]
         recArray = list(recSet)
-        recipes = []
-        amountLeft = 150.0 # 632778
-        amountUsed = 0
         lastQuery = False
 
         if os.path.exists("./requests/server/collections/recipes/recipesInvolved.json"):
@@ -796,6 +839,13 @@ def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, ge
                 alreadyScraped = set([x.get("id") for x in recipes])
                 recArray = list(recSet.difference(alreadyScraped))
                 print(f"CURRENT RECIPES LEFT TO ACQUIRE {len(recArray)}") 
+
+                if len(recArray)==0:
+                    raise ValueError("all current information has been collected. Re-run General Info w/ new params to access this endpoint.")
+                elif limit > len(recArray):
+                    limit = len(recArray)
+                    lastQuery= True
+
 
         for j in range(0, len(recArray), limit):
             if amountLeft < ((limit+1)*.5):
@@ -865,6 +915,7 @@ def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, ge
 # getStoreLocation({'01100482', '01100685', '01100438'})
 # getRecipes(ingredients=['pork', 'beef', 'chicken', 'salmon', 'shrimp', 'eggs', 'flour', 'lettuce', 'sugar', 'butter'], limit=100)
 # getRecipes(route="recipes/informationBulk", limit=50, generalInfo=False)
+getRecipes(route="recipes/complexSearch", limit=100, ingredients=dict(), generalInfo=True)
 # # # # # # # # # # ## # # # # #
 #trips = json.loads(open('./data/collections/trips.json', 'r').read())
 # # # # # MATCH RECEIPTS TO ITEMS # #  # # # #
