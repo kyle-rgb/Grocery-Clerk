@@ -753,9 +753,11 @@ def getPrices(api):
 
 def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, generalInfo=True):
     # pork, beef, chicken, salmon, eggs, lettuce, jalapenos, flour, sugar, 
-    types = ["main course", "side dish", "dessert", "appetizer", "salad", "bread", "breakfast", "soup", "beverage", "sauce", "marinade", "fingerfood", "snack", "drink"]
+    # types = ["main course", "side dish", "dessert", "appetizer", "salad", "bread", "breakfast", "soup", "beverage", "sauce", "marinade", "fingerfood", "snack", "drink"]
+    # types = {'main course': {"max": 1516, "offset": 100}}
+    types = {'side dish': {"offset": 100, "max":1814}, 'dessert':{"offset": 100, "max": 299}, 'appetizer': {"offset": 100, "max":598}, 'salad': {"offset": 100, "max":266}, 'bread':{"offset": 100, "max": 38}, 'breakfast':{"offset": 100, "max": 224}, 'soup':{"offset": 100, "max": 320}, 'beverage':{"offset": 100, "max": 86}, 'sauce':{"offset": 100, "max": 74}, 'marinade':{"offset": 100, "max": 3}, 'fingerfood':{"offset": 100, "max": 31}, 'snack':{"offset": 100, "max": 598}, 'drink':{"offset": 100, "max": 86}}
     recipes = []
-    amountLeft = 142.875 # 632778
+    amountLeft = 40.0 # 632778
     amountUsed = 150.0-amountLeft
 
     if not route:
@@ -782,42 +784,85 @@ def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, ge
                 recipes.extend(json.loads(text))
                 time.sleep(1.5)
         elif isinstance(ingredients, dict):
-            # ingredients["number"] = limit
-            # ingredients["apiKey"] = RECIPE_KEY
-            
-            for type in types:
-                queryAmount = 1 + (.01*limit)
-                offset = 0
-                #params = "&".join([f"{key}={','.join(value)}" if isinstance(value, list) else f"{key}={value}" for key, value in ingredients.items()])
-                req_url = recipe_base_url + route + "?" + f"offset={offset}&type={type}&number={limit}&apiKey={RECIPE_KEY}"
-                print(req_url)
-                req = requests.get(req_url)
-                headers = req.headers
-                try:
-                    headers_response = json.loads(str(headers))
-                    pprint.pprint(headers_response)
-                except:
-                    pprint.pprint(headers)
-                print("\n")
-                text = req.text
-                data = json.loads(text)
-                if isinstance(data, dict):
-                    offset = data.get("number") + data.get("offset")
-                    entries = data.get("totalResults")
-                    if (offset+limit)>entries:
-                        offset = entries-limit
-                    recipes.extend(data["results"])
-                else:
-                    recipes.extend(data)
+            for type in types.keys():
+                offset = types[type]["offset"]
+                max = types[type]["max"]
+                if max == 0:
+                    req_url = recipe_base_url + route + "?" + f"offset={offset}&type={type}&number={limit}&apiKey={RECIPE_KEY}"
+                    print(req_url)
+                    print("\n")
+                    req = requests.get(req_url)
+                    headers = req.headers
 
-                amountUsed = float(headers.get('X-API-Quota-Request'))
-                amountLeft = float(headers.get('X-API-Quota-Left'))
-                print("AMT LEFT : ", amountLeft)
-                print("\nAMT USED : ", amountUsed)
-                print("\nTOTALS : ", entries)
-                if amountUsed>amountLeft:
-                    break
-                time.sleep(3)
+                    text = req.text
+                    data = json.loads(text)
+                    if isinstance(data, dict):
+                        offset = data.get("number") + data.get("offset")
+                        entries = data.get("totalResults")
+                        recipes.extend(data["results"])
+                        types[type]["max"] = entries
+                    else:
+                        recipes.extend(data)
+                    amountUsed = float(headers.get('X-API-Quota-Request'))
+                    amountLeft = float(headers.get('X-API-Quota-Left'))
+                    print("AMT LEFT : ", amountLeft)
+                    print("\nAMT USED : ", amountUsed)
+                    print("\nTOTALS : ", entries)
+                    if amountUsed>amountLeft:
+                        break
+                while (2<amountLeft) and (offset<max):
+                    req_url = recipe_base_url + route + "?" + f"offset={offset}&type={type}&number={limit}&apiKey={RECIPE_KEY}"
+                    print(req_url)
+                    req = requests.get(req_url)
+                    headers = req.headers
+                    print(headers)
+                    print("\n")
+                    text = req.text
+                    data = json.loads(text)
+                    if isinstance(data, dict):
+                        offset = offset + len(data["results"])
+                        entries = data.get("totalResults")
+                        recipes.extend(data["results"])
+                    else:
+                        offset = max+limit
+                        recipes.extend(data)
+                    amountUsed = float(headers.get('X-API-Quota-Request'))
+                    amountLeft = float(headers.get('X-API-Quota-Left'))
+                    print("AMT LEFT : ", amountLeft)
+                    print("\nAMT USED : ", amountUsed)
+                    print("\nTOTALS : ", entries)
+                    time.sleep(5)
+                print(f"++++++++++++FINISHED++++++++++{type}")
+                
+                
+                
+
+        # for type, count in amounts.items():
+        #     offset = 100
+        #     if offset >= count:
+        #         next
+        #     while (amountUsed<amountLeft) and (offset<count):
+        #         req_url = recipe_base_url + route + "?" + f"offset={offset}&type={type}&number={limit}&apiKey={RECIPE_KEY}"
+        #         req = requests.get(req_url)
+        #         headers = req.headers
+        #         print(headers)
+        #         print("\n")
+        #         text = req.text
+        #         data = json.loads(text)
+        #         if isinstance(data, dict):
+        #             offset = data.get("number") + data.get("offset")
+        #             entries = data.get("totalResults")
+        #             recipes.extend(data["results"])
+        #             amounts[type] = entries
+        #         else:
+        #             recipes.extend(data)
+        #         amountUsed = float(headers.get('X-API-Quota-Request'))
+        #         amountLeft = float(headers.get('X-API-Quota-Left'))
+        #         print("AMT LEFT : ", amountLeft)
+        #         print("\nAMT USED : ", amountUsed)
+        #         print("\nTOTALS : ", entries)
+        #         if amountUsed>amountLeft:
+        #             break
 
         try:
             with open("./requests/server/collections/recipes/recipes.json", "w", encoding="utf-8") as file:

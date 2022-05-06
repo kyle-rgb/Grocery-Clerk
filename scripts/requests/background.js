@@ -36,21 +36,25 @@ function listener(details) {
     filter.ondata = event => {
       let str = decoder.decode(event.data, {stream: true});
       console.log("event", details.requestId, 'chunkObtained', 'buffer: ', event.data)
+      console.log("TYPE FROM DECODER", typeof(str))
       tempString += str
       filter.write(encoder.encode(str))
+      str = null
       console.log('filter reachEnd of first data stream:', filter.status)
     }
 
     filter.onstop = event => {
       getI(details.requestId).then((ii) => {
         if (ii===0){
-          new_obj = JSON.parse(tempString)
+          let new_obj = JSON.parse(tempString)
           new_obj.url = details.url
           new_obj.acquisition_timestamp = Date.now()
           masterArray.push(new_obj)
           console.log("B4", masterArray)
           masterArray = pruneArray(masterArray)
           console.log("AF4", masterArray)
+          console.log("CURRENT SIZE : ", JSON.stringify(masterArray).length, "CURRENT TEMPSTR SIZE", tempString.length)
+
         } else{
           console.log(`${details.requestId} fired > 1x`)
         }
@@ -94,13 +98,19 @@ chrome.contextMenus.onClicked.addListener(function(info, tab) {
 })
 
 
-chrome.webRequest.onBeforeRequest.addListener(
-    logURL,
-    {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*", "*://*.kroger.com/mypurchases/api/v1/receipt*"],  types: ["xmlhttprequest", "object"]}, // ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas*"]
-    ['blocking']
-  );
+// chrome.webRequest.onBeforeRequest.addListener(
+//     logURL,
+//     {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*", "*://*.kroger.com/mypurchases/api/v1/receipt*"],  types: ["xmlhttprequest", "object"]}, // ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas*"]
+//     ['blocking']
+//   );
 
 chrome.webRequest.onBeforeRequest.addListener(
+  listener,
+  {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*", "*://*.kroger.com/mypurchases/api/v1/receipt*"], types: ["xmlhttprequest", "object"]}, // 
+  ["blocking"]
+)
+
+chrome.webRequest.onCompleted.removeListener(
   listener,
   {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*", "*://*.kroger.com/mypurchases/api/v1/receipt*"], types: ["xmlhttprequest", "object"]}, // 
   ["blocking"]
