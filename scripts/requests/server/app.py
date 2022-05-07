@@ -1,36 +1,26 @@
 from flask import Flask, request, render_template
 
-import time, json, re, os
+import time, json, re, os, datetime as dt
 
 
 app = Flask(__name__)
 
 @app.route('/docs', methods=['GET', 'POST'])
 def docs():
+    d = dt.datetime.now()
+    dateCode= dt.datetime.strftime(d, "%m%d%y")    
+
     if request.method=="POST":
         data = json.loads(request.get_data(as_text=True))
         length = request.content_length
+        contentType = request.args.get("type")
 
-        if os.path.exists("./collections/cashback/cashback050322.json"):
-            with open(f'./collections/cashback/cashback050322.json', 'r', encoding='utf-8') as file:
+        if os.path.exists(f"./collections/{contentType}/{contentType}{dateCode}.json"):
+            with open(f'./collections/{contentType}/{contentType}{dateCode}.json', 'r', encoding='utf-8') as file:
                 past_data = json.loads(file.read())
                 data.extend(past_data)
 
-        with open(f'./collections/cashback/cashback050322.json', 'w', encoding='utf-8') as file:
-            file.write(json.dumps(data))
-        print(f'successfly wrote {length} to disk')
-
-        return({"data": {"length": length}, "continue": 1})
-
-    else:
-        data = json.loads(request.get_data(as_text=True))
-        length = request.content_length
-        if os.path.exists("./collections/cashback/cashback050322.json"):
-            with open(f'./collections/cashback/cashback050322.json', 'r', encoding='utf-8') as file:
-                past_data = json.loads(file.read())
-                data.extend(past_data)
-
-        with open(f'./collections/cashback/cashback050322.json', 'w', encoding='utf-8') as file:
+        with open(f'./collections/{contentType}/{contentType}{dateCode}.json', 'w', encoding='utf-8') as file:
             file.write(json.dumps(data))
         print(f'successfly wrote {length} to disk')
 

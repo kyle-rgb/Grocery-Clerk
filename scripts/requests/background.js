@@ -36,7 +36,6 @@ function listener(details) {
     filter.ondata = event => {
       let str = decoder.decode(event.data, {stream: true});
       console.log("event", details.requestId, 'chunkObtained', 'buffer: ', event.data)
-      console.log("TYPE FROM DECODER", typeof(str))
       tempString += str
       filter.write(encoder.encode(str))
       str = null
@@ -50,11 +49,7 @@ function listener(details) {
           new_obj.url = details.url
           new_obj.acquisition_timestamp = Date.now()
           masterArray.push(new_obj)
-          console.log("B4", masterArray)
           masterArray = pruneArray(masterArray)
-          console.log("AF4", masterArray)
-          console.log("CURRENT SIZE : ", JSON.stringify(masterArray).length, "CURRENT TEMPSTR SIZE", tempString.length)
-
         } else{
           console.log(`${details.requestId} fired > 1x`)
         }
@@ -79,7 +74,7 @@ async function getI(i){
 }
 
 function pruneArray(array){
-  if (array.length >=25){
+  if (array.length >=200){
     response = fetch(`http://127.0.0.1:5000/docs`, {method: "POST", body: JSON.stringify(array)})
     return []
   } else {
@@ -93,8 +88,21 @@ chrome.contextMenus.create({
 })
 
 chrome.contextMenus.onClicked.addListener(function(info, tab) {
-  response = fetch(`http://127.0.0.1:5000/docs`, {method: "POST", body: JSON.stringify(masterArray)})
-  console.log(`download received && ${masterArray.length} length array cleared.`)
+  let reg = /mypurchases|cashback|coupons/
+  var fileTypes = {'mypurchases': 'trips', 'cashback': 'cashback', "coupons": 'digital'}
+
+  browser.tabs.query({active: true}).then((tabs)=>{
+    let type = ''
+    for (let tab of tabs){
+      if (tab.url.match(reg)!=null){
+        let match = tab.url.match(reg)[0]
+        type = fileTypes[match]
+      }
+    }
+    response = fetch(`http://127.0.0.1:5000/docs?type=${type}`, {method: "POST", body: JSON.stringify(masterArray)})
+    masterArray = []
+  })//
+
 })
 
 

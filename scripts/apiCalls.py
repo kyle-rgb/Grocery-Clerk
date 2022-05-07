@@ -763,12 +763,13 @@ def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, ge
     if not route:
         raise ValueError("You must enter a route")
 
+    
     if os.path.exists("./requests/server/collections/recipes/recipes.json"):
         with open("./requests/server/collections/recipes/recipes.json", "r", encoding="utf-8") as file:
             recipes.extend(json.loads(file.read()))
 
     if generalInfo:
-
+        re.compile = r'\\x\d+'
         if isinstance(ingredients, list):
             for ingredient in ingredients:
                 req_url = recipe_base_url + route + "?" + f"ingredients={ingredient}" + f"&number={limit}&apiKey={RECIPE_KEY}"
@@ -880,8 +881,8 @@ def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, ge
         if os.path.exists("./requests/server/collections/recipes/recipesInvolved.json"):
             with open("./requests/server/collections/recipes/recipesInvolved.json", "r", encoding="utf-8") as file:
                 oldrecipes = json.loads(file.read())
+                alreadyScraped = set([x.get("id") for x in oldrecipes])
                 recipes.extend(oldrecipes)
-                alreadyScraped = set([x.get("id") for x in recipes])
                 recArray = list(recSet.difference(alreadyScraped))
                 print(f"CURRENT RECIPES LEFT TO ACQUIRE {len(recArray)}") 
 
@@ -959,8 +960,8 @@ def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, ge
 # getItemInfo(upcSET)
 # getStoreLocation({'01100482', '01100685', '01100438'})
 # getRecipes(ingredients=['pork', 'beef', 'chicken', 'salmon', 'shrimp', 'eggs', 'flour', 'lettuce', 'sugar', 'butter'], limit=100)
-# getRecipes(route="recipes/informationBulk", limit=50, generalInfo=False)
-getRecipes(route="recipes/complexSearch", limit=100, ingredients=dict(), generalInfo=True)
+getRecipes(route="recipes/informationBulk", limit=50, generalInfo=False)
+# getRecipes(route="recipes/complexSearch", limit=100, ingredients=dict(), generalInfo=True)
 # # # # # # # # # # ## # # # # #
 #trips = json.loads(open('./data/collections/trips.json', 'r').read())
 # # # # # MATCH RECEIPTS TO ITEMS # #  # # # #
