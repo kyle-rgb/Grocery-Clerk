@@ -922,7 +922,6 @@ def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, ge
             if lastQuery:
                 break
             time.sleep(65.5)
-
         try:
             with open("./requests/server/collections/recipes/recipesInvolved.json", "w", encoding="utf-8") as file:
                 file.write(json.dumps(recipes))
