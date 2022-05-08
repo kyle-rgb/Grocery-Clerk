@@ -54,7 +54,13 @@ def forceClose(dataFile):
     # identifys loose objects involuntarily inserted into streams via early pulls
     with open(dataFile, 'r', encoding="utf-8") as file:
         myString = file.read()
-        myString.encode('ascii', 'replace')
+        print(myString.index("Requirements for Proper Coupon Redemption"))
+        print(myString[72063-50:72063+50])
+        asciiString = myString.encode('ascii', 'ignore')
+        print(asciiString[72063-50:72063+50].replace(b'\x19', b''))
+        asciiString = str(asciiString.replace(b'\x19', b''))
+        print(asciiString[72063-50:72063+50])
+        print(asciiString[-20:-1], '!!!',  myString[-20:])
 
     # def mp_worker():
     #     pass
@@ -89,18 +95,31 @@ def forceClose(dataFile):
         start, stop = group.span()
         groupMatches = group.groups()
         toAdd =[]
-
+        h= 0
         for gm in groupMatches:
             if (gm!=':\"') and (gm!='\"'):
-                toAdd.append(re.sub('\"', "", gm))
+                toAdd.append(re.sub('\"', "", gm).strip())
             
 
-        newString = newString + myString[lastStart:start-1] + "".join(toAdd) + "\","
+        newString = newString + myString[lastStart:start+1] + "\"" +"".join(toAdd) + "\","
         lastStart = stop
     
-    print(newString[63088-500:63088+200])
-    # newString = re.sub(regURL,r',\3"url":"www.kroger.com/\2",', newString)
-    # newString = "[" + newString[1:] + "]"
+    
+    newString = newString + myString[lastStart:]
+    print(re.findall('\u2193', myString))
+    newString = re.sub(regURL,r',<XINDICATOR>\3"url":"www.kroger.com/\2",', newString)
+    #newString = "[" + newString[1:] + "]"
+    objects = newString[1:].split("<XINDICATOR>") 
+    print(len(objects))
+    for i, o in enumerate(objects):
+        try:
+            json.loads(o)
+        except json.decoder.JSONDecodeError as error:
+            charAt = error.args[0]
+            charAt = int(re.findall(r'char (\d+)', charAt)[0])
+            print(o[charAt-100:charAt], "<<<>>>", o[charAt:charAt+100])
+            print(error)
+
     # for i in range(50):
     #     try:
     #         json.loads(newString)

@@ -41,6 +41,52 @@ from api_keys import CLIENT_ID, CLIENT_SECRET, RECIPE_KEY, recipe_base_url
     # Lets not waste certain pulls so only make api calls to distinct UPCs.
     # ...
     # The crucuial routes seem to map directly to my two routes as of now via. {Trips} => /Locations (One Trip of Many Items Occurs at One Location) 
+def counter(JSON):
+    keyer = {}
+
+    for j in JSON:
+        if isinstance(j, dict):
+            for key in j.keys():
+                if key in keyer:
+                    keyer[key]+=1
+                    if isinstance(j[key], str) and (j[key]==''):
+                        keyer[key]-=1
+                    elif isinstance(j[key], list) and (j[key]==[]):
+                        keyer[key]-=1
+                    elif isinstance(j[key], dict) and (j[key]=={}):
+                        keyer[key]-=1
+                else:
+                    keyer[key]=1
+                    if isinstance(j[key], str) and (j[key]==''):
+                        keyer[key]-=1
+                    elif isinstance(j[key], list) and (j[key]==[]):
+                        keyer[key]-=1
+                    elif isinstance(j[key], dict) and (j[key]=={}):
+                        keyer[key]-=1
+        else:
+            for key in j:
+                if key in keyer:
+                    keyer[key]+=1
+                    if isinstance(key, str) and (key==''):
+                        keyer[key]-=1
+                    elif isinstance(key, list) and (key==[]):
+                        keyer[key]-=1
+                    elif isinstance(key, dict) and (key=={}):
+                        keyer[key]-=1
+                else:
+                    keyer[key]=1
+                    if isinstance(key, str) and (key==''):
+                        keyer[key]-=1
+                    elif isinstance(key, list) and (key==[]):
+                        keyer[key]-=1
+                    elif isinstance(key, dict) and (key=={}):
+                        keyer[key]-=1 
+    pprint.pprint(sorted(keyer.items(), key=lambda  x: x[1], reverse=True))
+    # all_keys = list(filter(lambda x: len(x.keys())>2, JSON))
+    #all_keys = list(filter(lambda x: x.keys()==keyer.keys(), JSON))
+    #pprint.pprint(all_keys[0])
+    return None
+
 
 def parse_ingredients(ingredient_string):
     # the important tokens are collection indicators and commas
@@ -757,7 +803,7 @@ def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, ge
     # types = {'main course': {"max": 1516, "offset": 100}}
     types = {'side dish': {"offset": 100, "max":1814}, 'dessert':{"offset": 100, "max": 299}, 'appetizer': {"offset": 100, "max":598}, 'salad': {"offset": 100, "max":266}, 'bread':{"offset": 100, "max": 38}, 'breakfast':{"offset": 100, "max": 224}, 'soup':{"offset": 100, "max": 320}, 'beverage':{"offset": 100, "max": 86}, 'sauce':{"offset": 100, "max": 74}, 'marinade':{"offset": 100, "max": 3}, 'fingerfood':{"offset": 100, "max": 31}, 'snack':{"offset": 100, "max": 598}, 'drink':{"offset": 100, "max": 86}}
     recipes = []
-    amountLeft = 40.0 # 632778
+    amountLeft = 150.0 
     amountUsed = 150.0-amountLeft
 
     if not route:
@@ -834,37 +880,6 @@ def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, ge
                     print("\nTOTALS : ", entries)
                     time.sleep(5)
                 print(f"++++++++++++FINISHED++++++++++{type}")
-                
-                
-                
-
-        # for type, count in amounts.items():
-        #     offset = 100
-        #     if offset >= count:
-        #         next
-        #     while (amountUsed<amountLeft) and (offset<count):
-        #         req_url = recipe_base_url + route + "?" + f"offset={offset}&type={type}&number={limit}&apiKey={RECIPE_KEY}"
-        #         req = requests.get(req_url)
-        #         headers = req.headers
-        #         print(headers)
-        #         print("\n")
-        #         text = req.text
-        #         data = json.loads(text)
-        #         if isinstance(data, dict):
-        #             offset = data.get("number") + data.get("offset")
-        #             entries = data.get("totalResults")
-        #             recipes.extend(data["results"])
-        #             amounts[type] = entries
-        #         else:
-        #             recipes.extend(data)
-        #         amountUsed = float(headers.get('X-API-Quota-Request'))
-        #         amountLeft = float(headers.get('X-API-Quota-Left'))
-        #         print("AMT LEFT : ", amountLeft)
-        #         print("\nAMT USED : ", amountUsed)
-        #         print("\nTOTALS : ", entries)
-        #         if amountUsed>amountLeft:
-        #             break
-
         try:
             with open("./requests/server/collections/recipes/recipes.json", "w", encoding="utf-8") as file:
                 file.write(json.dumps(recipes))
@@ -881,11 +896,11 @@ def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, ge
         if os.path.exists("./requests/server/collections/recipes/recipesInvolved.json"):
             with open("./requests/server/collections/recipes/recipesInvolved.json", "r", encoding="utf-8") as file:
                 oldrecipes = json.loads(file.read())
+                recipes = []
                 alreadyScraped = set([x.get("id") for x in oldrecipes])
                 recipes.extend(oldrecipes)
                 recArray = list(recSet.difference(alreadyScraped))
-                print(f"CURRENT RECIPES LEFT TO ACQUIRE {len(recArray)}") 
-
+                print(f"CURRENT RECIPES LEFT TO ACQUIRE {len(recArray)}.") 
                 if len(recArray)==0:
                     raise ValueError("all current information has been collected. Re-run General Info w/ new params to access this endpoint.")
                 elif limit > len(recArray):
@@ -1005,55 +1020,6 @@ getRecipes(route="recipes/informationBulk", limit=50, generalInfo=False)
 # getFuzzyMatch(items=priced, trips=atri)
 
 # return items and price (as quant * promo) to help fuzzy matching
-
-#pprint.pprint([l.get('upc') for l in afil])
-
-def counter(JSON):
-    keyer = {}
-
-    for j in JSON:
-        if isinstance(j, dict):
-            for key in j.keys():
-                if key in keyer:
-                    keyer[key]+=1
-                    if isinstance(j[key], str) and (j[key]==''):
-                        keyer[key]-=1
-                    elif isinstance(j[key], list) and (j[key]==[]):
-                        keyer[key]-=1
-                    elif isinstance(j[key], dict) and (j[key]=={}):
-                        keyer[key]-=1
-                else:
-                    keyer[key]=1
-                    if isinstance(j[key], str) and (j[key]==''):
-                        keyer[key]-=1
-                    elif isinstance(j[key], list) and (j[key]==[]):
-                        keyer[key]-=1
-                    elif isinstance(j[key], dict) and (j[key]=={}):
-                        keyer[key]-=1
-        else:
-            for key in j:
-                if key in keyer:
-                    keyer[key]+=1
-                    if isinstance(key, str) and (key==''):
-                        keyer[key]-=1
-                    elif isinstance(key, list) and (key==[]):
-                        keyer[key]-=1
-                    elif isinstance(key, dict) and (key=={}):
-                        keyer[key]-=1
-                else:
-                    keyer[key]=1
-                    if isinstance(key, str) and (key==''):
-                        keyer[key]-=1
-                    elif isinstance(key, list) and (key==[]):
-                        keyer[key]-=1
-                    elif isinstance(key, dict) and (key=={}):
-                        keyer[key]-=1 
-    pprint.pprint(sorted(keyer.items(), key=lambda  x: x[1], reverse=True))
-    # all_keys = list(filter(lambda x: len(x.keys())>2, JSON))
-    #all_keys = list(filter(lambda x: x.keys()==keyer.keys(), JSON))
-    #pprint.pprint(all_keys[0])
-    return None
-
 # counter(filter(lambda x: x!=None, map(lambda x: x.get('categories'), combinedItems)))
 # print(len(combinedItems))
 
