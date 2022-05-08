@@ -919,16 +919,15 @@ def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, ge
             print("AMT-LEFT : ", amountLeft)
             print("LIMIT: ", limit, "\n")
             print("RECIPE LN: ", len(recipes), "\n")
+            try:
+                with open("./requests/server/collections/recipes/recipesInvolved.json", "w", encoding="utf-8") as file:
+                    file.write(json.dumps(recipes))
+            except:
+                with open('./recipesInvolved.txt', 'w', encoding='utf-8') as file:
+                    file.write(str(recipes))
             if lastQuery:
                 break
             time.sleep(65.5)
-        try:
-            with open("./requests/server/collections/recipes/recipesInvolved.json", "w", encoding="utf-8") as file:
-                file.write(json.dumps(recipes))
-
-        except:
-            with open('./recipesInvolved.txt', 'w', encoding='utf-8') as file:
-                file.write(str(recipes))
 
     return None
 
