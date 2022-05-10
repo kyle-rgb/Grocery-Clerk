@@ -1,4 +1,5 @@
 import json, re
+from msilib.schema import Error
 from pprint import pprint
 
 from multiprocessing import Pool
@@ -50,18 +51,38 @@ def destroyIDs(dataFile):
 
     return None
 
+def partitionString(string, openChar, closeChar, index=0):
+    CHAR_IDs = {"{": {"close": "}", "type": "object"}, "[": {"close":"]", "type": "array"}, "\"": {"type": "string", "close":"\""}}
+    arr = []
+    string = string[index:]
+    for i, signifier in enumerate(string):
+        startingIndex = i + index
+        nextSign = string[i+1]
+        if signifier==openChar:
+            arr.append([signifier, i+index, len(string)])
+            nextIndex = i + 1
+            while nextSign != closeChar:
+                print(nextIndex, len(string)-1)
+                nextSign = string[nextIndex]
+                if nextSign in CHAR_IDs.keys():
+                    return partitionString(string, nextSign, CHAR_IDs[nextSign]['close'], index=nextIndex)
+                nextIndex+=1
+        else:
+            next
+                
+    print(arr)
+
+            
+
+
+
 def forceClose(dataFile):
     # identifys loose objects involuntarily inserted into streams via early pulls
     with open(dataFile, 'r', encoding="utf-8") as file:
         myString = file.read()
-        print(myString.index("Requirements for Proper Coupon Redemption"))
-        print(myString[72063-50:72063+50])
         asciiString = myString.encode('ascii', 'ignore')
-        print(asciiString[72063-50:72063+50].replace(b'\x19', b''))
-        asciiString = str(asciiString.replace(b'\x19', b''))
-        print(asciiString[72063-50:72063+50])
-        print(asciiString[-20:-1], '!!!',  myString[-20:])
-
+        asciiString = asciiString.replace(b'\x19', b'')
+        myString = asciiString.decode('utf-8', 'ignore')
     # def mp_worker():
     #     pass
 
@@ -83,7 +104,7 @@ def forceClose(dataFile):
     # GETS STRINGS = re.compile("(?=\:\")(\:\")([^\"])+(\".{1})(?=[\}\]\"\s\,])")
     regxFour = re.compile(r"(?=\:\")(\:\")([^\"]+)(\")(?!\"[\}\]\s\,])([^\:\}\]]+\,)")
     regTwo = re.compile(r"((\{\s*|\"success\"\s*:\s*true,)\s*\"data\")")
-    regURL = re.compile(r'(\|([A-z0-9\/?\.=&]+):){2}([\[\{])')
+    regURL = re.compile(r'(\|[^\|:]+:)+')
     regThree = re.compile(r"(\"\w+\":)")
     #myString = re.sub(regThree, r'   \1   ', myString)
     # newResponse = [x.span() for x in re.finditer(regTwo, myString)]
@@ -104,67 +125,71 @@ def forceClose(dataFile):
         newString = newString + myString[lastStart:start+1] + "\"" +"".join(toAdd) + "\","
         lastStart = stop
     
-    
+    urlMatcher = (r"\{\"url\":\"(.+)\"(?=,)")
     newString = newString + myString[lastStart:]
-    print(re.findall('\u2193', myString))
-    newString = re.sub(regURL,r',<XINDICATOR>\3"url":"www.kroger.com/\2",', newString)
-    #newString = "[" + newString[1:] + "]"
-    objects = newString[1:].split("<XINDICATOR>") 
-    print(len(objects))
+    urlsAndObjects = re.split(regURL, newString)
+    urls = list(filter(lambda x: re.match(regURL, x), urlsAndObjects))
+    objects = filter(lambda x: ((x!='')and(re.match(regURL, x))==None), urlsAndObjects)
+    filteredObjects = []
     for i, o in enumerate(objects):
+        # Stream writes in 3 ways:
+            # writing of object attributes are cut off by a repeat call
+            # An Object's stream exhausts mid-parameter, causing parms to be cut off.
+            # the intercepting object can also be cut off mid paramter by the starting streams return.   
         try:
+            # 1st: see if the stream was written in one buffer 
             json.loads(o)
+            print('did not happen')
         except json.decoder.JSONDecodeError as error:
-            charAt = error.args[0]
-            charAt = int(re.findall(r'char (\d+)', charAt)[0])
-            print(o[charAt-100:charAt], "<<<>>>", o[charAt:charAt+100])
-            print(error)
+            msg = error.args[0]
+            charAt = int(re.findall(r'char (\d+)', msg)[0])
+            looseObjs = []
+            looseObjs.append(o[:charAt])
+            if msg.startswith("Extra"):
+                try:
+                    firstData = json.loads(o[:charAt])
+                    secondData = json.loads(o[charAt+2:])
+                    if firstData==secondData:
+                        firstData['url'] = urls[i]
+                        filteredObjects.append(firstData)
+                except json.decoder.JSONDecodeError as error2:
+                    msg = error2.args[0]
+                    charAt = int(re.findall(r'char (\d+)', msg)[0])
+                    print(firstData)
+            else:
+                # expecting ',' delimiter: line 1 column n+1 (char n)
+                # case: stream interupts object with url indicator with the entire combined string from the api
+                # solution: get the object with the greater length and check to see if it has the call url parameter inside, if not pop it from interupted object and place in full object
+                while o[charAt]!="{":
+                    charAt-=1
 
-    # for i in range(50):
-    #     try:
-    #         json.loads(newString)
-    #     except json.decoder.JSONDecodeError as Error:
-    #         start_number = (Error.colno)-1
-    #         err = Error.args
-    #         print("ERROR:")
-    #         print(Error)
-    #         print("\n")
-    #         errorFigure = newString[start_number]
-    #         print(newString[start_number-20:start_number]+f"<{newString[start_number]}>"+newString[start_number+1:start_number+20])
-    #         if "delimiter" in Error.args[0]:
-    #             while errorFigure != "\"":
-    #                 start_number-=1
-    #                 errorFigure = newString[start_number]        
-    #             newString = newString[:start_number] + newString[start_number+1:]
-    #         elif "control character" in Error.args[0]:
-    #             newString = newString[:start_number] + newString[start_number+1:]
-    #         else:
-    #             raise ValueError('newError')
-            
-    #         print(newString[start_number-20:start_number+20])
-    #         print("\n")
-            
-    # for i in range(0, len(matches), 2):
-    #     index = matches[i][0]
-    #     parsedCode = matches[i][1]
-    #     if parsedCode in ["OE", "AE"]:
-    #         next
-    #     elif parsedCode == "SS":
-    #         if matches[i+1][1]=='SS':
-    #             finished = matches[i+1][0]+1
-    #     else:
-    #         wantedSignifier = closers[parsedCode]
-    #         finished = 0
-    #         j = i
-    #         while matches[j][1]!=wantedSignifier:
-    #             j+=1
-    #         finished = matches[j][0]+1
-    #     print(f'parsedCODE : {parsedCode} starts @ {index} and ends @ {finished}')
-    #     #print(matches[:i])
-    #     print(myString[index:finished])
-        
+                try:
+                    stringObj = o[charAt:]
+                    fullObject = json.loads(stringObj)
+                except json.decoder.JSONDecodeError as er:
+                    msg = er.args[0]
+                    charStreamReturn = int(re.findall(r'char (\d+)', msg)[0])
+                    try:
+                        filteredObjects.append(json.loads(stringObj[:charStreamReturn]))
 
-    # print(len(queue))
+                    except json.decoder.JSONDecodeError as er2:
+                        msg = er2.args[0]
+                        offendingString = int(re.findall(r'char (\d+)', msg)[0])
+                        endOfObject = o[-100:]
+                        # stringObj, looseObjs[-1], offendingString
+                        closer = stringObj[offendingString:].index(endOfObject)
+                        secondHalf = stringObj[offendingString-2:][:closer+len(endOfObject)+2]
+                        fullObject = looseObjs[-1] + secondHalf
+                        finalForm = json.loads(fullObject)
+                        finalForm['url'] = urls[i]
+                        filteredObjects.append(finalForm)
+
+    with open(dataFile.replace("txt", "json"), "w") as jfile:
+        jfile.write(json.dumps(filteredObjects))
+    
     return None
 
 forceClose("./requests/server/collections/toFix/cbk2.txt")
+
+#partitionString('{"type": "boose", "cost": 129.99, "tax": 23.22, "devices": ["soundbar", "voice remote", "smart alexa"], "customerInfo": {"address": "4501 Brekley Ridge", "zipCode": "75921", "repeat": true, "_id": {"oid": 2391312084123, "REF": 129031923}}}',
+#openChar="{", closeChar="}")
