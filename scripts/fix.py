@@ -106,6 +106,7 @@ def forceClose(dataFile):
     # re.compile(r'(?=\{)\{([^\}])+(?=\})') // OPEN CLOSE DO NOT CONTAIN OBJECTS  (?=\{)\{([^\}\[\{])+(?=\})\}
     # GETS EVERY ARRAY = (?=\[)\[([^\[\]])+(?=\])\]
     # GETS STRINGS = re.compile("(?=\:\")(\:\")([^\"])+(\".{1})(?=[\}\]\"\s\,])")
+    regFive = re.compile(r"(?=:\[?\")(:\[?\")(.+?)(?=\"\]?,\"[A-z]+\")")
     regxFour = re.compile(r"(?=\:\")(\:\")([^\\\"]+)(\")(?!\"[\}\]\s\,])([^\:\}\]]+\,)") # (?=:")(:")([^\\"]+)(")(?!"[\}\]\s,])([^:\}\]]+,)
     regTwo = re.compile(r"((\{\s*|\"success\"\s*:\s*true,)\s*\"data\")")
     regURL = re.compile(r'(\|[^\s\|:]+:)+') # make sure resulting object is not encased in a string, no spaces perhaps?
@@ -124,7 +125,7 @@ def forceClose(dataFile):
         for gm in groupMatches:
             if (gm!=':\"') and (gm!='\"'):
                 toAdd.append(re.sub(r'(?=[^\\])([^\\]\")', "", gm).strip())
-
+        print(toAdd)
         newString = newString + myString[lastStart:start+1] + "\"" +"".join(toAdd) + "\","
         lastStart = stop
     
@@ -177,15 +178,21 @@ def forceClose(dataFile):
                 # expecting ',' delimiter: line 1 column n+1 (char n)
                 # case: stream interupts object with url indicator with the entire combined string from the api
                 # solution: get the object with the greater length and check to see if it has the call url parameter inside, if not pop it from interupted object and place in full object
+                print(msg)
+                print(o[charAt-15:charAt], f"<<<<{o[charAt]}>>>>", o[charAt+1:charAt+15])
                 while o[charAt]!="\"": # use "{" for broken streams and "\""
+                    if o[charAt]=='{':
+                        break
                     charAt-=1
                 try:
+                    print(o[charAt-15:charAt], f"<<<<{o[charAt]}>>>>", o[charAt+1:charAt+15])
                     stringObj = o[charAt:]
                     fullObject = json.loads(stringObj)
                 except json.decoder.JSONDecodeError as er:
                     msg = er.args[0]
                     charStreamReturn = int(re.findall(r'char (\d+)', msg)[0])
-            
+                    print(msg)
+                    print(o[charAt:][charStreamReturn-15:charStreamReturn], f"<<<<{o[charAt:][charStreamReturn]}>>>>", o[charAt:][charStreamReturn+1:charStreamReturn+15])
                     try:
                         nextObject = json.loads(stringObj[:charStreamReturn])
                         nextObject['url'] = urls[i]
