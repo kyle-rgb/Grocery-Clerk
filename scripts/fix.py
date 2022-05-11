@@ -1,5 +1,4 @@
-import json, re
-from msilib.schema import Error
+import json, re, os, unicodedata
 from pprint import pprint
 
 from multiprocessing import Pool
@@ -80,31 +79,37 @@ def forceClose(dataFile):
     # identifys loose objects involuntarily inserted into streams via early pulls
     with open(dataFile, 'r', encoding="utf-8") as file:
         myString = file.read()
-        asciiString = myString.encode('ascii', 'ignore')
-        asciiString = asciiString.replace(b'\x19', b'')
-        myString = asciiString.decode('utf-8', 'ignore')
-    # def mp_worker():
-    #     pass
+        myString = myString.replace("\x18", "")
+        myString = myString.replace("\x19", "")
+        myString = myString.replace("\x13", "")
+        myString = myString.replace("\x14", "")
+        myString = myString.replace("\x02", "")
+        myString = myString.replace("\x10", "")
+        myString = myString.replace("\x11", "")
+        myString = myString.replace("\x1c", "")
+        myString = myString.replace("\x1e", "")
+        myString = myString.replace("\x1d", "")
+        myString = myString.replace("\x0b", "")
+        
+        
 
-    # def mp_handler():
-    #     pool = Pool(16)
-    #     pool.map(mp_worker, )
-    #     pass
+    
 
 
-    queue = []#deque(maxlen=10_000)
-    reg = r"(\"|\{|\[|\}|\])"
-    parsed = {'{': "OO", "}": "OE", "[": "AO", "]": "AE", "\"": "SS"}
-    closers  = {"OO": "OE", "AO": "AE", "SS":"SS"}
+    # queue = []#deque(maxlen=10_000)
+    # reg = r"(\"|\{|\[|\}|\])"
+    # parsed = {'{': "OO", "}": "OE", "[": "AO", "]": "AE", "\"": "SS"}
+    # closers  = {"OO": "OE", "AO": "AE", "SS":"SS"}
     #matches = [(x.span()[0], parsed[x.group()]) for x in re.finditer(reg, myString)]
     # re.compile(r'\:(?=\")\"([^\"]+)\"(?=[\}\],])') # pulls out all strings
     # re.compile(r'\:(?=\[)([^\]]+)(?=\])') # pulls out all arrays
     # re.compile(r'(?=\{)\{([^\}])+(?=\})') // OPEN CLOSE DO NOT CONTAIN OBJECTS  (?=\{)\{([^\}\[\{])+(?=\})\}
     # GETS EVERY ARRAY = (?=\[)\[([^\[\]])+(?=\])\]
     # GETS STRINGS = re.compile("(?=\:\")(\:\")([^\"])+(\".{1})(?=[\}\]\"\s\,])")
-    regxFour = re.compile(r"(?=\:\")(\:\")([^\"]+)(\")(?!\"[\}\]\s\,])([^\:\}\]]+\,)")
+    regxFour = re.compile(r"(?=\:\")(\:\")([^\\\"]+)(\")(?!\"[\}\]\s\,])([^\:\}\]]+\,)") # (?=:")(:")([^\\"]+)(")(?!"[\}\]\s,])([^:\}\]]+,)
     regTwo = re.compile(r"((\{\s*|\"success\"\s*:\s*true,)\s*\"data\")")
-    regURL = re.compile(r'(\|[^\|:]+:)+')
+    regURL = re.compile(r'(\|[^\s\|:]+:)+') # make sure resulting object is not encased in a string, no spaces perhaps?
+    regxFourImp = re.compile(r"(?=:\")(:\")([^\\\"]+)(\")(?!\"[\}\]\s,])([^:\}\]]+(,|\}|\]))")
     regThree = re.compile(r"(\"\w+\":)")
     #myString = re.sub(regThree, r'   \1   ', myString)
     # newResponse = [x.span() for x in re.finditer(regTwo, myString)]
@@ -112,15 +117,13 @@ def forceClose(dataFile):
     # [print(myString[x[0]-12:x[1]+50]) for x in newResponse]
     newString = ''
     lastStart = 0
-    for group in re.finditer(regxFour, myString):
+    for group in re.finditer(regxFourImp, myString):
         start, stop = group.span()
         groupMatches = group.groups()
         toAdd =[]
-        h= 0
         for gm in groupMatches:
             if (gm!=':\"') and (gm!='\"'):
-                toAdd.append(re.sub('\"', "", gm).strip())
-            
+                toAdd.append(re.sub(r'(?=[^\\])([^\\]\")', "", gm).strip())
 
         newString = newString + myString[lastStart:start+1] + "\"" +"".join(toAdd) + "\","
         lastStart = stop
@@ -131,15 +134,16 @@ def forceClose(dataFile):
     urls = list(filter(lambda x: re.match(regURL, x), urlsAndObjects))
     objects = filter(lambda x: ((x!='')and(re.match(regURL, x))==None), urlsAndObjects)
     filteredObjects = []
+    
     for i, o in enumerate(objects):
         # Stream writes in 3 ways:
             # writing of object attributes are cut off by a repeat call
             # An Object's stream exhausts mid-parameter, causing parms to be cut off.
             # the intercepting object can also be cut off mid paramter by the starting streams return.   
         try:
-            # 1st: see if the stream was written in one buffer 
-            json.loads(o)
-            print('did not happen')
+            # 1st: see if the stream was written in one buffer
+            filteredObjects.append(json.loads(o))
+        
         except json.decoder.JSONDecodeError as error:
             msg = error.args[0]
             charAt = int(re.findall(r'char (\d+)', msg)[0])
@@ -155,41 +159,82 @@ def forceClose(dataFile):
                 except json.decoder.JSONDecodeError as error2:
                     msg = error2.args[0]
                     charAt = int(re.findall(r'char (\d+)', msg)[0])
-                    print(firstData)
+            elif 'Invalid control' in msg:
+                print(msg, charAt)
+                try:
+                    controlObject = o[:charAt] + o[charAt+1:]
+                    filteredObjects.append(json.loads(controlObject))
+
+                except json.decoder.JSONDecodeError as errorControl:
+                    
+                    msg = errorControl.args[0]
+                    charAt = int(re.findall(r'char (\d+)', msg)[0])
+                    print(errorControl, charAt)
+                    print(controlObject[charAt-10:charAt] + f"<<<{controlObject[charAt]}>>>" + controlObject[charAt+1:charAt+10])
+
+            
             else:
                 # expecting ',' delimiter: line 1 column n+1 (char n)
                 # case: stream interupts object with url indicator with the entire combined string from the api
                 # solution: get the object with the greater length and check to see if it has the call url parameter inside, if not pop it from interupted object and place in full object
-                while o[charAt]!="{":
+                while o[charAt]!="\"": # use "{" for broken streams and "\""
                     charAt-=1
-
                 try:
                     stringObj = o[charAt:]
                     fullObject = json.loads(stringObj)
                 except json.decoder.JSONDecodeError as er:
                     msg = er.args[0]
                     charStreamReturn = int(re.findall(r'char (\d+)', msg)[0])
+            
                     try:
-                        filteredObjects.append(json.loads(stringObj[:charStreamReturn]))
+                        nextObject = json.loads(stringObj[:charStreamReturn])
+                        nextObject['url'] = urls[i]
+                        filteredObjects.append(nextObject)
 
                     except json.decoder.JSONDecodeError as er2:
-                        msg = er2.args[0]
-                        offendingString = int(re.findall(r'char (\d+)', msg)[0])
-                        endOfObject = o[-100:]
-                        # stringObj, looseObjs[-1], offendingString
-                        closer = stringObj[offendingString:].index(endOfObject)
-                        secondHalf = stringObj[offendingString-2:][:closer+len(endOfObject)+2]
-                        fullObject = looseObjs[-1] + secondHalf
-                        finalForm = json.loads(fullObject)
-                        finalForm['url'] = urls[i]
-                        filteredObjects.append(finalForm)
+                        try:
+                            print(msg2)   
+                            msg2 = er2.args[0]
+                            offendingString = int(re.findall(r'char (\d+)', msg)[0])
+                            endOfObject = o[-100:]
+                            closer = stringObj[offendingString:].index(endOfObject)
+                            secondHalf = stringObj[offendingString-2:][:closer+len(endOfObject)+2]
+                            fullObject = looseObjs[-1] + secondHalf
+                            finalForm = json.loads(fullObject)
+                            finalForm['url'] = urls[i]
+                            filteredObjects.append(finalForm)
+                        except:
+                            msg = er2.args[0]
+                            offendingString = int(re.findall(r'char (\d+)', msg)[0])
+                            print(fullObject[offendingString], repr(fullObject[offendingString]), ord(fullObject[offendingString]))
+                            raise ValueError
+
+        print(f'@{i}. FilteredObjects = {len(filteredObjects)} . {type(filteredObjects[-1])}')
+
 
     with open(dataFile.replace("txt", "json"), "w") as jfile:
         jfile.write(json.dumps(filteredObjects))
     
     return None
 
-forceClose("./requests/server/collections/toFix/cbk2.txt")
+# for folder, _, files in os.walk("./requests/server/collections/toFix/"):
+    
+#     for file in files:
+#         if file.endswith('json'):
+#             next
+#         else:
+#             try:
+#                 forceClose(folder+file)
+#                 print('successfully parse {}'.format(file))    
+#             except BaseException as error:
+#                 print(error, file)
+            
+
+
+
+
+
+forceClose("./requests/server/collections/toFix/cashback420.txt")
 
 #partitionString('{"type": "boose", "cost": 129.99, "tax": 23.22, "devices": ["soundbar", "voice remote", "smart alexa"], "customerInfo": {"address": "4501 Brekley Ridge", "zipCode": "75921", "repeat": true, "_id": {"oid": 2391312084123, "REF": 129031923}}}',
 #openChar="{", closeChar="}")
