@@ -106,7 +106,7 @@ def forceClose(dataFile):
     # re.compile(r'(?=\{)\{([^\}])+(?=\})') // OPEN CLOSE DO NOT CONTAIN OBJECTS  (?=\{)\{([^\}\[\{])+(?=\})\}
     # GETS EVERY ARRAY = (?=\[)\[([^\[\]])+(?=\])\]
     # GETS STRINGS = re.compile("(?=\:\")(\:\")([^\"])+(\".{1})(?=[\}\]\"\s\,])")
-    regFive = re.compile(r"(?=:\[?\")(:\[?\")(.+?)(?=\"\]?,\"[A-z]+\")")
+    regFive = re.compile(r"(?=:\{?\[?\")(:\")(.*?)(?=\"[\}\],])")
     regxFour = re.compile(r"(?=\:\")(\:\")([^\\\"]+)(\")(?!\"[\}\]\s\,])([^\:\}\]]+\,)") # (?=:")(:")([^\\"]+)(")(?!"[\}\]\s,])([^:\}\]]+,)
     regTwo = re.compile(r"((\{\s*|\"success\"\s*:\s*true,)\s*\"data\")")
     regURL = re.compile(r'(\|[^\s\|:]+:)+') # make sure resulting object is not encased in a string, no spaces perhaps?
@@ -118,24 +118,31 @@ def forceClose(dataFile):
     # [print(myString[x[0]-12:x[1]+50]) for x in newResponse]
     newString = ''
     lastStart = 0
-    for group in re.finditer(regxFourImp, myString):
-        start, stop = group.span()
+    l = [x for x in re.finditer(regFive, myString)]
+    print(len(l))
+    for j, group in enumerate(l):#re.finditer(regFive, myString):
+        if j%10_000==0:
+            print(j)
         groupMatches = group.groups()
-        toAdd =[]
-        for gm in groupMatches:
-            if (gm!=':\"') and (gm!='\"'):
-                toAdd.append(re.sub(r'(?=[^\\])([^\\]\")', "", gm).strip())
-        print(toAdd)
-        newString = newString + myString[lastStart:start+1] + "\"" +"".join(toAdd) + "\","
-        lastStart = stop
-    
-    urlMatcher = (r"\{\"url\":\"(.+)\"(?=,)")
+        if '"' in groupMatches[1]:
+            print(groupMatches[1])
+            start, stop = group.span()
+            data = re.sub(r'(?<=[^\\])"', "",groupMatches[1])
+            newString = newString + myString[lastStart:start] + groupMatches[0] + data
+            lastStart = stop
+        else:
+            start, stop = group.span()
+            newString = newString + myString[lastStart:stop] 
+            lastStart = stop
+            
+
     newString = newString + myString[lastStart:]
     urlsAndObjects = re.split(regURL, newString)
     urls = list(filter(lambda x: re.match(regURL, x), urlsAndObjects))
-    objects = filter(lambda x: ((x!='')and(re.match(regURL, x))==None), urlsAndObjects)
+    objects = list(filter(lambda x: ((x!='')and(re.match(regURL, x))==None), urlsAndObjects))
     filteredObjects = []
-    
+    with open('./g.txt', 'w', encoding='unicode_escape') as h:
+        h.write(newString)
     for i, o in enumerate(objects):
         # Stream writes in 3 ways:
             # writing of object attributes are cut off by a repeat call
@@ -146,6 +153,7 @@ def forceClose(dataFile):
             filteredObjects.append(json.loads(o))
         
         except json.decoder.JSONDecodeError as error:
+            print(error)
             msg = error.args[0]
             charAt = int(re.findall(r'char (\d+)', msg)[0])
             looseObjs = []
