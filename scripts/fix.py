@@ -71,9 +71,6 @@ def partitionString(string, openChar, closeChar, index=0):
                 
     print(arr)
 
-            
-
-
 
 def forceClose(dataFile):
     # identifys loose objects involuntarily inserted into streams via early pulls
@@ -95,7 +92,7 @@ def forceClose(dataFile):
 
     
 
-
+    # pprint([x for x in re.findall(r'(?!,\s)(.{100})(?=\{\"data\")(.{70})', myString)])
     # queue = []#deque(maxlen=10_000)
     # reg = r"(\"|\{|\[|\}|\])"
     # parsed = {'{': "OO", "}": "OE", "[": "AO", "]": "AE", "\"": "SS"}
@@ -106,7 +103,7 @@ def forceClose(dataFile):
     # re.compile(r'(?=\{)\{([^\}])+(?=\})') // OPEN CLOSE DO NOT CONTAIN OBJECTS  (?=\{)\{([^\}\[\{])+(?=\})\}
     # GETS EVERY ARRAY = (?=\[)\[([^\[\]])+(?=\])\]
     # GETS STRINGS = re.compile("(?=\:\")(\:\")([^\"])+(\".{1})(?=[\}\]\"\s\,])")
-    regFive = re.compile(r"(?=:\{?\[?\")(:\")(.*?)(?=\"[\}\],])")
+    regFive = re.compile(r"(?=:\{?\[?\")(:\")(.*?)(?=\"[\}\],\{\[]+\"[A-z])")
     regxFour = re.compile(r"(?=\:\")(\:\")([^\\\"]+)(\")(?!\"[\}\]\s\,])([^\:\}\]]+\,)") # (?=:")(:")([^\\"]+)(")(?!"[\}\]\s,])([^:\}\]]+,)
     regTwo = re.compile(r"((\{\s*|\"success\"\s*:\s*true,)\s*\"data\")")
     regURL = re.compile(r'(\|[^\s\|:]+:)+') # make sure resulting object is not encased in a string, no spaces perhaps?
@@ -116,119 +113,186 @@ def forceClose(dataFile):
     # newResponse = [x.span() for x in re.finditer(regTwo, myString)]
     # urls = [x.span() for x in re.finditer(regURL, myString)]
     # [print(myString[x[0]-12:x[1]+50]) for x in newResponse]
-    newString = ''
-    lastStart = 0
-    l = [x for x in re.finditer(regFive, myString)]
-    print(len(l))
-    for j, group in enumerate(l):#re.finditer(regFive, myString):
-        if j%10_000==0:
-            print(j)
-        groupMatches = group.groups()
-        if '"' in groupMatches[1]:
-            print(groupMatches[1])
-            start, stop = group.span()
-            data = re.sub(r'(?<=[^\\])"', "",groupMatches[1])
-            newString = newString + myString[lastStart:start] + groupMatches[0] + data
-            lastStart = stop
-        else:
-            start, stop = group.span()
-            newString = newString + myString[lastStart:stop] 
-            lastStart = stop
-            
-
-    newString = newString + myString[lastStart:]
-    urlsAndObjects = re.split(regURL, newString)
+    
+    
+    # for j, group in enumerate(l):#re.finditer(regFive, myString):
+    #     if j%10_000==0:
+    #         print(j)
+    #     groupMatches = group.groups()
+    #     if '"' in groupMatches[1]:
+    #         print(groupMatches[1])
+    #         start, stop = group.span()
+    #         data = re.sub(r'(?<=[^\\])"', "",groupMatches[1])
+    #         newString = newString + myString[lastStart:start] + groupMatches[0] + data
+    #         lastStart = stop
+    #     else:
+    #         start, stop = group.span()
+    #         newString = newString + myString[lastStart:stop] 
+    #         lastStart = stop
+    #newString = newString + myString[lastStart:]
+    urlsAndObjects = re.split(regURL, myString)
     urls = list(filter(lambda x: re.match(regURL, x), urlsAndObjects))
     objects = list(filter(lambda x: ((x!='')and(re.match(regURL, x))==None), urlsAndObjects))
     filteredObjects = []
-    with open('./g.txt', 'w', encoding='unicode_escape') as h:
-        h.write(newString)
-    for i, o in enumerate(objects):
-        # Stream writes in 3 ways:
-            # writing of object attributes are cut off by a repeat call
-            # An Object's stream exhausts mid-parameter, causing parms to be cut off.
-            # the intercepting object can also be cut off mid paramter by the starting streams return.   
-        try:
-            # 1st: see if the stream was written in one buffer
-            filteredObjects.append(json.loads(o))
-        
-        except json.decoder.JSONDecodeError as error:
-            print(error)
-            msg = error.args[0]
-            charAt = int(re.findall(r'char (\d+)', msg)[0])
-            looseObjs = []
-            looseObjs.append(o[:charAt])
-            if msg.startswith("Extra"):
-                try:
-                    firstData = json.loads(o[:charAt])
-                    secondData = json.loads(o[charAt+2:])
-                    if firstData==secondData:
-                        firstData['url'] = urls[i]
-                        filteredObjects.append(firstData)
-                except json.decoder.JSONDecodeError as error2:
-                    msg = error2.args[0]
-                    charAt = int(re.findall(r'char (\d+)', msg)[0])
-            elif 'Invalid control' in msg:
-                print(msg, charAt)
-                try:
-                    controlObject = o[:charAt] + o[charAt+1:]
-                    filteredObjects.append(json.loads(controlObject))
+    k=0
 
-                except json.decoder.JSONDecodeError as errorControl:
-                    
-                    msg = errorControl.args[0]
+    print("URLS:", len(urls), "OBJECTS:", len(objects))
+    for i, o in enumerate(objects):
+        completeObjectRegex = re.compile(r"(,\s)(?=\{\"(data|success)\")") # check to see if object is complete and duplicated
+        brokenObjectRegex = re.compile(r"(?<!,\s)(\{\"(data|success)\")")
+        completeObjects = re.split(completeObjectRegex, o)
+        if len(completeObjects)==1:
+            # object broken by stream, we know that the stream breakpoint is the start of the original string
+            # search nonsplit string for its beginning, get both the span to find break location
+            # object is closed successfully, so get ending and search the stream breaker for the ending location
+            # append broken first half with broken second helf compare objects equality and add single object
+            startOfStream = re.sub(r'([\"\{\}\[\]\(\).$])', r'\\\1', o[:500])
+            endOfStream = re.sub(r'([\"\{\}\[\]\(\).$])', r'\\\1', o[-500:])
+            starts = [x.span() for x in re.finditer(startOfStream, o)]
+            ends = [x.span() for x in re.finditer(endOfStream, o)]
+            if len(starts)!=2 or len(ends)!=2:
+                print(starts, ends)
+                raise re.error('indicators contain an unescaped general character')
+            
+            cutoff = o[:starts[1][0]]
+            print(len(cutoff))
+            s1 = o[starts[0][0]:starts[1][0]] + o[ends[0][1]+1:] 
+            s2 = o[starts[1][0]:ends[0][1]]
+            a = max([s1, s2], key=len)
+            b = o[starts[0][0]:starts[1][0]]#min([s1, s2], key=len)
+            
+            newString = ''
+            lastStart = 0
+            for group in re.finditer(regFive, a):
+                groupMatches = group.groups()
+                if '"' in groupMatches[1]:
+                    start, stop = group.span()
+                    data = re.sub(r'(?<![\\])"', " ",groupMatches[1])
+                    newString = newString + a[lastStart:start] + groupMatches[0] + data
+                    lastStart = stop
+                else:
+                    start, stop = group.span()
+                    newString = newString + a[lastStart:stop] 
+                    lastStart = stop
+            newString = newString + a[lastStart:]
+            try:
+                json.loads(newString)
+            except json.decoder.JSONDecodeError as e:
+                if e.pos == len(newString)-1:
+                    try:
+                        print(e)
+                        print(newString[-20:])
+                        json.loads(newString[:-4])
+                    except json.decoder.JSONDecodeError as je:
+                        print(je)
+                else:
+                    #print(f"{newString[e.pos-1000:e.pos]}" + f"<<<<<{newString[e.pos]}>>>>>",  f"{newString[e.pos+1:e.pos+100]}" )
+                    msg = e.args[0]
                     charAt = int(re.findall(r'char (\d+)', msg)[0])
-                    print(errorControl, charAt)
-                    print(controlObject[charAt-10:charAt] + f"<<<{controlObject[charAt]}>>>" + controlObject[charAt+1:charAt+10])
+                    returningString = newString[e.pos+1:e.pos+500]
+                    startOfStream = re.sub(r'([\"\{\}\[\]\(\).$])', r'\\\1', returningString)
+                    # print([x.span() for x in re.finditer(startOfStream, newString[charAt:])])
+                    endOfStream = re.sub(r'([\"\{\}\[\]\(\).$])', r'\\\1', b[-500:])
+                    matches = [x.span() for x in re.finditer(endOfStream, newString)]
+                    matches = [re.sub(r'([\"\{\}\[\]\(\).$])', r'\\\1',newString[x[1]:x[1]+500])for x in matches]
+                    
+                    matches = [x.span() for x in re.finditer(matches[0], newString)]
+                    print('\n')
+
+
+
+
+                    
+
+
+        # else: 
+        #     # print(completeObjects[0]==completeObjects[-1])
+    # for i, o in enumerate(objects):
+    #     # Stream writes in 3 ways:
+    #         # writing of object attributes are cut off by a repeat call
+    #         # An Object's stream exhausts mid-parameter, causing parms to be cut off.
+    #         # the intercepting object can also be cut off mid paramter by the starting streams return.   
+    #     try:
+    #         # 1st: see if the stream was written in one buffer
+    #         filteredObjects.append(json.loads(o))
+        
+    #     except json.decoder.JSONDecodeError as error:
+    #         print(error)
+    #         msg = error.args[0]
+    #         charAt = int(re.findall(r'char (\d+)', msg)[0])
+    #         looseObjs = []
+    #         looseObjs.append(o[:charAt])
+    #         if msg.startswith("Extra"):
+    #             try:
+    #                 firstData = json.loads(o[:charAt])
+    #                 secondData = json.loads(o[charAt+2:])
+    #                 if firstData==secondData:
+    #                     firstData['url'] = urls[i]
+    #                     filteredObjects.append(firstData)
+    #             except json.decoder.JSONDecodeError as error2:
+    #                 msg = error2.args[0]
+    #                 charAt = int(re.findall(r'char (\d+)', msg)[0])
+    #         elif 'Invalid control' in msg:
+    #             print(msg, charAt)
+    #             try:
+    #                 controlObject = o[:charAt] + o[charAt+1:]
+    #                 filteredObjects.append(json.loads(controlObject))
+
+    #             except json.decoder.JSONDecodeError as errorControl:
+                    
+    #                 msg = errorControl.args[0]
+    #                 charAt = int(re.findall(r'char (\d+)', msg)[0])
+    #                 print(errorControl, charAt)
+    #                 print(controlObject[charAt-10:charAt] + f"<<<{controlObject[charAt]}>>>" + controlObject[charAt+1:charAt+10])
 
             
-            else:
-                # expecting ',' delimiter: line 1 column n+1 (char n)
-                # case: stream interupts object with url indicator with the entire combined string from the api
-                # solution: get the object with the greater length and check to see if it has the call url parameter inside, if not pop it from interupted object and place in full object
-                print(msg)
-                print(o[charAt-15:charAt], f"<<<<{o[charAt]}>>>>", o[charAt+1:charAt+15])
-                while o[charAt]!="\"": # use "{" for broken streams and "\""
-                    if o[charAt]=='{':
-                        break
-                    charAt-=1
-                try:
-                    print(o[charAt-15:charAt], f"<<<<{o[charAt]}>>>>", o[charAt+1:charAt+15])
-                    stringObj = o[charAt:]
-                    fullObject = json.loads(stringObj)
-                except json.decoder.JSONDecodeError as er:
-                    msg = er.args[0]
-                    charStreamReturn = int(re.findall(r'char (\d+)', msg)[0])
-                    print(msg)
-                    print(o[charAt:][charStreamReturn-15:charStreamReturn], f"<<<<{o[charAt:][charStreamReturn]}>>>>", o[charAt:][charStreamReturn+1:charStreamReturn+15])
-                    try:
-                        nextObject = json.loads(stringObj[:charStreamReturn])
-                        nextObject['url'] = urls[i]
-                        filteredObjects.append(nextObject)
+    #         else:
+    #             # expecting ',' delimiter: line 1 column n+1 (char n)
+    #             # case: stream interupts object with url indicator with the entire combined string from the api
+    #             # solution: get the object with the greater length and check to see if it has the call url parameter inside, if not pop it from interupted object and place in full object
+    #             print(msg)
+    #             print(o[charAt-15:charAt], f"<<<<{o[charAt]}>>>>", o[charAt+1:charAt+15])
+    #             while o[charAt]!="\"": # use "{" for broken streams and "\""
+    #                 if o[charAt]=='{':
+    #                     break
+    #                 charAt-=1
+    #             try:
+    #                 print(o[charAt-15:charAt], f"<<<<{o[charAt]}>>>>", o[charAt+1:charAt+15])
+    #                 stringObj = o[charAt:]
+    #                 fullObject = json.loads(stringObj)
+    #             except json.decoder.JSONDecodeError as er:
+    #                 msg = er.args[0]
+    #                 charStreamReturn = int(re.findall(r'char (\d+)', msg)[0])
+    #                 print(msg)
+    #                 print(o[charAt:][charStreamReturn-15:charStreamReturn], f"<<<<{o[charAt:][charStreamReturn]}>>>>", o[charAt:][charStreamReturn+1:charStreamReturn+15])
+    #                 try:
+    #                     nextObject = json.loads(stringObj[:charStreamReturn])
+    #                     nextObject['url'] = urls[i]
+    #                     filteredObjects.append(nextObject)
 
-                    except json.decoder.JSONDecodeError as er2:
-                        try:
-                            print(msg2)   
-                            msg2 = er2.args[0]
-                            offendingString = int(re.findall(r'char (\d+)', msg)[0])
-                            endOfObject = o[-100:]
-                            closer = stringObj[offendingString:].index(endOfObject)
-                            secondHalf = stringObj[offendingString-2:][:closer+len(endOfObject)+2]
-                            fullObject = looseObjs[-1] + secondHalf
-                            finalForm = json.loads(fullObject)
-                            finalForm['url'] = urls[i]
-                            filteredObjects.append(finalForm)
-                        except:
-                            msg = er2.args[0]
-                            offendingString = int(re.findall(r'char (\d+)', msg)[0])
-                            print(fullObject[offendingString], repr(fullObject[offendingString]), ord(fullObject[offendingString]))
-                            raise ValueError
+    #                 except json.decoder.JSONDecodeError as er2:
+    #                     try:
+    #                         print(msg2)   
+    #                         msg2 = er2.args[0]
+    #                         offendingString = int(re.findall(r'char (\d+)', msg)[0])
+    #                         endOfObject = o[-100:]
+    #                         closer = stringObj[offendingString:].index(endOfObject)
+    #                         secondHalf = stringObj[offendingString-2:][:closer+len(endOfObject)+2]
+    #                         fullObject = looseObjs[-1] + secondHalf
+    #                         finalForm = json.loads(fullObject)
+    #                         finalForm['url'] = urls[i]
+    #                         filteredObjects.append(finalForm)
+    #                     except:
+    #                         msg = er2.args[0]
+    #                         offendingString = int(re.findall(r'char (\d+)', msg)[0])
+    #                         print(fullObject[offendingString], repr(fullObject[offendingString]), ord(fullObject[offendingString]))
+    #                         raise ValueError
 
-        print(f'@{i}. FilteredObjects = {len(filteredObjects)} . {type(filteredObjects[-1])}')
+    #     print(f'@{i}. FilteredObjects = {len(filteredObjects)} . {type(filteredObjects[-1])}')
 
 
-    with open(dataFile.replace("txt", "json"), "w") as jfile:
-        jfile.write(json.dumps(filteredObjects))
+    # with open(dataFile.replace("txt", "json"), "w") as jfile:
+    #     jfile.write(json.dumps(filteredObjects))
     
     return None
 
