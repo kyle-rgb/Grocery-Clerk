@@ -4,13 +4,15 @@ import time, json, re, os, datetime as dt
 
 
 app = Flask(__name__)
-
+i = 0 
 @app.route('/docs', methods=['GET', 'POST'])
 def docs():
     d = dt.datetime.now()
-    dateCode= dt.datetime.strftime(d, "%m%d%y")    
-
+    dateCode= dt.datetime.strftime(d, "%m%d%y")
+    global i     
+    # TODO: use continue to communicate program execution back to extension
     if request.method=="POST":
+        i += 25
         data = json.loads(request.get_data(as_text=True))
         length = request.content_length
         contentType = request.args.get("type")
@@ -22,7 +24,7 @@ def docs():
 
         with open(f'./collections/{contentType}/{contentType}{dateCode}.json', 'w', encoding='utf-8') as file:
             file.write(json.dumps(data))
-        print(f'successfly wrote {length} to disk')
+        print(f'successfly wrote {length} to disk. have received {i} objects')
 
         return({"data": {"length": length}, "continue": 1})
 
@@ -52,9 +54,6 @@ def fixit():
                 dataArray.append(0)
 
     return {"data": dataArray}
-
-    
-
 
 
 if __name__ == "__main__":

@@ -509,28 +509,27 @@ def getDigitalPromotions():
     return None
 
 
-def simulateUser():
-    neededLinks = {'cashback': 139, 'digital': 622}
+def simulateUser(link):
+    neededLinks = {'cashback': {"no": 147, "button": "./requests/server/cashback.png"}, 'digital': {"no":315, "button": "./requests/server/signIn.png"}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
     # start at top of the screen 
     # align all items https://www.kroger.com/savings/cl/coupons/
     re.compile(r"\".+\"\:\s*\".+\"")
-    iterations = neededLinks['digital'] // 12
+    iterations = neededLinks[link]["no"] // 12
     iterations = iterations + 1
     time.sleep(3)
     pag.scroll(-800)
     time.sleep(2)
     # find all buttons
     for i in range(iterations):
-        buttons = list(pag.locateAllOnScreen("./requests/server/cashback.png", confidence=.6, grayscale=False))
-        # print(buttons)
+        buttons = list(pag.locateAllOnScreen(neededLinks[link]['button'], confidence=.66, grayscale=False))
         buttons = [pag.center(y) for i, y in enumerate(buttons) if (abs(buttons[i].left-buttons[i-1].left) > 100) or (abs(buttons[i].top-buttons[i-1].top)>100)] # > 2
         print(f"Located {len(buttons)} Items")
         if len(buttons)>12:
             yaxis = list(map(lambda b: b.y, buttons))
-            buttons = [x for x in buttons if yaxis.count(x.y) >= 4]
-        print(len(buttons), "buttons", buttons)
+            buttons = [x for x in buttons if yaxis.count(x.y) >= 4 ]
+        print(len(buttons), "buttons")
         for b in buttons:
             pag.moveTo(b)
             x, y = pag.position()
@@ -583,5 +582,5 @@ def newOperation():
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
 # getMyData() 
 # getDigitalPromotions()
-simulateUser()
+simulateUser("cashback")
 # newOperation()

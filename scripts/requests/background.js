@@ -1,20 +1,29 @@
 var setMaster = new Set() 
 var masterArray = []
 
-// function setCookie(e) {
-//   let setMyCookie = {
-//     name: "Set-Cookie",
-//     value: "my-cookie1=my-cookie-value1; SameSite=None; Secure"
-//   };
-//   e.responseHeaders.push(setMyCookie);
-//   console.log('myResponseH', e.responseHeaders, chrome.downloads)
-//   // let download = chrome.downloads.download({saveAs: true, url: "http://127.0.0.1:5000/docs"})
-//   return {responseHeaders: e.responseHeaders};
-// }
+
+async function createType(){
+  let typeT = await browser.tabs.query({active: true}).then((tabs)=>{
+    var t = ''
+    let reg = /mypurchases|cashback|coupons/
+    var fileTypes = {'mypurchases': 'trips', 'cashback': 'cashback', "coupons": 'digital'}
+    for (let tab of tabs){
+      if (tab.url.match(reg)!=null){
+        let match = tab.url.match(reg)[0]
+        t = fileTypes[match]
+      }
+    }
+    return t
+  })
+  return typeT  
+
+}
+
+
 
 function logURL(requestDetails) {
     console.log("Loading: " + requestDetails.url);
-    console.log("details: ", requestDetails)
+    console.log("details: ", requestDetails)   
     return null
   }
 
@@ -74,8 +83,13 @@ async function getI(i){
 }
 
 function pruneArray(array){
-  if (array.length >=200){
-    response = fetch(`http://127.0.0.1:5000/docs`, {method: "POST", body: JSON.stringify(array)})
+  if (array.length >=25){
+    createType().then((t) => {
+      console.log('type = ', t);
+      let type = t ;
+      response = fetch(`http://127.0.0.1:5000/docs?type=${type}`, {method: "POST", body: JSON.stringify(array)})
+      return null
+  })
     return []
   } else {
     return array
@@ -88,22 +102,12 @@ chrome.contextMenus.create({
 })
 
 chrome.contextMenus.onClicked.addListener(function(info, tab) {
-  let reg = /mypurchases|cashback|coupons/
-  var fileTypes = {'mypurchases': 'trips', 'cashback': 'cashback', "coupons": 'digital'}
-
-  browser.tabs.query({active: true}).then((tabs)=>{
-    let type = ''
-    for (let tab of tabs){
-      if (tab.url.match(reg)!=null){
-        let match = tab.url.match(reg)[0]
-        type = fileTypes[match]
-      }
-    }
-    response = fetch(`http://127.0.0.1:5000/docs?type=${type}`, {method: "POST", body: JSON.stringify(masterArray)})
-    masterArray = []
-  })//
-
-})
+    createType().then((t) => {
+      let type = t ;
+      response = fetch(`http://127.0.0.1:5000/docs?type=${type}`, {method: "POST", body: JSON.stringify(masterArray)})
+      return null
+    })
+  })
 
 
 // chrome.webRequest.onBeforeRequest.addListener(
@@ -117,6 +121,12 @@ chrome.webRequest.onBeforeRequest.addListener(
   {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*", "*://*.kroger.com/mypurchases/api/v1/receipt*"], types: ["xmlhttprequest", "object"]}, // 
   ["blocking"]
 )
+
+// chrome.webRequest.onBeforeRequest.addListener(
+//   logTab,
+//   {urls: ["<all_urls>"], types: ["xmlhttprequest", "object"]}, // 
+//   ["blocking"]
+// )
 
 chrome.webRequest.onCompleted.removeListener(
   listener,
