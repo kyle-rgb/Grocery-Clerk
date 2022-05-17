@@ -801,9 +801,9 @@ def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, ge
     # pork, beef, chicken, salmon, eggs, lettuce, jalapenos, flour, sugar, 
     # types = ["main course", "side dish", "dessert", "appetizer", "salad", "bread", "breakfast", "soup", "beverage", "sauce", "marinade", "fingerfood", "snack", "drink"]
     # types = {'main course': {"max": 1516, "offset": 100}}
-    types = {'side dish': {"offset": 100, "max":1814}, 'dessert':{"offset": 100, "max": 299}, 'appetizer': {"offset": 100, "max":598}, 'salad': {"offset": 100, "max":266}, 'bread':{"offset": 100, "max": 38}, 'breakfast':{"offset": 100, "max": 224}, 'soup':{"offset": 100, "max": 320}, 'beverage':{"offset": 100, "max": 86}, 'sauce':{"offset": 100, "max": 74}, 'marinade':{"offset": 100, "max": 3}, 'fingerfood':{"offset": 100, "max": 31}, 'snack':{"offset": 100, "max": 598}, 'drink':{"offset": 100, "max": 86}}
+    types = {'main course': {"max": 1516, "offset": 1350} ,'side dish': {"offset": 1115, "max":1814}, 'dessert':{"offset": 305, "max": 299}, 'appetizer': {"offset": 272, "max":598}, 'salad': {"offset": 177, "max":266}, 'bread':{"offset": 39, "max": 38}, 'breakfast':{"offset": 138, "max": 224}, 'soup':{"offset": 169, "max": 320}, 'beverage':{"offset": 86, "max": 86}, 'sauce':{"offset": 74, "max": 74}, 'marinade':{"offset": 100, "max": 3}, 'fingerfood':{"offset": 100, "max": 31}, 'snack':{"offset": 272, "max": 598}, 'drink':{"offset": 100, "max": 86}}
     recipes = []
-    amountLeft = 150.0 
+    amountLeft = 45.5 
     amountUsed = 150.0-amountLeft
 
     if not route:
@@ -815,7 +815,6 @@ def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, ge
             recipes.extend(json.loads(file.read()))
 
     if generalInfo:
-        re.compile = r'\\x\d+'
         if isinstance(ingredients, list):
             for ingredient in ingredients:
                 req_url = recipe_base_url + route + "?" + f"ingredients={ingredient}" + f"&number={limit}&apiKey={RECIPE_KEY}"
@@ -831,6 +830,7 @@ def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, ge
                 recipes.extend(json.loads(text))
                 time.sleep(1.5)
         elif isinstance(ingredients, dict):
+            recSet = set([x.get('id') for x in recipes])
             for type in types.keys():
                 offset = types[type]["offset"]
                 max = types[type]["max"]
@@ -869,27 +869,26 @@ def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, ge
                     if isinstance(data, dict):
                         offset = offset + len(data["results"])
                         entries = data.get("totalResults")
-                        recipes.extend(data["results"])
+                        recipes.extend([x for x in data["results"] if x.get('id') not in recSet])
                     else:
                         offset = max+limit
-                        recipes.extend(data)
+                        recipes.extend([x for x in data if x.get('id') not in recSet])
                     amountUsed = float(headers.get('X-API-Quota-Request'))
                     amountLeft = float(headers.get('X-API-Quota-Left'))
+                    try:
+                        with open("./requests/server/collections/recipes/recipes.json", "w", encoding="utf-8") as file:
+                            file.write(json.dumps(recipes))
+                    except:
+                        with open("./requests/server/collections/recipes/recipesErr.txt", "w", encoding="utf-8") as file:
+                            file.write(str(recipes))
                     print("AMT LEFT : ", amountLeft)
                     print("\nAMT USED : ", amountUsed)
                     print("\nTOTALS : ", entries)
                     time.sleep(5)
-                print(f"++++++++++++FINISHED++++++++++{type}")
-        try:
-            with open("./requests/server/collections/recipes/recipes.json", "w", encoding="utf-8") as file:
-                file.write(json.dumps(recipes))
-        except:
-            with open("./requests/server/collections/recipes/recipesErr.txt", "w", encoding="utf-8") as file:
-                file.write(str(recipes))
+                print(f"++++++++++++FINISHED {type}++++++++++")
     else:
-        recSet = set()
+        recSet = set([x.get('id') for x in recipes])
         # has all ids of recipes based on the calls to the above route
-        [recSet.add(x.get('id')) for x in recipes]
         recArray = list(recSet)
         lastQuery = False
 
@@ -973,8 +972,8 @@ def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, ge
 # getItemInfo(upcSET)
 # getStoreLocation({'01100482', '01100685', '01100438'})
 # getRecipes(ingredients=['pork', 'beef', 'chicken', 'salmon', 'shrimp', 'eggs', 'flour', 'lettuce', 'sugar', 'butter'], limit=100)
-getRecipes(route="recipes/informationBulk", limit=50, generalInfo=False)
-# getRecipes(route="recipes/complexSearch", limit=100, ingredients=dict(), generalInfo=True)
+# getRecipes(route="recipes/informationBulk", limit=51, generalInfo=False)
+getRecipes(route="recipes/complexSearch", limit=100, ingredients=dict(), generalInfo=True)
 # # # # # # # # # # ## # # # # #
 #trips = json.loads(open('./data/collections/trips.json', 'r').read())
 # # # # # MATCH RECEIPTS TO ITEMS # #  # # # #
