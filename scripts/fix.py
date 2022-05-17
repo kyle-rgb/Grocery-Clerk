@@ -30,8 +30,8 @@ def fixData():
 def destroyIDs(dataFile):
     with open(dataFile, 'r', encoding="utf-8") as file:
         myString = file.read()
-        j = json.loads(myString)
-        jj = json.loads(j)
+        jj = json.loads(myString)
+        #jj = json.loads(j)
 
 
         for entry in jj:
@@ -47,7 +47,9 @@ def destroyIDs(dataFile):
                     if 'loyaltyId' in data:
                         data['loyaltyId'] = ''
 
-    with open('parsed'+dataFile, 'w', encoding="utf-8") as file:
+    filename = 'parsed' + dataFile.split('/')[-1]
+    filename = "/".join(dataFile.split('/')[:-1] + [filename])
+    with open(filename, 'w', encoding="utf-8") as file:
         file.write(json.dumps(jj))
         
 
@@ -415,7 +417,7 @@ def forceClose(dataFile):
 
 
 
-forceClose("./requests/server/collections/toFix/cashback420.txt")
-
+# forceClose("./requests/server/collections/toFix/cashback420.txt")
+destroyIDs("./requests/server/collections/trips/trips051622.json")
 #partitionString('{"type": "boose", "cost": 129.99, "tax": 23.22, "devices": ["soundbar", "voice remote", "smart alexa"], "customerInfo": {"address": "4501 Brekley Ridge", "zipCode": "75921", "repeat": true, "_id": {"oid": 2391312084123, "REF": 129031923}}}',
 #openChar="{", closeChar="}")
