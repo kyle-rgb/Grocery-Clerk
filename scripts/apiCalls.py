@@ -972,8 +972,8 @@ def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, ge
 # getItemInfo(upcSET)
 # getStoreLocation({'01100482', '01100685', '01100438'})
 # getRecipes(ingredients=['pork', 'beef', 'chicken', 'salmon', 'shrimp', 'eggs', 'flour', 'lettuce', 'sugar', 'butter'], limit=100)
-# getRecipes(route="recipes/informationBulk", limit=51, generalInfo=False)
-getRecipes(route="recipes/complexSearch", limit=100, ingredients=dict(), generalInfo=True)
+getRecipes(route="recipes/informationBulk", limit=50, generalInfo=False)
+#getRecipes(route="recipes/complexSearch", limit=100, ingredients=dict(), generalInfo=True)
 # # # # # # # # # # ## # # # # #
 #trips = json.loads(open('./data/collections/trips.json', 'r').read())
 # # # # # MATCH RECEIPTS TO ITEMS # #  # # # #
