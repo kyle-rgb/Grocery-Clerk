@@ -83,7 +83,7 @@ async function getI(i){
 }
 
 function pruneArray(array){
-  if (array.length >=25){
+  if (array.length >=75){
     createType().then((t) => {
       console.log('type = ', t);
       let type = t ;
@@ -115,12 +115,15 @@ chrome.contextMenus.onClicked.addListener(function(info, tab) {
 //     {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*", "*://*.kroger.com/mypurchases/api/v1/receipt*"],  types: ["xmlhttprequest", "object"]}, // ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas*"]
 //     ['blocking']
 //   );
+// ["*://*.dollargeneral.com/bin/omni/coupons/products*", "https://www.dollargeneral.com/bin/omni/coupons/recommended*"]
+// 
 
 chrome.webRequest.onBeforeRequest.addListener(
   listener,
   {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*", "*://*.kroger.com/mypurchases/api/v1/receipt*"], types: ["xmlhttprequest", "object"]}, // 
   ["blocking"]
 )
+
 
 // chrome.webRequest.onBeforeRequest.addListener(
 //   logTab,

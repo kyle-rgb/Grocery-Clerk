@@ -560,10 +560,10 @@ def deconstructExtensions(filename):
 
 
 
-deconstructExtensions('./requests/server/collections/digital/digital050322.json')
+# deconstructExtensions('./requests/server/collections/digital/digital050322.json')
 
 # summarizeCollection('./requests/server/collections/recipes/recipes.json')
 # forceClose("./requests/server/collections/digital/digital42822.txt", streams=False)
-#destroyIDs("./requests/server/collections/trips/trips051622.json")
+destroyIDs("./requests/server/collections/trips/trips052122.json")
 #partitionString('{"type": "boose", "cost": 129.99, "tax": 23.22, "devices": ["soundbar", "voice remote", "smart alexa"], "customerInfo": {"address": "4501 Brekley Ridge", "zipCode": "75921", "repeat": true, "_id": {"oid": 2391312084123, "REF": 129031923}}}',
 #openChar="{", closeChar="}")
