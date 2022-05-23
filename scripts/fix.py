@@ -417,14 +417,27 @@ def deconstructExtensions(filename):
 
         cDict={}
         startingArray = sorted(startingArray, key=lambda x: x['url'])
-        promotionsCollection = []
-        pricesCollection = []
-        itemCollection = []
-        inventoryCollection = []
+
+        if os.path.exists('./requests/server/collections/web/prices/collection.json'):
+            with open(f'./requests/server/collections/web/prices/collection.json', 'r', encoding='utf-8') as file:
+                pricesCollection = json.loads(file.read())
+            
+            with open(f'./requests/server/collections/web/inventories/collection.json', 'r', encoding='utf-8') as file:
+                inventoryCollection = json.loads(file.read())
+            
+            with open(f'./requests/server/collections/web/promotions/collection.json', 'r', encoding='utf-8') as file:
+                promotionsCollection = json.loads(file.read())
+
+            with open(f'./requests/server/collections/web/items/collection.json', 'r', encoding='utf-8') as file:
+                itemCollection = json.loads(file.read())
+
+        else:
+            promotionsCollection = []
+            pricesCollection = []
+            itemCollection = []
+            inventoryCollection = []
         connectionErrors = []
-        summarizer = {'coupons': {}, 'products': {}, 'item': {}, 'inventory': {}, 'sourceLocations':{}, 'sale':{}, 'regular':{}, 'prices':{}}
-        c = 0
-        dTypes = set()
+
         # Decomposing Product Calls into Separate Collections that Cover the Static and nonStatic properties of individual products:
             # (n.b.) calls to api w/ full projection filters gives several valuable properties regarding products:
             # in all calls thr response includes:
@@ -475,7 +488,6 @@ def deconstructExtensions(filename):
                         v.update({'productUpcs': cDict[k]})
                     else:
                         v.update({'productUpcs': []})
-                    [summarizer['coupons'].update({k2: summarizer['coupons'][k2]+1}) if ((k2 in summarizer['coupons'].keys()) and (bool(v[k2]))) else summarizer['coupons'].setdefault(k2, 1) for k2 in v.keys() ]
                     promotionsCollection.append(v)
             elif re.match(productsRegex, url):
                 # products => {items, prices, inventory, stores}
@@ -493,8 +505,7 @@ def deconstructExtensions(filename):
                         if bool(p.get('productRestrictions')):
                             itemDoc['productRestrictions']  = p.get('productRestrictions')
                         #[summarizer['products'].update({k: summarizer['products'][k]+1}) if ((k in summarizer['products'].keys()) and (bool(p[k]))) else summarizer['products'].setdefault(k, 1) for k in p.keys() ]
-                        [summarizer['item'].update({k: summarizer['item'][k]+1}) if ((k in summarizer['item'].keys()) ) else summarizer['item'].setdefault(k, 1) for k in p.get('item').keys() ]            
-
+                        # [summarizer['item'].update({k: summarizer['item'][k]+1}) if ((k in summarizer['item'].keys()) ) else summarizer['item'].setdefault(k, 1) for k in p.get('item').keys() ]            
                         sources = p.get('sourceLocations')
 
                         for source in sources:
@@ -502,9 +513,9 @@ def deconstructExtensions(filename):
                             if 'prices' in source:
                                 prices = source.get('prices')[0]
                                 priceData['priceObj'] = prices
-                                [summarizer['prices'].update({k: summarizer['prices'][k]+1}) if ((k in summarizer['prices'].keys()) and (bool(prices[k]))) else summarizer['prices'].setdefault(k, 1) for k in prices.keys() ]
+                                #[summarizer['prices'].update({k: summarizer['prices'][k]+1}) if ((k in summarizer['prices'].keys()) and (bool(prices[k]))) else summarizer['prices'].setdefault(k, 1) for k in prices.keys() ]
                                 if bool(prices.get('sale')):
-                                    [summarizer['sale'].update({k: summarizer['sale'][k]+1}) if ((k in summarizer['sale'].keys()) and (bool(prices.get('sale')[k]))) else summarizer['sale'].setdefault(k, 1) for k in prices.get('sale').keys() ]
+                                    #[summarizer['sale'].update({k: summarizer['sale'][k]+1}) if ((k in summarizer['sale'].keys()) and (bool(prices.get('sale')[k]))) else summarizer['sale'].setdefault(k, 1) for k in prices.get('sale').keys() ]
                                 
 
                                     promo = float(prices.get('sale').get('nFor').get('price').replace('USD', ''))
@@ -513,7 +524,7 @@ def deconstructExtensions(filename):
                                     priceData['quantitySale'] = quantity
 
                                 if bool(prices.get('regular')):
-                                    [summarizer['regular'].update({k: summarizer['regular'][k]+1}) if ((k in summarizer['regular'].keys()) and (bool(prices.get('regular')[k]))) else summarizer['regular'].setdefault(k, 1) for k in prices.get('regular').keys() ]
+                                    #[summarizer['regular'].update({k: summarizer['regular'][k]+1}) if ((k in summarizer['regular'].keys()) and (bool(prices.get('regular')[k]))) else summarizer['regular'].setdefault(k, 1) for k in prices.get('regular').keys() ]
                                     priceData['regular'] = float(prices.get('regular').get('nFor').get('price').replace('USD', '')) / prices.get('regular').get('nFor').get('count')
                                     priceData['quantity'] = prices.get('regular').get('nFor').get('count')
 
@@ -530,40 +541,51 @@ def deconstructExtensions(filename):
                                 pricesCollection.append(priceData)
 
                             if 'inventory' in source:
-                                inventory = source.get('inventory')[0]
-                                inventory['locationId'] = source.get('id')
-                                inventory['acquisition_timestamp'] = acqistionTimestamp
-                                inventory['upc'] = itemDoc.get('upc')
-                                inventoryCollection.append(inventory)
-
+                                inventory = source.get('inventory')
+                                i = inventory[0]
+                                i['locationId'] = source.get('id')
+                                i['acquisition_timestamp'] = acqistionTimestamp
+                                i['upc'] = itemDoc.get('upc')
+                                inventoryCollection.append(i)
+                                
                             
                         
                         itemCollection.append(itemDoc)
 
-        pprint({'inventory': len(inventoryCollection), 'prices': len(pricesCollection), 'items': len(itemCollection), 'promotions': len(promotionsCollection)})
-        pprint({k: sorted(x.items(), key=lambda item: item[1], reverse=True) for k, x in summarizer.items()})
+
+        
+        # pprint({'inventory': len(inventoryCollection), 'prices': len(pricesCollection), 'items': len(itemCollection), 'promotions': len(promotionsCollection)})
+        # pprint({k: sorted(x.items(), key=lambda item: item[1], reverse=True) for k, x in summarizer.items()})
+        
+        # pprint(pricesCollection[0])
+        # pprint(props[10])
+        # ls = max(itemCollection, key=len)
+        # pprint(ls)
         #pprint([x for x in promotionsCollection if 'Nitro' in x.get('shortDescription')])
         # s = list(filter(lambda x: bool(x.get('specialSavings')), promotionsCollection))
         # pprint(s[600:603])
         #print(connectionErrors)
-        # with open(f'./requests/server/collections/web/prices/{dc}prices.json', 'w', encoding='utf-8') as file:
-        #     file.write(json.dumps(pricesCollection))
+        with open(f'./requests/server/collections/web/prices/collection.json', 'w', encoding='utf-8') as file:
+            file.write(json.dumps(pricesCollection))
         
-        # with open(f'./requests/server/collections/web/inventories/{dc}inventories.json', 'w', encoding='utf-8') as file:
-        #     file.write(json.dumps(inventoryCollection))
+        with open(f'./requests/server/collections/web/inventories/collection.json', 'w', encoding='utf-8') as file:
+            file.write(json.dumps(inventoryCollection))
         
-        # with open(f'./requests/server/collections/web/items/{dc}items.json', 'w', encoding='utf-8') as file:
-        #     file.write(json.dumps(itemCollection))
+        with open(f'./requests/server/collections/web/promotions/collection.json', 'w', encoding='utf-8') as file:
+            file.write(json.dumps(promotionsCollection))
+
+        with open(f'./requests/server/collections/web/items/collection.json', 'w', encoding='utf-8') as file:
+            file.write(json.dumps(itemCollection))
 
     return None
         
 
 
 
-# deconstructExtensions('./requests/server/collections/digital/digital050322.json')
+deconstructExtensions('./requests/server/collections/digital/digital051422.json')
 
 # summarizeCollection('./requests/server/collections/recipes/recipes.json')
 # forceClose("./requests/server/collections/digital/digital42822.txt", streams=False)
-destroyIDs("./requests/server/collections/trips/trips052122.json")
+# destroyIDs("./requests/server/collections/trips/trips052122.json")
 #partitionString('{"type": "boose", "cost": 129.99, "tax": 23.22, "devices": ["soundbar", "voice remote", "smart alexa"], "customerInfo": {"address": "4501 Brekley Ridge", "zipCode": "75921", "repeat": true, "_id": {"oid": 2391312084123, "REF": 129031923}}}',
 #openChar="{", closeChar="}")
