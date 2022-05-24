@@ -552,7 +552,12 @@ def deconstructExtensions(filename):
                         
                         itemCollection.append(itemDoc)
 
-
+        # s = set()
+        # list(map(lambda v: s.add(v.get('krogerCouponNumber')), promotionsCollection))
+        # pprint([p for p in pricesCollection if bool(p.get('priceObj').get('sale'))][-10:])
+        # # pprint(list(filter(lambda x: bool(x.get('snapEligible')),itemCollection))[-3])
+        # pprint(promotionsCollection[5:10])
+        #print(s)
         
         # pprint({'inventory': len(inventoryCollection), 'prices': len(pricesCollection), 'items': len(itemCollection), 'promotions': len(promotionsCollection)})
         # pprint({k: sorted(x.items(), key=lambda item: item[1], reverse=True) for k, x in summarizer.items()})
@@ -565,6 +570,8 @@ def deconstructExtensions(filename):
         # s = list(filter(lambda x: bool(x.get('specialSavings')), promotionsCollection))
         # pprint(s[600:603])
         #print(connectionErrors)
+
+
         with open(f'./requests/server/collections/web/prices/collection.json', 'w', encoding='utf-8') as file:
             file.write(json.dumps(pricesCollection))
         
@@ -582,7 +589,7 @@ def deconstructExtensions(filename):
 
 
 
-deconstructExtensions('./requests/server/collections/digital/digital051422.json')
+deconstructExtensions('./requests/server/collections/cashback/cashback051422.json')
 
 # summarizeCollection('./requests/server/collections/recipes/recipes.json')
 # forceClose("./requests/server/collections/digital/digital42822.txt", streams=False)
