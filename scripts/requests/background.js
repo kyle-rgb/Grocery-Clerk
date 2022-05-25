@@ -44,11 +44,11 @@ function listener(details) {
     }
     filter.ondata = event => {
       let str = decoder.decode(event.data, {stream: true});
-      console.log("event", details.requestId, 'chunkObtained', 'buffer: ', event.data)
+      //console.log("event", details.requestId, 'chunkObtained', 'buffer: ', event.data)
       tempString += str
       filter.write(encoder.encode(str))
       str = null
-      console.log('filter reachEnd of first data stream:', filter.status)
+      // console.log('filter reachEnd of first data stream:', filter.status)
     }
 
     filter.onstop = event => {
@@ -59,14 +59,10 @@ function listener(details) {
           new_obj.acquisition_timestamp = Date.now()
           masterArray.push(new_obj)
           masterArray = pruneArray(masterArray)
-        } else{
-          console.log(`${details.requestId} fired > 1x`)
         }
-        console.log('masterArray', masterArray)
       })
       
       filter.disconnect();
-      console.log(`filter disconnected ${details.requestId}`, filter.constructor.name, filter.status, setMaster)
       
     }
 
@@ -85,7 +81,6 @@ async function getI(i){
 function pruneArray(array){
   if (array.length >=75){
     createType().then((t) => {
-      console.log('type = ', t);
       let type = t ;
       response = fetch(`http://127.0.0.1:5000/docs?type=${type}`, {method: "POST", body: JSON.stringify(array)})
       return null

@@ -562,7 +562,7 @@ def deconstructExtensions(filename):
         # pprint({'inventory': len(inventoryCollection), 'prices': len(pricesCollection), 'items': len(itemCollection), 'promotions': len(promotionsCollection)})
         # pprint({k: sorted(x.items(), key=lambda item: item[1], reverse=True) for k, x in summarizer.items()})
         
-        # pprint(pricesCollection[0])
+        pprint(pricesCollection[0])
         # pprint(props[10])
         # ls = max(itemCollection, key=len)
         # pprint(ls)
@@ -572,17 +572,17 @@ def deconstructExtensions(filename):
         #print(connectionErrors)
 
 
-        with open(f'./requests/server/collections/web/prices/collection.json', 'w', encoding='utf-8') as file:
-            file.write(json.dumps(pricesCollection))
+        # with open(f'./requests/server/collections/web/prices/collection.json', 'w', encoding='utf-8') as file:
+        #     file.write(json.dumps(pricesCollection))
         
-        with open(f'./requests/server/collections/web/inventories/collection.json', 'w', encoding='utf-8') as file:
-            file.write(json.dumps(inventoryCollection))
+        # with open(f'./requests/server/collections/web/inventories/collection.json', 'w', encoding='utf-8') as file:
+        #     file.write(json.dumps(inventoryCollection))
         
-        with open(f'./requests/server/collections/web/promotions/collection.json', 'w', encoding='utf-8') as file:
-            file.write(json.dumps(promotionsCollection))
+        # with open(f'./requests/server/collections/web/promotions/collection.json', 'w', encoding='utf-8') as file:
+        #     file.write(json.dumps(promotionsCollection))
 
-        with open(f'./requests/server/collections/web/items/collection.json', 'w', encoding='utf-8') as file:
-            file.write(json.dumps(itemCollection))
+        # with open(f'./requests/server/collections/web/items/collection.json', 'w', encoding='utf-8') as file:
+        #     file.write(json.dumps(itemCollection))
 
     return None
         
