@@ -552,7 +552,8 @@ def deconstructExtensions(filename):
                         
                         itemCollection.append(itemDoc)
 
-        # s = set()
+        s = set()
+        pr = set()
         # list(map(lambda v: s.add(v.get('krogerCouponNumber')), promotionsCollection))
         # pprint([p for p in pricesCollection if bool(p.get('priceObj').get('sale'))][-10:])
         # # pprint(list(filter(lambda x: bool(x.get('snapEligible')),itemCollection))[-3])
@@ -562,7 +563,23 @@ def deconstructExtensions(filename):
         # pprint({'inventory': len(inventoryCollection), 'prices': len(pricesCollection), 'items': len(itemCollection), 'promotions': len(promotionsCollection)})
         # pprint({k: sorted(x.items(), key=lambda item: item[1], reverse=True) for k, x in summarizer.items()})
         
-        pprint(pricesCollection[0])
+        sa = list(filter(lambda p: 'sale' in p.get('priceObj'), pricesCollection))
+        [s.add(x.get('priceObj').get('sale').get('linkedOfferCode')) for x in sa]
+        sa = list(filter(lambda p: 'sale' in p.get('priceObj'), pricesCollection))
+        [pr.add(x.get('id')) for x in promotionsCollection]
+        pprint(len(pr))
+        #pprint(s)
+        offers = sorted([(x.get('priceObj').get('displayTemplate'), x.get('priceObj').get('sale').get('linkedOfferCode')) for x in sa], key=lambda x: x[0], reverse=True)
+        newOffers = {}
+        for k, of  in offers:
+
+            if k not in newOffers.keys():
+                newOffers[k]= set([of])
+            else:
+                newOffers[k].add(of)
+
+        pprint(newOffers)
+        # pprint(promotionsCollection[-6])
         # pprint(props[10])
         # ls = max(itemCollection, key=len)
         # pprint(ls)
@@ -587,7 +604,44 @@ def deconstructExtensions(filename):
     return None
         
 
+def priceMods(file):
+    with open(file, 'r', encoding='utf-8') as f:
+        data = json.loads(f.read())
+        data = list(filter(lambda t: 'receipt' in t.get('url'), data))
+        data = list(map(lambda x: x.get('data'), data))
+        trips = []
+        [trips.extend(d) for d in data]
+        print(len(trips))
+    
+    priceMs = []
+    for trip in trips:
+        items = trip.get('items')
+        for item in items:
+            if bool(item.get('priceModifiers')):
+                priceMods = item.get('priceModifiers')
+                for ppm in priceMods:
+                    if ppm['action']!='' and ppm['amount']>0:
+                        priceMs.append(ppm)
+                        if ppm.get('promotionId').startswith('1'):
+                            print(item.get('detail').get('description'), ppm.get('reportingCode'))
+                            pprint(item)
 
+    
+    summary = {}
+    for pm in priceMs:
+        for k,v in pm.items():
+            if k!='promotionId' and k!='amount' and k!='action' and k!='type' :
+                if v not in summary.keys():
+                    summary[v]=1
+                else:
+                    summary[v]+=1
+
+
+    pprint(summary)
+
+    return None
+
+# priceMods('./requests/server/collections/trips/trips052422.json')
 
 deconstructExtensions('./requests/server/collections/cashback/cashback051422.json')
 

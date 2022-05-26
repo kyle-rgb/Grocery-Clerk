@@ -521,9 +521,6 @@ def combineItems(api, scraped):
             prices_array = json.loads(file.read())
 
         # write upcs to parsedItemSet
-
-    print(1 / 0)
-
     for product in api:
         upc = product.get('upc')
         if upc in parsedItemsSet:
