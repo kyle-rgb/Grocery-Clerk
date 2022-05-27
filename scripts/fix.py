@@ -437,7 +437,7 @@ def deconstructExtensions(filename):
             itemCollection = []
             inventoryCollection = []
         connectionErrors = []
-
+        print(len(startingArray))
         # Decomposing Product Calls into Separate Collections that Cover the Static and nonStatic properties of individual products:
             # (n.b.) calls to api w/ full projection filters gives several valuable properties regarding products:
             # in all calls thr response includes:
@@ -513,11 +513,7 @@ def deconstructExtensions(filename):
                             if 'prices' in source:
                                 prices = source.get('prices')[0]
                                 priceData['priceObj'] = prices
-                                #[summarizer['prices'].update({k: summarizer['prices'][k]+1}) if ((k in summarizer['prices'].keys()) and (bool(prices[k]))) else summarizer['prices'].setdefault(k, 1) for k in prices.keys() ]
                                 if bool(prices.get('sale')):
-                                    #[summarizer['sale'].update({k: summarizer['sale'][k]+1}) if ((k in summarizer['sale'].keys()) and (bool(prices.get('sale')[k]))) else summarizer['sale'].setdefault(k, 1) for k in prices.get('sale').keys() ]
-                                
-
                                     promo = float(prices.get('sale').get('nFor').get('price').replace('USD', ''))
                                     quantity = float(prices.get('sale').get('nFor').get('count'))
                                     priceData['promo'] = round(promo / quantity, 2)
@@ -534,6 +530,8 @@ def deconstructExtensions(filename):
                                         if modal.get('availability'):
                                             priceData['modalities'].append(modal.get('modalityType'))
 
+                                priceData['itemName'] = itemDoc['description']
+                                priceData['familyTree'] = itemDoc.get('familyTree')
                                 priceData['upc']=itemDoc.get('upc')
                                 priceData['locationId'] = source.get('id')
                                 priceData['acquistion_timestamp']=acqistionTimestamp
@@ -569,16 +567,19 @@ def deconstructExtensions(filename):
         [pr.add(x.get('id')) for x in promotionsCollection]
         pprint(len(pr))
         #pprint(s)
-        offers = sorted([(x.get('priceObj').get('displayTemplate'), x.get('priceObj').get('sale').get('linkedOfferCode')) for x in sa], key=lambda x: x[0], reverse=True)
+        offers = sorted([(x.get('upc'), x.get('itemName'),x.get('priceObj').get('displayTemplate'),x.get('priceObj').get('sale').get('linkedOfferCode')) for x in sa], key=lambda x: x[0], reverse=True)
         newOffers = {}
-        for k, of  in offers:
-
-            if k not in newOffers.keys():
-                newOffers[k]= set([of])
-            else:
-                newOffers[k].add(of)
+        for k, n,dist,of  in offers:
+            if dist!='YellowTag' and dist!='CloseOut' and dist!='WhiteTag':
+                if k not in newOffers.keys():
+                    newOffers[k]= set([f"{of} - {dist} - {n}"])
+                else:
+                    newOffers[k].add(f"{of} - {dist} - {n}")
 
         pprint(newOffers)
+        #pprint(list(filter(lambda x:x.get('upc') in newOffers.keys(), pricesCollection)))
+        pprint(list(filter(lambda x: x.get('upc').startswith('000255001'), itemCollection)))
+        #pprint(list(filter(lambda item: item.get('upc') in newOffers.keys(), itemCollection)))
         # pprint(promotionsCollection[-6])
         # pprint(props[10])
         # ls = max(itemCollection, key=len)
@@ -607,6 +608,7 @@ def deconstructExtensions(filename):
 def priceMods(file):
     with open(file, 'r', encoding='utf-8') as f:
         data = json.loads(f.read())
+        dat2 = list(filter(lambda t: 'atlas' in t.get('url'), data))
         data = list(filter(lambda t: 'receipt' in t.get('url'), data))
         data = list(map(lambda x: x.get('data'), data))
         trips = []
@@ -622,7 +624,7 @@ def priceMods(file):
                 for ppm in priceMods:
                     if ppm['action']!='' and ppm['amount']>0:
                         priceMs.append(ppm)
-                        if ppm.get('promotionId').startswith('1'):
+                        if ppm.get('couponType')=='63':
                             print(item.get('detail').get('description'), ppm.get('reportingCode'))
                             pprint(item)
 
@@ -638,11 +640,12 @@ def priceMods(file):
 
 
     pprint(summary)
+    
+    #pprint([x.get('data').get('products')[0]for x in[ dat2[0]]])
 
     return None
 
-# priceMods('./requests/server/collections/trips/trips052422.json')
-
+#priceMods('./requests/server/collections/trips/trips052522.json')
 deconstructExtensions('./requests/server/collections/cashback/cashback051422.json')
 
 # summarizeCollection('./requests/server/collections/recipes/recipes.json')
