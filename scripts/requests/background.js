@@ -110,12 +110,12 @@ chrome.contextMenus.onClicked.addListener(function(info, tab) {
 //     {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*", "*://*.kroger.com/mypurchases/api/v1/receipt*"],  types: ["xmlhttprequest", "object"]}, // ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas*"]
 //     ['blocking']
 //   );
-// ["*://*.dollargeneral.com/bin/omni/coupons/products*", "https://www.dollargeneral.com/bin/omni/coupons/recommended*"]
+// 
 // 
 
 chrome.webRequest.onBeforeRequest.addListener(
   listener,
-  {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*", "*://*.kroger.com/mypurchases/api/v1/receipt*"], types: ["xmlhttprequest", "object"]}, // 
+  {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*", "*://*.kroger.com/mypurchases/api/v1/receipt*", "*://*.dollargeneral.com/bin/omni/coupons/products*", "https://www.dollargeneral.com/bin/omni/coupons/recommended*"], types: ["xmlhttprequest", "object"]}, // 
   ["blocking"]
 )
 
@@ -128,7 +128,7 @@ chrome.webRequest.onBeforeRequest.addListener(
 
 chrome.webRequest.onCompleted.removeListener(
   listener,
-  {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*", "*://*.kroger.com/mypurchases/api/v1/receipt*"], types: ["xmlhttprequest", "object"]}, // 
+  {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*", "*://*.kroger.com/mypurchases/api/v1/receipt*", "*://*.dollargeneral.com/bin/omni/coupons/products*", "https://www.dollargeneral.com/bin/omni/coupons/recommended*"], types: ["xmlhttprequest", "object"]}, // 
   ["blocking"]
 )
 

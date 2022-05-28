@@ -437,7 +437,7 @@ def deconstructExtensions(filename):
             itemCollection = []
             inventoryCollection = []
         connectionErrors = []
-        print(len(startingArray))
+        print(len(promotionsCollection))
         # Decomposing Product Calls into Separate Collections that Cover the Static and nonStatic properties of individual products:
             # (n.b.) calls to api w/ full projection filters gives several valuable properties regarding products:
             # in all calls thr response includes:
@@ -576,9 +576,11 @@ def deconstructExtensions(filename):
                 else:
                     newOffers[k].add(f"{of} - {dist} - {n}")
 
-        pprint(newOffers)
+        print(set([tuple(x) for x in list(map(lambda l: set(map(lambda t: t.get('displayName'), l.get('specialSavings'))), list(filter(lambda f: f.get('specialSavings')!=[], promotionsCollection))))]))
+        #pprint(list(filter(lambda fox: '5X' in fox.get('specialSavings')[0].values(), list(filter(lambda g: g.get('specialSavings')!=[], promotionsCollection))), ))
+        pprint(set(map(lambda ff: ff.get('cashbackCashoutType'), list(filter(lambda p: p.get('cashbackCashoutType')!='', promotionsCollection)))))
         #pprint(list(filter(lambda x:x.get('upc') in newOffers.keys(), pricesCollection)))
-        pprint(list(filter(lambda x: x.get('upc').startswith('000255001'), itemCollection)))
+        #pprint(list(filter(lambda x: x.get('upc').startswith('000255001'), itemCollection)))
         #pprint(list(filter(lambda item: item.get('upc') in newOffers.keys(), itemCollection)))
         # pprint(promotionsCollection[-6])
         # pprint(props[10])
