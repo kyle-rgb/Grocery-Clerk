@@ -510,16 +510,17 @@ def getDigitalPromotions():
 
 
 def simulateUser(link):
-    neededLinks = {'cashback': {"no": 136, "button": "./requests/server/cashback.png", "confidenceInterval": .66}, 'digital': {"no":258, "button": "./requests/server/signIn.png", "confidenceInterval": .6}}
+    neededLinks = {'cashback': {"no": 136, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151)},\
+        'digital': {"no":258, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151)},\
+            'dollarGeneral': {'no': 136, "button": "./requests/server/addToWallet.png", "confidenceInterval": .75, 'maxCarousel': 3, 'buttonColor': (0, 0, 0)}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
     # start at top of the screen 
     # align all items https://www.kroger.com/savings/cl/coupons/
-    re.compile(r"\".+\"\:\s*\".+\"")
     iterations = neededLinks[link]["no"] // 12
     iterations = iterations + 1
     time.sleep(3)
-    pag.scroll(-800)
+    #pag.scroll(-800)
     time.sleep(2)
     # find all buttons
     for i in range(iterations):
@@ -528,7 +529,7 @@ def simulateUser(link):
         print(f"Located {len(buttons)} Items")
         if len(buttons)>12:
             yaxis = list(map(lambda b: b.y, buttons))
-            buttons = [x for x in buttons if yaxis.count(x.y) >= 4 ]
+            buttons = [x for x in buttons if yaxis.count(x.y) >= neededLinks[link]['maxCarousel']  and (x.y+1 not in yaxis)]
         print(len(buttons), "buttons")
         for b in buttons:
             pag.moveTo(b)
@@ -536,18 +537,54 @@ def simulateUser(link):
             draws = 0
             direction = 1
             print(pag.position())
-            while pag.pixel(x, y) != (56, 83, 151):
+            while pag.pixel(x, y) !=  neededLinks[link]['buttonColor'] :
                 pag.moveRel(0, 5*direction)
                 x, y = pag.position()
                 draws+= 1
                 if draws > 14:
                     direction = -1
-            pag.moveRel(-186, 0, duration=1.5)
-            pag.click()
-            # escape out of portal
-            time.sleep(7.5)
-            pag.press('esc')
-            pag.moveRel(186, 0, duration=1.5)
+            if link!='dollarGeneral':
+                pag.moveRel(-186, 0, duration=1.5)
+                pag.click()
+                # escape out of portal
+                time.sleep(7.5)
+                pag.press('esc')
+                pag.moveRel(186, 0, duration=1.5)
+            else:
+                pag.moveRel(-145, 0, duration=1.5)
+                pag.moveRel(0, -125, duration=1.5)
+                # expand items
+                pag.keyDown('ctrlleft')
+                pag.click()
+                # switch to tab
+                pag.keyDown('shiftleft')
+                pag.keyDown('tab')
+
+                pag.keyUp('ctrlleft')
+                pag.keyUp('shiftleft')
+                pag.keyUp('tab')
+                time.sleep(6)
+                pag.press('pagedown', 3, interval=0.5)
+                # escape out of portal
+
+                moreItems = list(pag.locateAllOnScreen(neededLinks[link]['moreContent'], confidence=neededLinks[link]['confidenceInterval'], grayscale=True))
+                while bool(moreItems):
+                    button = [pag.center(y) for y in moreItems]
+                    pag.moveTo(button[0].x, button[0].y, duration=0.5)
+                    pag.click()
+                    time.sleep(3)
+                    pag.press('pagedown', 3, interval=0.5)
+                    moreItems = list(pag.locateAllOnScreen(neededLinks[link]['moreContent'], confidence=neededLinks[link]['confidenceInterval'], grayscale=True))
+                    if len(moreItems)!=4:
+                        print(len(moreItems))
+                        break
+
+                pag.keyDown('ctrlleft')
+                pag.keyDown('w')
+                pag.keyUp('ctrlleft')
+                pag.keyUp('w')
+                time.sleep(2.5)
+                pag.moveRel(186, 0, duration=1.5)
             
         pag.scroll(-2004)
         print('finished row {}; {} to go; mouse currently @ {} :: {} seconds left'.format(i, iterations-i, pag.position(), (time.perf_counter()/(i+1))*(iterations-i)))
@@ -582,5 +619,5 @@ def newOperation():
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
 # getMyData() 
 # getDigitalPromotions()
-simulateUser("cashback")
+simulateUser("dollarGeneral")
 # newOperation()

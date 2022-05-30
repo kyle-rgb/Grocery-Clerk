@@ -115,20 +115,20 @@ chrome.contextMenus.onClicked.addListener(function(info, tab) {
 
 chrome.webRequest.onBeforeRequest.addListener(
   listener,
-  {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*", "*://*.kroger.com/mypurchases/api/v1/receipt*", "*://*.dollargeneral.com/bin/omni/coupons/products*", "*://*.dollargeneral.com/bin/omni/coupons/recommended*"], types: ["xmlhttprequest", "object"]}, // 
+  {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*",  "*://ice-familydollar.dpn.inmar.com/v2/offers*","*://*.kroger.com/mypurchases/api/v1/receipt*", "*://*.dollargeneral.com/bin/omni/coupons/products*", "*://*.dollargeneral.com/bin/omni/coupons/recommended*"], types: ["xmlhttprequest", "object"]}, // 
   ["blocking"]
 )
 
 
 // chrome.webRequest.onBeforeRequest.addListener(
-//   logTab,
+//   logTab,"
 //   {urls: ["<all_urls>"], types: ["xmlhttprequest", "object"]}, // 
 //   ["blocking"]
 // )
 
 chrome.webRequest.onCompleted.removeListener(
   listener,
-  {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*", "*://*.kroger.com/mypurchases/api/v1/receipt*", "*://*.dollargeneral.com/bin/omni/coupons/products*", "*://*.dollargeneral.com/bin/omni/coupons/recommended*"], types: ["xmlhttprequest", "object"]}, // 
+  {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*",  "*://ice-familydollar.dpn.inmar.com/v2/offers*", "*://*.kroger.com/mypurchases/api/v1/receipt*", "*://*.dollargeneral.com/bin/omni/coupons/products*", "*://*.dollargeneral.com/bin/omni/coupons/recommended*"], types: ["xmlhttprequest", "object"]}, // 
   ["blocking"]
 )
 
