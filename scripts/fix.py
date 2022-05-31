@@ -579,6 +579,7 @@ def deconstructExtensions(filename):
         print(set([tuple(x) for x in list(map(lambda l: set(map(lambda t: t.get('displayName'), l.get('specialSavings'))), list(filter(lambda f: f.get('specialSavings')!=[], promotionsCollection))))]))
         #pprint(list(filter(lambda fox: '5X' in fox.get('specialSavings')[0].values(), list(filter(lambda g: g.get('specialSavings')!=[], promotionsCollection))), ))
         pprint(set(map(lambda ff: ff.get('cashbackCashoutType'), list(filter(lambda p: p.get('cashbackCashoutType')!='', promotionsCollection)))))
+        pprint(promotionsCollection[1:4])
         #pprint(list(filter(lambda x:x.get('upc') in newOffers.keys(), pricesCollection)))
         #pprint(list(filter(lambda x: x.get('upc').startswith('000255001'), itemCollection)))
         #pprint(list(filter(lambda item: item.get('upc') in newOffers.keys(), itemCollection)))
@@ -649,7 +650,6 @@ def priceMods(file):
 
 #priceMods('./requests/server/collections/trips/trips052522.json')
 deconstructExtensions('./requests/server/collections/cashback/cashback051422.json')
-
 # summarizeCollection('./requests/server/collections/recipes/recipes.json')
 # forceClose("./requests/server/collections/digital/digital42822.txt", streams=False)
 # destroyIDs("./requests/server/collections/trips/trips052122.json")
