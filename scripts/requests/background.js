@@ -79,7 +79,7 @@ async function getI(i){
 }
 
 function pruneArray(array){
-  if (array.length >75){
+  if (array.length >25){
     createType().then((t) => {
       let type = t ;
       response = fetch(`http://127.0.0.1:5000/docs?type=${type}`, {method: "POST", body: JSON.stringify(array)})

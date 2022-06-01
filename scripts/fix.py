@@ -648,6 +648,7 @@ def priceMods(file):
 
     return None
 
+#provideSummary('./requests/server/collections/digital/digital052822FD.json')
 #priceMods('./requests/server/collections/trips/trips052522.json')
 deconstructExtensions('./requests/server/collections/cashback/cashback051422.json')
 # summarizeCollection('./requests/server/collections/recipes/recipes.json')
