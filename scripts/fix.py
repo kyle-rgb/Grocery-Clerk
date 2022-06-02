@@ -405,40 +405,8 @@ def deconstructExtensions(filename):
     # Add item UPCs that correspond to their appropiate promotion
     # Aggregate couponDetails separate calls into promotions collections
     # Break down item api calls into both price and item collections
-    dc = ''.join([x for x in re.findall(r'\d', filename)])
-    startingArray=[]
-    upcsRegex = re.compile(r'https://www.kroger.com/cl/api/couponDetails/(\d+)/upcs')
-    couponsDetailsRegex = re.compile(r'https://www.kroger.com/cl/api/coupons\?.+')
-    productsRegex = re.compile(r'https://www.kroger.com/atlas/v1/product/v2/products\?.+')
-    productErrorsRegex = re.compile(r'\.gtin13s=(\d+)')
-    if os.path.exists(filename):
-        with open(filename, 'r', encoding='utf-8') as file:
-            startingArray = json.loads(file.read())
 
-        cDict={}
-        startingArray = sorted(startingArray, key=lambda x: x['url'])
-
-        if os.path.exists('./requests/server/collections/web/prices/collection.json'):
-            with open(f'./requests/server/collections/web/prices/collection.json', 'r', encoding='utf-8') as file:
-                pricesCollection = json.loads(file.read())
-            
-            with open(f'./requests/server/collections/web/inventories/collection.json', 'r', encoding='utf-8') as file:
-                inventoryCollection = json.loads(file.read())
-            
-            with open(f'./requests/server/collections/web/promotions/collection.json', 'r', encoding='utf-8') as file:
-                promotionsCollection = json.loads(file.read())
-
-            with open(f'./requests/server/collections/web/items/collection.json', 'r', encoding='utf-8') as file:
-                itemCollection = json.loads(file.read())
-
-        else:
-            promotionsCollection = []
-            pricesCollection = []
-            itemCollection = []
-            inventoryCollection = []
-        connectionErrors = []
-        print(len(promotionsCollection))
-        # Decomposing Product Calls into Separate Collections that Cover the Static and nonStatic properties of individual products:
+    # Decomposing Product Calls into Separate Collections that Cover the Static and nonStatic properties of individual products:
             # (n.b.) calls to api w/ full projection filters gives several valuable properties regarding products:
             # in all calls thr response includes:
                 #! item, ship, id, sourceLocations, itemsV1, laf
@@ -472,6 +440,49 @@ def deconstructExtensions(filename):
                                 # Network of fulfillment Centers {stores collection}
                                 # General Store Information  {stores collection}          
             # static: 
+
+    startingArray=[]
+    forGeneralItems={}
+    upcsRegex = re.compile(r'https://www.kroger.com/cl/api/couponDetails/(\d+)/upcs')
+    couponsDetailsRegex = re.compile(r'https://www.kroger.com/cl/api/coupons\?.+')
+    productsRegex = re.compile(r'https://www.kroger.com/atlas/v1/product/v2/products\?.+')
+    tripRegex = re.compile(r'https://www.kroger.com/mypurchases/api/v1/receipt.+')
+    productErrorsRegex = re.compile(r'\.gtin13s=(\d+)')
+    if os.path.exists(filename):
+        with open(filename, 'r', encoding='utf-8') as file:
+            startingArray = json.loads(file.read())
+
+        cDict={}
+        startingArray = sorted(startingArray, key=lambda x: x['url'])
+
+        if os.path.exists('./requests/server/collections/web/prices/collection.json'):
+            with open(f'./requests/server/collections/web/prices/collection.json', 'r', encoding='utf-8') as file:
+                pricesCollection = json.loads(file.read())
+            
+            with open(f'./requests/server/collections/web/inventories/collection.json', 'r', encoding='utf-8') as file:
+                inventoryCollection = json.loads(file.read())
+            
+            with open(f'./requests/server/collections/web/promotions/collection.json', 'r', encoding='utf-8') as file:
+                promotionsCollection = json.loads(file.read())
+
+            with open(f'./requests/server/collections/web/items/collection.json', 'r', encoding='utf-8') as file:
+                itemCollection = json.loads(file.read())
+
+        else:
+            # static collections
+            promotionsCollection = []
+            itemCollection = []
+            # dynamic flows @ specific moment in time
+            pricesCollection = []
+            inventoryCollection = []
+            # dependent tables @ specific moment in time
+            tripCollection = []
+            priceModifierCollection = []
+            # identifying the users specific relation to and contact with these flows/objects to present data solutions based on past interactions with all these elements
+            userCollection = []
+
+        connectionErrors = []
+        
         for apiCall in startingArray:
             url = apiCall.pop('url')
             acqistionTimestamp = apiCall.pop('acquisition_timestamp')
@@ -483,14 +494,102 @@ def deconstructExtensions(filename):
             elif re.match(couponsDetailsRegex, url):
                 coupons = data.get('coupons')
                 for k,v in coupons.items():
-                    
                     if k in cDict:
                         v.update({'productUpcs': cDict[k]})
                     else:
                         v.update({'productUpcs': []})
                     promotionsCollection.append(v)
-            elif re.match(productsRegex, url):
-                # products => {items, prices, inventory, stores}
+            elif re.match(tripRegex, url): # receipt?
+                # trips => {items, prices, inventory, users, priceModifiers}
+                removalTrip = ['address', 'returns', 'barcode', 'purchaseHistoryID', 'priceModifiers', 'coupon', 'source', 'version', 'transactionTime']
+                removalAggregations = ['tipAmounts', 'totalSavings', 'tenderChanges', 'total', 'subtotal', 'totalTax', 'grossAmount', 'totalTender', 'totalLineItems', 'totalTenderChange']
+                tripKeep = {'loyaltyId', 'assocaiteId', 'transactionTimeWithTimezone', 'fulfillmentType', 'tax',\
+                'tenders', 'items', 'receiptId'}
+                # isContainerDeposit, isManagerOverride, isManagerOverrideIgnore
+                itemKeep = {'isFuel', 'isGiftCard', 'isPharmacy', 'isWeighted', 'barCodes', 'monetizationId'}
+
+                for trip in data:
+                    # setup trip
+                    tripDocument = {}
+                    transactionId = trip.get('receiptId').get('transactionId')
+                    for key, value in trip.items():
+                        if key in tripKeep:
+                            if key=='tenders':
+                                tripDocument['tenderType'] = value[0].get('tenderType')
+                            elif key=='receiptId':
+                                tripDocument['locationId'] = value.get('divisionNumber') + value.get('storeNumber')
+                                tripDocument['terminalNumber'] = value.get('terminalNumber')
+                                tripDocument['transactionId'] = transactionId
+                                if len(userCollection)==0:
+                                    #setup Users
+                                    userCollection.append({'userId': value.get('userId'), 'loyaltyId': trip.get('loyaltyId'), 'trips': [value.get('transactionId')]})
+                                else:
+                                    user = list(filter(lambda u: u.get('loyaltyId')==trip.get('loyaltyId')))[0]
+                                    if transactionId not in user.get('trips'):
+                                        user['trips'].append(transactionId)
+                            elif key=='items':
+                                # offshoots to new collections
+                                # needs to reference back to items (by baseUpc), trip (via trip Id), priceModifiers (pointes to priceModifier) and time (via acquistion timestamp)
+                                
+                                currentPMs = set(map(lambda x: x.get('promotionalId'), priceModifierCollection))
+                                for item in value:
+                                    if item.get('itemType')!='STORE_COUPON':
+                                        # setup priceModifiers collection
+                                        if item.get('priceModifiers'):
+                                            for pm in item_value:
+                                                if pm.get('promotionId') not in currentPMs and bool(pm.get('amount')):
+                                                    pm.pop('action')
+                                                    pm['redemptions'] = 1
+                                                    pm['upcs'] = [item.get('baseUpc')]
+                                                    priceModifierCollection.append(pm)
+                                                elif pm.get('promotionId') in currentPMs and bool(pm.get('amount')):
+                                                    existingPm = list(filter(lambda x: x.get('promotionId')==pm.get('promotionId'), priceModifierCollection))[0]
+                                                    existingPm['amount'] += pm.get('amount')
+                                                    exisitingPm['redemptions'] += 1
+                                                    if item.get('baseUpc') not in exisitingPm.get('upcs'):
+                                                        exisitingPm['upcs'].append(item.get('baseUpc'))
+                                        # setup prices collection
+                                        if item.get('extendedPrice')==item.get('pricePaid'):
+                                            value = round(item.get('extendedPrice') / item.get('quantity'), 2)
+                                            pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'acquistion_timestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'REGULAR'})
+                                        else:
+                                            value = round(item.get('extendedPrice') / item.get('quantity'), 2)
+                                            pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'acquistion_timestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'REGULAR'})
+                                            value = round(item.get('pricePaid') / item.get('quantity'), 2)
+                                            pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'acquistion_timestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'REDUCED',
+                                            'offerIds': list(map(lambda pm: pm.get('promotionId'), item.get('priceModifiers')))})
+
+                                        if item.get('isWeighted'):
+                                            averageWgt = item.get('detail').get('averageWeight')
+                                            pricesCollection.append({'value': item.get('unitPrice'), 'quantity': averageWgt, 'acquistion_timestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': False, 'transactionId': transactionId, 'type': 'AVERAGE'})
+
+                                        for booleanCategory in itemKeep:
+                                            if bool(item.get(booleanCategory)) and item.get('baseUpc') not in forGeneralItems.keys():
+                                                forGeneralItems[item.get('baseUpc')] = {booleanCategory: item.get(booleanCategory)}
+                                            elif bool(item.get(booleanCategory)) and item.get('baseUpc') in forGeneralItems.keys():
+                                                if booleanCategory=='monetizationId':
+                                                    forGeneralItems[item.get('baseUpc')].setdefault('monetizationId', [])
+                                                    forGeneralItems[item.get('baseUpc')]['monetizationId'].append({'id': item.get('monetizationId'), 'acquisition_timestamp': acquistionTimestamp})
+                                                elif boolenCategory == 'barCodes':
+                                                    forGeneralItems[item.get('baseUpc')].setdefault('barCodes', [])
+                                                    forGeneralItems[item.get('baseUpc')]['barCodes'].extend(item.get('barCodes'))
+                                                else:
+                                                    forGeneralItems[item.get('baseUpc')] = item.get(booleanCategory)
+
+
+                            
+                            elif key == 'transactionTimeWithTimezone':
+                                tripDocument['utcTimestamp'] = value.get('transactionTimeWithTimezone')
+                            else:
+                                tripDocument[key] = value
+                                
+                    
+
+                # dealing with the items aggregation
+                
+
+            elif re.match(productsRegex, url): # products?
+                # products => {items, prices, inventory, promotions}
                 if data==None:
                     connectionErrors.extend([x for x in re.findall(productErrorsRegex, url)])
                 else:
@@ -550,48 +649,6 @@ def deconstructExtensions(filename):
                         
                         itemCollection.append(itemDoc)
 
-        s = set()
-        pr = set()
-        # list(map(lambda v: s.add(v.get('krogerCouponNumber')), promotionsCollection))
-        # pprint([p for p in pricesCollection if bool(p.get('priceObj').get('sale'))][-10:])
-        # # pprint(list(filter(lambda x: bool(x.get('snapEligible')),itemCollection))[-3])
-        # pprint(promotionsCollection[5:10])
-        #print(s)
-        
-        # pprint({'inventory': len(inventoryCollection), 'prices': len(pricesCollection), 'items': len(itemCollection), 'promotions': len(promotionsCollection)})
-        # pprint({k: sorted(x.items(), key=lambda item: item[1], reverse=True) for k, x in summarizer.items()})
-        
-        sa = list(filter(lambda p: 'sale' in p.get('priceObj'), pricesCollection))
-        [s.add(x.get('priceObj').get('sale').get('linkedOfferCode')) for x in sa]
-        sa = list(filter(lambda p: 'sale' in p.get('priceObj'), pricesCollection))
-        [pr.add(x.get('id')) for x in promotionsCollection]
-        pprint(len(pr))
-        #pprint(s)
-        offers = sorted([(x.get('upc'), x.get('itemName'),x.get('priceObj').get('displayTemplate'),x.get('priceObj').get('sale').get('linkedOfferCode')) for x in sa], key=lambda x: x[0], reverse=True)
-        newOffers = {}
-        for k, n,dist,of  in offers:
-            if dist!='YellowTag' and dist!='CloseOut' and dist!='WhiteTag':
-                if k not in newOffers.keys():
-                    newOffers[k]= set([f"{of} - {dist} - {n}"])
-                else:
-                    newOffers[k].add(f"{of} - {dist} - {n}")
-
-        print(set([tuple(x) for x in list(map(lambda l: set(map(lambda t: t.get('displayName'), l.get('specialSavings'))), list(filter(lambda f: f.get('specialSavings')!=[], promotionsCollection))))]))
-        #pprint(list(filter(lambda fox: '5X' in fox.get('specialSavings')[0].values(), list(filter(lambda g: g.get('specialSavings')!=[], promotionsCollection))), ))
-        pprint(set(map(lambda ff: ff.get('cashbackCashoutType'), list(filter(lambda p: p.get('cashbackCashoutType')!='', promotionsCollection)))))
-        pprint(promotionsCollection[1:4])
-        #pprint(list(filter(lambda x:x.get('upc') in newOffers.keys(), pricesCollection)))
-        #pprint(list(filter(lambda x: x.get('upc').startswith('000255001'), itemCollection)))
-        #pprint(list(filter(lambda item: item.get('upc') in newOffers.keys(), itemCollection)))
-        # pprint(promotionsCollection[-6])
-        # pprint(props[10])
-        # ls = max(itemCollection, key=len)
-        # pprint(ls)
-        #pprint([x for x in promotionsCollection if 'Nitro' in x.get('shortDescription')])
-        # s = list(filter(lambda x: bool(x.get('specialSavings')), promotionsCollection))
-        # pprint(s[600:603])
-        #print(connectionErrors)
-
 
         # with open(f'./requests/server/collections/web/prices/collection.json', 'w', encoding='utf-8') as file:
         #     file.write(json.dumps(pricesCollection))
@@ -608,49 +665,31 @@ def deconstructExtensions(filename):
     return None
         
 
-def priceMods(file):
-    with open(file, 'r', encoding='utf-8') as f:
-        data = json.loads(f.read())
-        dat2 = list(filter(lambda t: 'atlas' in t.get('url'), data))
-        data = list(filter(lambda t: 'receipt' in t.get('url'), data))
-        data = list(map(lambda x: x.get('data'), data))
-        trips = []
-        [trips.extend(d) for d in data]
-        print(len(trips))
-    
-    priceMs = []
-    for trip in trips:
-        items = trip.get('items')
-        for item in items:
-            if bool(item.get('priceModifiers')):
-                priceMods = item.get('priceModifiers')
-                for ppm in priceMods:
-                    if ppm['action']!='' and ppm['amount']>0:
-                        priceMs.append(ppm)
-                        if ppm.get('couponType')=='63':
-                            print(item.get('detail').get('description'), ppm.get('reportingCode'))
-                            pprint(item)
+def priceMods(dataRepoPath: str, wantedPaths: list):
 
-    
-    summary = {}
-    for pm in priceMs:
-        for k,v in pm.items():
-            if k!='promotionId' and k!='amount' and k!='action' and k!='type' :
-                if v not in summary.keys():
-                    summary[v]=1
-                else:
-                    summary[v]+=1
+    for head, subfolders, files in os.walk(dataRepoPath):
+        
+        if head.split('\\')[-1] in wantedPaths:
+            fullData = []
+            for file in files[-2:-1]:
+                with open(head+"\\"+file, 'r', encoding='utf-8') as j:
+                    data = json.loads(j.read())
+                    pprint(list(filter(lambda x: x.get('isWeighted'), data[0]['data'][1]['items'])))
+            
 
 
-    pprint(summary)
-    
-    #pprint([x.get('data').get('products')[0]for x in[ dat2[0]]])
 
     return None
 
+
+
+
+
+
+
 #provideSummary('./requests/server/collections/digital/digital052822FD.json')
-#priceMods('./requests/server/collections/trips/trips052522.json')
-deconstructExtensions('./requests/server/collections/cashback/cashback051422.json')
+priceMods('.\\requests\\server\\collections', wantedPaths=['trips'])
+#deconstructExtensions('./requests/server/collections/cashback/cashback051422.json')
 # summarizeCollection('./requests/server/collections/recipes/recipes.json')
 # forceClose("./requests/server/collections/digital/digital42822.txt", streams=False)
 # destroyIDs("./requests/server/collections/trips/trips052122.json")
