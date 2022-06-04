@@ -510,8 +510,8 @@ def getDigitalPromotions():
 
 
 def simulateUser(link):
-    neededLinks = {'cashback': {"no": 127, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151)},\
-        'digital': {"no":235, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151)},\
+    neededLinks = {'cashback': {"no": 118, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151)},\
+        'digital': {"no":569, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151)},\
             'dollarGeneral': {'no': 136, "button": "./requests/server/addToWallet.png", "confidenceInterval": .75, 'maxCarousel': 3, 'buttonColor': (0, 0, 0)}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
@@ -619,5 +619,5 @@ def newOperation():
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
 # getMyData() 
 # getDigitalPromotions()
-simulateUser("digital")
+simulateUser("cashback")
 # newOperation()

@@ -110,3 +110,5 @@ report_unittest.xml
 api_keys.*
 config/
 scripts/requests/server/collections/
+
+collection.json

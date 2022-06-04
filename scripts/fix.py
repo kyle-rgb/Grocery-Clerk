@@ -1,6 +1,8 @@
 from functools import reduce
-import json, re, os, unicodedata, itertools
+import json, re, os, unicodedata, itertools, sys, time
 from pprint import pprint
+
+startTime = time.perf_counter()
 
 def fixData():
 
@@ -447,31 +449,33 @@ def deconstructExtensions(filename, **madeCollections):
     productsRegex = re.compile(r'https://www.kroger.com/atlas/v1/product/v2/products\?.+')
     tripRegex = re.compile(r'https://www.kroger.com/mypurchases/api/v1/receipt.+')
     productErrorsRegex = re.compile(r'\.gtin13s=(\d+)')
-    tempCollections = ["promotionsCollection", "itemCollection", "pricesCollection", "inventoryCollection", "tripCollection", "priceModifierCollection", "userCollection", "sellerCollection"]
-
+    
     if os.path.exists(filename):
-        print(locals())
         with open(filename, 'r', encoding='utf-8') as file:
             startingArray = json.loads(file.read())
 
         cDict={}
-        startingArray = sorted(startingArray, key=lambda x: x['url'])
-        
+        try:
+            startingArray = sorted(startingArray, key=lambda x: x['url'])
+        except TypeError:
+            print(start)
+        except KeyError:
+            print(list(map(lambda x: x.keys(), startingArray)))
         # static collections
-        # promotionsCollection = []
-        # itemCollection = []
+        promotionsCollection = madeCollections['promotionsCollection']
+        itemCollection = madeCollections['itemCollection']
         # # dynamic flows @ specific moment in time
-        # pricesCollection = []
-        # inventoryCollection = []
+        pricesCollection = madeCollections['pricesCollection']
+        inventoryCollection = madeCollections['inventoryCollection']
         # # dependent tables @ specific moment in time
-        # tripCollection = []
-        # priceModifierCollection = []
+        tripCollection = madeCollections['tripCollection']
+        priceModifierCollection = madeCollections['priceModifierCollection']
         # # identifying the users specific relation to and contact with these flows/objects to present data solutions based on past interactions with all these elements
-        # userCollection = []
-        # sellerCollection = []
+        userCollection = madeCollections['userCollection']
+        sellerCollection = madeCollections['sellerCollection']
         # # intermediaries
-        # forGeneralItems={}
-        # connectionErrors = []
+        forGeneralItems={}
+        connectionErrors = []
         for apiCall in startingArray:
             url = apiCall.pop('url')
             acquistionTimestamp = apiCall.pop('acquisition_timestamp')
@@ -501,7 +505,7 @@ def deconstructExtensions(filename, **madeCollections):
                                 promo['startDate'] = coupVal
                             else:
                                 promo[coupKey] = coupVal
-                    isProcessed = bool(list(filter(lambda x: x.get('krogerCouponNumber')==promo.get('krogerCouponNumber'), tripCollection)))
+                    isProcessed = bool(list(filter(lambda x: x.get('krogerCouponNumber')==promo.get('krogerCouponNumber'), promotionsCollection)))
                     if isProcessed==False:
                         promotionsCollection.append(promo)
             elif re.match(tripRegex, url): # receipt?
@@ -531,7 +535,10 @@ def deconstructExtensions(filename, **madeCollections):
                                         #setup Users
                                         userCollection.append({'userId': value.get('userId'), 'loyaltyId': trip.get('loyaltyId'), 'trips': [value.get('transactionId')]})
                                     else:
-                                        user = list(filter(lambda u: u.get('loyaltyId')==trip.get('loyaltyId'), userCollection))[0]
+                                        try:
+                                            user = list(filter(lambda u: u.get('loyaltyId')==trip.get('loyaltyId'), userCollection))[0]
+                                        except IndexError:
+                                            user = userCollection[0]
                                         if transactionId not in user.get('trips'):
                                             user['trips'].append(transactionId)
                                 elif key=='items':
@@ -589,7 +596,6 @@ def deconstructExtensions(filename, **madeCollections):
                 # dealing with the items aggregation
             elif re.match(productsRegex, url): # products?
                 # products => {the final item collection, adds to prices collection, creates and adds to inventory collection, creates promotions}
-                
                 itemKeep = {"bool": {"alcoholFlag", "bounceFlag", "hazmatFlag", "heatSensitive", "prop65",\
                     "snapEligible", "shipToHomeItem", "soldInStore", "homeDeliveryItem", "shipsWithColdPack"},
                     "keep": {"prop65Warning", "images", "mainImagePerspective", "romanceDescription", "categories",\
@@ -728,7 +734,7 @@ def deconstructExtensions(filename, **madeCollections):
                             itemDoc.update(moreInfo)
      
 
-                        isProcessed = bool(list(filter(lambda x: x.get('upc')==tripDocument.get('upc'), tripCollection)))
+                        isProcessed = bool(list(filter(lambda x: x.get('upc')==itemDoc.get('upc'), itemCollection)))
                         if isProcessed==False:
                             itemCollection.append(itemDoc)
                         
@@ -738,7 +744,7 @@ def deconstructExtensions(filename, **madeCollections):
     return promotionsCollection, itemCollection, pricesCollection, inventoryCollection, tripCollection, priceModifierCollection, userCollection, sellerCollection
         
 
-def priceMods(dataRepoPath: str, wantedPaths: list):
+def createDecompositions(dataRepoPath: str, wantedPaths: list):
     iteration=0
     for head, subfolders, files in os.walk(dataRepoPath):
         if head.split('\\')[-1] in wantedPaths:
@@ -748,13 +754,20 @@ def priceMods(dataRepoPath: str, wantedPaths: list):
                     iteration+=1
                 else:
                     returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=returnTuple[0], itemCollection=returnTuple[1], pricesCollection=returnTuple[2], inventoryCollection=returnTuple[3], tripCollection=returnTuple[4], priceModifierCollection=returnTuple[5], userCollection=returnTuple[6], sellerCollection=returnTuple[7])
+                print(f'processed {file}.')
+    listTranslater={"0": "promotions", "1": "items", "2": "prices", "3": "inventories", "4":"trips", "5":"priceModifiers", "6":"users", "7":"sellers"}
 
+    for i, finalCollection in enumerate(returnTuple):
+        if not os.path.exists('../data/'):
+            os.mkdir("../data/")
+    
+        if not os.path.exists(os.path.join("..", "data", listTranslater[str(i)])):
+            os.mkdir(os.path.join("..", "data", listTranslater[str(i)]))
 
-
-            
-
-
-
+        with open(os.path.join("..", "data", listTranslater[str(i)], "collection.json"), "w", encoding="utf-8") as file:
+            size = sys.getsizeof(finalCollection)
+            file.write(json.dumps(finalCollection))
+            print(f"Wrote {size} to Disk. {len(finalCollection)} items in {listTranslater[str(i)]}")
     return None
 
 
@@ -764,10 +777,16 @@ def priceMods(dataRepoPath: str, wantedPaths: list):
 
 
 # provideSummary('./requests/server/collections/trips/trips052822.json')
-priceMods('.\\requests\\server\\collections', wantedPaths=['digital', 'trips', 'cashback'])
+createDecompositions('./requests/server/collections', wantedPaths=['digital', 'trips', 'cashback'])
 #deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
 # summarizeCollection('./requests/server/collections/recipes/recipes.json')
 # forceClose("./requests/server/collections/digital/digital42822.txt", streams=False)
 # destroyIDs("./requests/server/collections/trips/trips052122.json")
 #partitionString('{"type": "boose", "cost": 129.99, "tax": 23.22, "devices": ["soundbar", "voice remote", "smart alexa"], "customerInfo": {"address": "4501 Brekley Ridge", "zipCode": "75921", "repeat": true, "_id": {"oid": 2391312084123, "REF": 129031923}}}',
 #openChar="{", closeChar="}")
+
+
+
+print(f"Finsihed in {time.perf_counter()-startTime} seconds")
+
+
