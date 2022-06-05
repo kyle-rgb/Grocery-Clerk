@@ -763,6 +763,11 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list):
     
         if not os.path.exists(os.path.join("..", "data", listTranslater[str(i)])):
             os.mkdir(os.path.join("..", "data", listTranslater[str(i)]))
+        else:
+            with open(os.path.join("..", "data", listTranslater[str(i)], "collection.json"), "r", encoding='utf-8') as prevFile:
+                oldCollection = json.loads(prevFile.read())
+                finalCollection.extend(oldCollection)
+        
 
         with open(os.path.join("..", "data", listTranslater[str(i)], "collection.json"), "w", encoding="utf-8") as file:
             size = sys.getsizeof(finalCollection)
@@ -777,7 +782,7 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list):
 
 
 # provideSummary('./requests/server/collections/trips/trips052822.json')
-createDecompositions('./requests/server/collections', wantedPaths=['digital', 'trips', 'cashback'])
+createDecompositions('./requests/server/collections', wantedPaths=['trips'])
 #deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
 # summarizeCollection('./requests/server/collections/recipes/recipes.json')
 # forceClose("./requests/server/collections/digital/digital42822.txt", streams=False)

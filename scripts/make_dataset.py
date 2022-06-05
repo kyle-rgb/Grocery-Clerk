@@ -512,16 +512,16 @@ def getDigitalPromotions():
 def simulateUser(link):
     neededLinks = {'cashback': {"no": 118, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151)},\
         'digital': {"no":569, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151)},\
-            'dollarGeneral': {'no': 136, "button": "./requests/server/addToWallet.png", "confidenceInterval": .75, 'maxCarousel': 3, 'buttonColor': (0, 0, 0)}}
+            'dollarGeneral': {'no': 125, "button": "./requests/server/addToWallet.png", "confidenceInterval": .75, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), "moreContent": "./requests/server/loadMore.png"}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
     # start at top of the screen 
     # align all items https://www.kroger.com/savings/cl/coupons/
     iterations = neededLinks[link]["no"] // 12
     iterations = iterations + 1
-    time.sleep(3)
-    pag.scroll(-800)
-    time.sleep(2)
+    #time.sleep(3)
+    #pag.scroll(-800)
+    #time.sleep(2)
     # find all buttons
     for i in range(iterations):
         buttons = list(pag.locateAllOnScreen(neededLinks[link]['button'], confidence=neededLinks[link]['confidenceInterval'], grayscale=False))
@@ -619,5 +619,5 @@ def newOperation():
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
 # getMyData() 
 # getDigitalPromotions()
-simulateUser("cashback")
+simulateUser("dollarGeneral")
 # newOperation()
