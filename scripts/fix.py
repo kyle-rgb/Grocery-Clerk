@@ -545,7 +545,7 @@ def deconstructExtensions(filename, **madeCollections):
                                     # offshoots to new collections
                                     # needs to reference back to items (by baseUpc), trip (via trip Id), priceModifiers (pointes to priceModifier) and time (via acquistion timestamp)
                                     
-                                    currentPMs = set(map(lambda x: x.get('promotionalId'), priceModifierCollection))
+                                    currentPMs = set(map(lambda x: x.get('promotionId'), priceModifierCollection))
                                     for item in value:
                                         if item.get('itemType')!='STORE_COUPON':
                                             # setup priceModifiers collection
@@ -554,14 +554,25 @@ def deconstructExtensions(filename, **madeCollections):
                                                     if pm.get('promotionId') not in currentPMs and bool(pm.get('amount')):
                                                         pm.pop('action')
                                                         pm['redemptions'] = 1
-                                                        pm['upcs'] = [item.get('baseUpc')]
+                                                        pm.setdefault('redemptionKeys', [])
+                                                        pm['redemptionKeys'].append({'upc': item.get('baseUpc'), 'transactionId': transactionId, 'amount': pm.get('amount'), 'redeemed': 1})
+                                                        pm['total'] = pm.get('amount')
                                                         priceModifierCollection.append(pm)
                                                     elif pm.get('promotionId') in currentPMs and bool(pm.get('amount')):
                                                         existingPm = list(filter(lambda x: x.get('promotionId')==pm.get('promotionId'), priceModifierCollection))[0]
-                                                        existingPm['amount'] += pm.get('amount')
-                                                        exisitingPm['redemptions'] += 1
-                                                        if item.get('baseUpc') not in exisitingPm.get('upcs'):
-                                                            exisitingPm['upcs'].append(item.get('baseUpc'))
+                                                        existingPm['total'] += pm.get('amount')
+                                                        existingPm['redemptions'] += 1
+                                                        matchingObjs = list(filter(lambda x: x.get('upc')==item.get('upc'), existingPm.get('redemptionKeys')))
+                                                        if bool(matchingObjs):
+                                                            matchingObjs = matchingObjs[0]
+                                                            if matchingObjs.get('transactionId')==transactionId:
+                                                                matchingObjs['amount'] += pm.get('amount')
+                                                                matchingObjs['redeemed'] += 1
+                                                            else:
+                                                                existingPm['redemptionKeys'].append({'upc': item.get('baseUpc'), 'transactionId': transactionId, 'amount': pm.get('amount'), 'redeemed': 1})
+                                                        else:
+                                                            existingPm['redemptionKeys'].append({'upc': item.get('baseUpc'), 'transactionId': transactionId, 'amount': pm.get('amount'), 'redeemed': 1})
+
                                             # setup prices collection
                                             if item.get('extendedPrice')==item.get('pricePaid'):
                                                 value = round(item.get('extendedPrice') / item.get('quantity'), 2)
@@ -745,6 +756,33 @@ def deconstructExtensions(filename, **madeCollections):
         
 
 def createDecompositions(dataRepoPath: str, wantedPaths: list):
+    # add stores via api and previously scraped prices to new price collection schema
+
+    with open('data/API/myStoresAPI.json', 'r', encoding='utf-8') as storeFile:
+        stores = json.loads(storeFile.read())
+
+    if not os.path.exists('../data/stores/collection.json'):
+        os.mkdir("../data/stores/")
+        with open('../data/stores/collection.json', 'w', encoding='utf-8') as storeFile:
+            storeFile.write(json.dumps(stores))
+
+    with open('data/collections/combinedPrices.json', 'r', encoding='utf-8') as priceFile:
+        oldPrices = json.loads(priceFile.read())
+        oldPrices = list(filter(lambda y: y.get('isPurchase')==False, oldPrices)) # trip price data will already have been recorded
+
+
+    newFromOldPrices = []
+    for oldPrice in oldPrices:
+        # turn promo and regular to value
+        if oldPrice.get('promo') == oldPrice.get('regular'):
+            newFromOldPrices.append({'locationId': oldPrice.get('locationId'), 'isPurchase': oldPrice.get('isPurchase'), 'value': oldPrice.get('regular'), 'quantity': oldPrice.get('quantity'),\
+                'upc': oldPrice.get('upc'), 'utcTimestamp': oldPrice.get('acquistion_timestamp'), "type": 'Regular'})
+        else:
+            newFromOldPrices.append({'locationId': oldPrice.get('locationId'), 'isPurchase': oldPrice.get('isPurchase'), 'value': oldPrice.get('regular'), 'quantity': oldPrice.get('quantity'),\
+                'upc': oldPrice.get('upc'), 'utcTimestamp': oldPrice.get('acquistion_timestamp'), "type": 'Regular'})
+            newFromOldPrices.append({'locationId': oldPrice.get('locationId'), 'isPurchase': oldPrice.get('isPurchase'), 'value': oldPrice.get('promo'), 'quantity': oldPrice.get('quantity'),\
+                'upc': oldPrice.get('upc'), 'utcTimestamp': oldPrice.get('acquistion_timestamp'), "type": 'Sale'})
+
     iteration=0
     for head, subfolders, files in os.walk(dataRepoPath):
         if head.split('\\')[-1] in wantedPaths:
@@ -770,9 +808,14 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list):
         
 
         with open(os.path.join("..", "data", listTranslater[str(i)], "collection.json"), "w", encoding="utf-8") as file:
+            if i==2:
+                finalCollection.extend(newFromOldPrices)
             size = sys.getsizeof(finalCollection)
             file.write(json.dumps(finalCollection))
             print(f"Wrote {size} to Disk. {len(finalCollection)} items in {listTranslater[str(i)]}")
+
+    
+    
     return None
 
 
@@ -782,7 +825,7 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list):
 
 
 # provideSummary('./requests/server/collections/trips/trips052822.json')
-createDecompositions('./requests/server/collections', wantedPaths=['trips'])
+createDecompositions('./requests/server/collections', wantedPaths=['trips', 'digital', 'cashback'])
 #deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
 # summarizeCollection('./requests/server/collections/recipes/recipes.json')
 # forceClose("./requests/server/collections/digital/digital42822.txt", streams=False)
