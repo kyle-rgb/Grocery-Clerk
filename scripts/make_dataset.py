@@ -510,9 +510,9 @@ def getDigitalPromotions():
 
 
 def simulateUser(link):
-    neededLinks = {'cashback': {"no": 118, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151)},\
-        'digital': {"no":569, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151)},\
-            'dollarGeneral': {'no': 125, "button": "./requests/server/addToWallet.png", "confidenceInterval": .75, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), "moreContent": "./requests/server/loadMore.png"}}
+    neededLinks = {'cashback': {"no": 118, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008},\
+        'digital': {"no":569, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008},\
+            'dollarGeneral': {'no': 149, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1600 ,"moreContent": "./requests/server/loadMore.png"}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
     # start at top of the screen 
@@ -526,6 +526,8 @@ def simulateUser(link):
     for i in range(iterations):
         buttons = list(pag.locateAllOnScreen(neededLinks[link]['button'], confidence=neededLinks[link]['confidenceInterval'], grayscale=False))
         buttons = [pag.center(y) for i, y in enumerate(buttons) if (abs(buttons[i].left-buttons[i-1].left) > 100) or (abs(buttons[i].top-buttons[i-1].top)>100)] # > 2
+        if link=='dollarGeneral':
+            buttons = list(filter(lambda x: x.x<1600, buttons))
         print(f"Located {len(buttons)} Items")
         if len(buttons)>12:
             yaxis = list(map(lambda b: b.y, buttons))
@@ -537,12 +539,12 @@ def simulateUser(link):
             draws = 0
             direction = 1
             print(pag.position())
-            while pag.pixel(x, y) !=  neededLinks[link]['buttonColor'] :
-                pag.moveRel(0, 5*direction)
-                x, y = pag.position()
-                draws+= 1
-                if draws > 14:
-                    direction = -1
+            # while pag.pixel(x, y) !=  neededLinks[link]['buttonColor'] :
+            #     pag.moveRel(5*direction, 0)
+            #     x, y = pag.position()
+            #     draws+= 1
+            #     if draws > 14:
+            #         direction = -1
             if link!='dollarGeneral':
                 pag.moveRel(-186, 0, duration=1.5)
                 pag.click()
@@ -551,7 +553,7 @@ def simulateUser(link):
                 pag.press('esc')
                 pag.moveRel(186, 0, duration=1.5)
             else:
-                pag.moveRel(-145, 0, duration=1.5)
+                pag.moveRel(-70, 0, duration=1.5)
                 pag.moveRel(0, -125, duration=1.5)
                 # expand items
                 pag.keyDown('ctrlleft')
@@ -566,56 +568,99 @@ def simulateUser(link):
                 time.sleep(6)
                 pag.press('pagedown', 3, interval=0.5)
                 # escape out of portal
-
-                moreItems = list(pag.locateAllOnScreen(neededLinks[link]['moreContent'], confidence=neededLinks[link]['confidenceInterval'], grayscale=True))
+                moreItems = loadMoreAppears()
                 while bool(moreItems):
-                    button = [pag.center(y) for y in moreItems]
-                    pag.moveTo(button[0].x, button[0].y, duration=0.5)
+                    button = moreItems
+                    pag.moveTo(button.x, button.y, duration=0.5)
                     pag.click()
                     time.sleep(3)
                     pag.press('pagedown', 3, interval=0.5)
-                    moreItems = list(pag.locateAllOnScreen(neededLinks[link]['moreContent'], confidence=neededLinks[link]['confidenceInterval'], grayscale=True))
-                    if len(moreItems)!=4:
-                        print(len(moreItems))
-                        break
-
+                    moreItems = loadMoreAppears()
                 pag.keyDown('ctrlleft')
                 pag.keyDown('w')
                 pag.keyUp('ctrlleft')
                 pag.keyUp('w')
                 time.sleep(2.5)
-                pag.moveRel(186, 0, duration=1.5)
+                #pag.moveRel(186, 0, duration=1.5)
             
-        pag.scroll(-2004)
+        pag.scroll(neededLinks[link]['scrollAmount'])
         print('finished row {}; {} to go; mouse currently @ {} :: {} seconds left'.format(i, iterations-i, pag.position(), (time.perf_counter()/(i+1))*(iterations-i)))
         time.sleep(2)
 
     print(f"Processed {neededLinks['digital']} in {time.perf_counter()} seconds")
     return None
 
-def newOperation():
-    if os.path.exists('./data/collections/trips.json'):
-        with open('./data/collections/combinedPrices.json') as file: 
-            trips = json.loads(file.read())
-            #latest_trip_date = max(list(map(lambda f: dt.datetime.strptime(f.get('checkout_timestamp'), "%Y/%m/%d %H:%M"), trips)))
+def newOperation(dataFolder):
+    for folder, subfolders, files in os.walk(dataFolder):
+        for file in files:
+            print(file)
+            with open(folder+'/'+file, 'r', encoding='utf-8') as f:
+                data =json.loads(f.read())
+            coups = []
+            items = []
+            for d in data:
+                print(d.keys())
+                if 'Coupons' in d.keys():
+                    # existing coupon schema:
+                        # uuid: id, krogerCouponNumber
+                        # qualifying prouducts: productUPCs
+                        # qualifying products categories: brandName, categories
+                        # coupon categories: type, cashbackCashoutType, isSharable, forCampaign, specialSavings
+                        # web elems: imageUrl, title, requirementDescription
+                        # dates: startDate, expirationDate
+                        # values: redemptionsAllowed, requirementQuantity, value, 
+                    # dg coupon schema
+                        # uuid: OfferGS1, OfferID, OfferID=mainCouponId,  OfferCode,
+                        # values: RewardQuantity, RedemptionLimitQuantity, MinQuantity, RewardedOfferValue, 
+                        # coupon categories: isManufacturerCoupon, OfferType, RecemptionFrequency, BrandName, Companyname
+                            # OfferSummary = "Save $3.00", TargetType, RewardedCategoryName
+                        # web elems: Image1, Image2, OfferDescription, offerDisclaimer, 
+                        # dates: OfferActivationDate, OfferExpirationDate   
+                        # TODO: qualifying products = in parent element url
+                    for t in d.get('Coupons'):
+                        coups.append(t)
+                elif 'Items' in d.keys():
+                    # TODO Decompose::-> To Equivalent Kroger Document Level Attributes
+                        # items: Description, UPC, Image, IsGenericBrand, IsSellable, IsBopisEligible, Ratings {AverageRating, RatingReviewCount, }, Category(| separated string)
+                            # shipToHomeQuantity, isShipToHome
+                        # inventories: AvailableQty, AvailableStockStore, InventoryStatus,
+                        # prices: Price, OriginalPrice,
+                        # quasiPriceModifiers: DealsAvailable, DealStatus, SponsoredProductId, SponsoredAgreementId, SponsoredDisplayRow
+                        # <boot>: CartQuantity,                    
+                    for t in d.get('Items'):
+                        items.append(t)
+                    
+            o = {}
+            for i in coups:
+                for k in i.keys():
+                    if k not in o.keys() and bool(i[k]):
+                        o[k]=1
+                    elif k in o.keys() and bool(i[k]):
+                        o[k]+=1
+            print(len(items))
+            pprint(sorted(o.items(), key=lambda x: x[1], reverse=True))
+            pprint(coups[-1])
+            1/0
 
-        with open('./data/API/myStoresAPI.json') as file: 
-            stores = json.loads(file.read())
-        
-        #print(latest_trip_date, type(latest_trip_date))
-    o = {}
-    for t in trips:
-        for k in t.keys():
-            if k in o:
-                o[k]+=1
-            else:
-                o[k]=1
-    pprint(sorted(o.items(), key=lambda x: x[1]))
 
     # need to then break down [the see order details link]
 
     return None
 
+def loadMoreAppears(png='./requests/server/moreContent.png'):
+    locations = list(pag.locateAllOnScreen(png, confidence=.6, grayscale=False))
+    locations = list(map(lambda x: pag.center(x), locations))
+    locations = list(filter(lambda x: x.y>240, locations))
+    if locations:
+        x, y = locations[0]
+        color = pag.pixel(int(x), int(y))
+        if color==(0, 0, 0):
+            return locations[0]
+    return None
+
+
+
+# newOperation('./requests/server/collections/digital/dollars')
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
 # getMyData() 
 # getDigitalPromotions()
