@@ -510,18 +510,18 @@ def getDigitalPromotions():
 
 
 def simulateUser(link):
-    neededLinks = {'cashback': {"no": 118, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008},\
-        'digital': {"no":569, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008},\
-            'dollarGeneral': {'no': 149, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1600 ,"moreContent": "./requests/server/loadMore.png"}}
+    neededLinks = {'cashback': {"no": 115, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008},\
+        'digital': {"no":599, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008},\
+            'dollarGeneral': {'no': 145, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png"}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
     # start at top of the screen 
     # align all items https://www.kroger.com/savings/cl/coupons/
     iterations = neededLinks[link]["no"] // 12
-    iterations = iterations + 1
-    #time.sleep(3)
-    #pag.scroll(-800)
-    #time.sleep(2)
+    iterations = iterations + 2
+    # time.sleep(3)
+    # pag.scroll(-800)
+    # time.sleep(2)
     # find all buttons
     for i in range(iterations):
         buttons = list(pag.locateAllOnScreen(neededLinks[link]['button'], confidence=neededLinks[link]['confidenceInterval'], grayscale=False))
@@ -650,12 +650,17 @@ def newOperation(dataFolder):
 def loadMoreAppears(png='./requests/server/moreContent.png'):
     locations = list(pag.locateAllOnScreen(png, confidence=.6, grayscale=False))
     locations = list(map(lambda x: pag.center(x), locations))
-    locations = list(filter(lambda x: x.y>240, locations))
+    i = 0
+    locations = list(filter(lambda x: x.y>418 and x.y<560, locations))
     if locations:
-        x, y = locations[0]
+        loc = locations[i]
+        x, y = loc
         color = pag.pixel(int(x), int(y))
         if color==(0, 0, 0):
-            return locations[0]
+            return loc
+        else:
+            i+=1
+
     return None
 
 
