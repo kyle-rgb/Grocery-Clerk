@@ -510,18 +510,21 @@ def getDigitalPromotions():
 
 
 def simulateUser(link):
-    neededLinks = {'cashback': {"no": 115, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008},\
-        'digital': {"no":599, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008},\
-            'dollarGeneral': {'no': 145, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png"}}
+    neededLinks = {'cashback': {"no": 114, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -800},\
+        'digital': {"no":663, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -800},\
+            'dollarGeneral': {'no': 142, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
+                 'initalScroll': -1650}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
     # start at top of the screen 
     # align all items https://www.kroger.com/savings/cl/coupons/
     iterations = neededLinks[link]["no"] // 12
-    iterations = iterations + 2
-    # time.sleep(3)
-    # pag.scroll(-800)
-    # time.sleep(2)
+    iterations = iterations + 1
+    if link!='dollarGeneral':
+        time.sleep(3)
+        pag.scroll(neededLinks[link]['initalScroll'])
+        time.sleep(2)
+
     # find all buttons
     for i in range(iterations):
         buttons = list(pag.locateAllOnScreen(neededLinks[link]['button'], confidence=neededLinks[link]['confidenceInterval'], grayscale=False))
@@ -539,12 +542,6 @@ def simulateUser(link):
             draws = 0
             direction = 1
             print(pag.position())
-            # while pag.pixel(x, y) !=  neededLinks[link]['buttonColor'] :
-            #     pag.moveRel(5*direction, 0)
-            #     x, y = pag.position()
-            #     draws+= 1
-            #     if draws > 14:
-            #         direction = -1
             if link!='dollarGeneral':
                 pag.moveRel(-186, 0, duration=1.5)
                 pag.click()
@@ -581,66 +578,90 @@ def simulateUser(link):
                 pag.keyUp('ctrlleft')
                 pag.keyUp('w')
                 time.sleep(2.5)
-                #pag.moveRel(186, 0, duration=1.5)
-            
-        pag.scroll(neededLinks[link]['scrollAmount'])
+
+        if i==0 and link=='dollarGeneral':
+            pag.scroll(neededLinks[link]['initalScroll'])
+        else:
+            pag.scroll(neededLinks[link]['scrollAmount'])
         print('finished row {}; {} to go; mouse currently @ {} :: {} seconds left'.format(i, iterations-i, pag.position(), (time.perf_counter()/(i+1))*(iterations-i)))
         time.sleep(2)
 
-    print(f"Processed {neededLinks['digital']} in {time.perf_counter()} seconds")
+    print(f"Processed {neededLinks[link]['no']} in {time.perf_counter()} seconds")
     return None
 
 def newOperation(dataFolder):
     for folder, subfolders, files in os.walk(dataFolder):
         for file in files:
-            print(file)
-            with open(folder+'/'+file, 'r', encoding='utf-8') as f:
-                data =json.loads(f.read())
-            coups = []
-            items = []
-            for d in data:
-                print(d.keys())
-                if 'Coupons' in d.keys():
-                    # existing coupon schema:
-                        # uuid: id, krogerCouponNumber
-                        # qualifying prouducts: productUPCs
-                        # qualifying products categories: brandName, categories
-                        # coupon categories: type, cashbackCashoutType, isSharable, forCampaign, specialSavings
-                        # web elems: imageUrl, title, requirementDescription
-                        # dates: startDate, expirationDate
-                        # values: redemptionsAllowed, requirementQuantity, value, 
-                    # dg coupon schema
-                        # uuid: OfferGS1, OfferID, OfferID=mainCouponId,  OfferCode,
-                        # values: RewardQuantity, RedemptionLimitQuantity, MinQuantity, RewardedOfferValue, 
-                        # coupon categories: isManufacturerCoupon, OfferType, RecemptionFrequency, BrandName, Companyname
-                            # OfferSummary = "Save $3.00", TargetType, RewardedCategoryName
-                        # web elems: Image1, Image2, OfferDescription, offerDisclaimer, 
-                        # dates: OfferActivationDate, OfferExpirationDate   
-                        # TODO: qualifying products = in parent element url
-                    for t in d.get('Coupons'):
-                        coups.append(t)
-                elif 'Items' in d.keys():
-                    # TODO Decompose::-> To Equivalent Kroger Document Level Attributes
-                        # items: Description, UPC, Image, IsGenericBrand, IsSellable, IsBopisEligible, Ratings {AverageRating, RatingReviewCount, }, Category(| separated string)
-                            # shipToHomeQuantity, isShipToHome
-                        # inventories: AvailableQty, AvailableStockStore, InventoryStatus,
-                        # prices: Price, OriginalPrice,
-                        # quasiPriceModifiers: DealsAvailable, DealStatus, SponsoredProductId, SponsoredAgreementId, SponsoredDisplayRow
-                        # <boot>: CartQuantity,                    
-                    for t in d.get('Items'):
-                        items.append(t)
-                    
-            o = {}
-            for i in coups:
-                for k in i.keys():
-                    if k not in o.keys() and bool(i[k]):
-                        o[k]=1
-                    elif k in o.keys() and bool(i[k]):
-                        o[k]+=1
-            print(len(items))
-            pprint(sorted(o.items(), key=lambda x: x[1], reverse=True))
-            pprint(coups[-1])
-            1/0
+            if file.endswith('FD.json'):
+                print(file, files)
+                with open(folder+'/'+file, 'r', encoding='utf-8') as f:
+                    data =json.loads(f.read())
+                coups = []
+                items = []
+                data = data[0].get('data')
+                for d in data:
+                    if 'clipType' in d.keys():
+                        # existing coupon schema:
+                            # uuid: id, krogerCouponNumber
+                            # qualifying products: productUPCs
+                            # qualifying products categories: brandName, categories
+                            # coupon categories: type, cashbackCashoutType, isSharable, forCampaign, specialSavings
+                            # web elems: imageUrl, title, requirementDescription
+                            # dates: startDate, expirationDate
+                            # values: redemptionsAllowed, requirementQuantity, value, 
+                        # dg coupon schema
+                            # uuid: OfferGS1, OfferID, OfferID=mainCouponId,  OfferCode,
+                            # values: RewardQuantity, RedemptionLimitQuantity, MinQuantity, RewardedOfferValue, 
+                            # coupon categories: isManufacturerCoupon, OfferType, RecemptionFrequency, BrandName, Companyname
+                                # OfferSummary = "Save $3.00", TargetType, RewardedCategoryName
+                            # web elems: Image1, Image2, OfferDescription, offerDisclaimer, 
+                            # dates: OfferActivationDate, OfferExpirationDate   
+                            # TODO: qualifying products = in parent element url
+                        # family dollar coupon schema
+                            # uuid: mid, 
+                            # qualifying products: nihil 
+                            # qualifying products categories: nihil 
+                            # coupon categories: brand, category{}, clipType, offerType, redemptionGating, redemptionChannels, group, groups, status, ?tags, ?badge
+                            # web elems: imageUrl, enhancedImageUrl, description{text}, shortDescription{text}, terms, type{text='mfg'}, 
+                            # dates: clipEndDate, clipStartDateTime, clipEndDateTime, clipStartDate, expirationDate, expirationDatetime, redemptionStartDatetime
+                            # coupon values: clippedCount, popularity,  minPurchase, offerSortValue, valueSort, valueText, redemptionsPerTransaction, isActive, ?value, 
+                        
+                        coups.append(d)
+
+                        # for t in d.get('Coupons'):
+                        #     coups.append(t)
+                    elif 'Items' in d.keys():
+                        # TODO Decompose::-> To Equivalent Kroger Document Level Attributes
+                            # items: Description, UPC, Image, IsGenericBrand, IsSellable, IsBopisEligible, Ratings {AverageRating, RatingReviewCount, }, Category(| separated string)
+                                # shipToHomeQuantity, isShipToHome
+                            # inventories: AvailableQty, AvailableStockStore, InventoryStatus,
+                            # prices: Price, OriginalPrice,
+                            # quasiPriceModifiers: DealsAvailable, DealStatus, SponsoredProductId, SponsoredAgreementId, SponsoredDisplayRow
+                            # <bool>: CartQuantity,                    
+                        for t in d.get('Items'):
+                            items.append(t)
+                        
+                o = {}
+                #print(coups)
+                for i in coups:
+                    for k in i.keys():
+                        if k not in o.keys() and bool(i[k]):
+                            o[k]=1
+                        elif k in o.keys() and bool(i[k]):
+                            o[k]+=1
+                pprint(sorted(o.items(), key=lambda x: x[1], reverse=True))
+                pprint(list(filter(lambda x: x.get('badge'), coups)))
+                o = {}
+                # for i in items:
+                #     for k in i.keys():
+                #         if k not in o.keys() and bool(i[k]):
+                #             o[k]=1
+                #         elif k in o.keys() and bool(i[k]):
+                #             o[k]+=1
+                # pprint(sorted(o.items(), key=lambda x: x[1], reverse=True))
+            
+
+                1/0
 
 
     # need to then break down [the see order details link]
@@ -665,9 +686,10 @@ def loadMoreAppears(png='./requests/server/moreContent.png'):
 
 
 
-# newOperation('./requests/server/collections/digital/dollars')
+
+#newOperation('./requests/server/collections/digital/dollars')
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
 # getMyData() 
 # getDigitalPromotions()
-simulateUser("dollarGeneral")
+simulateUser("cashback")
 # newOperation()
