@@ -724,6 +724,8 @@ def deconstructExtensions(filename, **madeCollections):
                                     i['sellerKey'] = id 
                                 i.pop('sellerId')
                                 i.pop('sellerName')
+                                if 'offerId' in i:
+                                    i.pop('offerId')
                                 inventoryCollection.append(i)
                                 
                         toPop = []
@@ -737,9 +739,10 @@ def deconstructExtensions(filename, **madeCollections):
                                 if key=='mainImagePerspective':
                                     imgs = list(filter(lambda x: x.get('perspective')==value, itemDoc.get('images')))
                                     [im.setdefault('main', True) for im in imgs]
-
-                        itemDoc = {k:v for k,v in itemDoc.items() if k not in toPop}
-
+                        pprint(itemDoc)
+                        itemDoc = {k:v for k,v in itemDoc.items() if (k not in toPop )and( k in itemKeep['keep'].union(itemKeep['bool']))}
+                        pprint(itemDoc)
+                        1/0
                         if itemDoc.get('upc') in forGeneralItems.keys():
                             moreInfo = forGeneralItems[itemDoc.get('upc')]
                             itemDoc.update(moreInfo)
@@ -825,7 +828,7 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list):
 
 
 # provideSummary('./requests/server/collections/trips/trips052822.json')
-createDecompositions('./requests/server/collections', wantedPaths=['trips', 'digital', 'cashback'])
+createDecompositions('./requests/server/collections', wantedPaths=['cashback', 'digital', 'trips'])
 #deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
 # summarizeCollection('./requests/server/collections/recipes/recipes.json')
 # forceClose("./requests/server/collections/digital/digital42822.txt", streams=False)

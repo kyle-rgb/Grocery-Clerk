@@ -1,6 +1,6 @@
 
 from pprint import pprint
-import time, re, random, datetime as dt, os, json
+import time, re, random, datetime as dt, os, json, urllib
 import pyautogui as pag
 
 from apiCalls import parse_ingredients, getFuzzyMatch
@@ -510,9 +510,9 @@ def getDigitalPromotions():
 
 
 def simulateUser(link):
-    neededLinks = {'cashback': {"no": 114, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -800},\
-        'digital': {"no":663, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -800},\
-            'dollarGeneral': {'no': 142, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
+    neededLinks = {'cashback': {"no": 98, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
+        'digital': {"no":662, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
+            'dollarGeneral': {'no': 141, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
                  'initalScroll': -1650}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
@@ -685,11 +685,93 @@ def loadMoreAppears(png='./requests/server/moreContent.png'):
     return None
 
 
+def f(file, specKey='stockLevel'):
+    with open(file, 'r', encoding='utf-8') as fd:
+        data = json.loads(fd.read())
+    summary = {}
+    newS = set()
+    for d in data:
+        if specKey in d and bool(d[specKey]):
+            for k in d[specKey]:
+                if k not in summary.keys():
+                    summary[k]=1
+                else:
+                    summary[k]+=1
+                if k==specKey and d[k] not in newS:
+                    newS.add(d[k])
+    pprint(summary)
+    # pprint(list(filter(lambda v: bool(v.get('availableToSell'))and(v.get('availableToSell')>0), data))[0])
+    print(f'{specKey} = {newS}')
+    return None
+
+def seeDollars(file='./requests/server/collections/digital/dollars/digital060422DG.json'):
+    with open(file, 'r', encoding='utf-8') as fd:
+        data = sorted(json.loads(fd.read()), key=lambda x: x.get('url'))
+        products = filter(lambda p: 'eligibleProductsResult' in p.keys(), data)
+        coupons = filter(lambda p: 'Coupons' in p.keys(), data)
+        
+    # pprint(list(products)[1].get('eligibleProductsResult').get('Items'))  
+    newProducts=[]
+    newCoupons=[]
+    newPrices = []
+    newInventory = []
+    storeCode = ''
+    booleans = {'prices': {'IsSellable': 'IN_STORE', 'IsBopisEligible': 'PICKUP', 'isShipToHome': 'SHIP'}, 'items': {'IsGenericBrand', 'IsBopisEligible', 'isShipToHome'}}
+    inventoryKeys= {'1': 'TEMPORARILY_OUT_OF_STOCK', '2': "LOW", "3": 'HIGH'}
+    for item in products:
+        utcTimestamp = item["acquisition_timestamp"]
+        url = item['url']
+        if bool(storeCode)==False:
+            params = urllib.parse.parse_qsl()
+            storeCode = filter(lambda x: x[0]=='store', params)[0][1]
+        itemList = item.get('eligibleProductsResults').get('Items')
+        for i in itemList:
+        
+            modalities = []
+            for key, val in booleans.get('prices').items():
+                if i[key]:
+                    modalities.append(val)
+            # deconconstuct to prices
+            newPrices.append({'value': i.get('OriginalPrice'), 'type': 'Regular', 'isPurchase': False, 'locationId': storeCode, 'utcTimestamp': utcTimestamp,\
+                'upc': i.get('UPC'), 'quantity': 1 , 'modalities': modalities, })
+            if i.get('OriginalPrice')!=i.get('Price'):
+                newPrices.append({'value': i.get('Price'), 'type': 'Sale', 'isPurchase': False, 'locationId': storeCode, 'utcTimestamp': utcTimestamp,\
+                'upc': i.get('UPC'), 'quantity': 1 , 'modalities': modalities, })
+            # deconstruct to inventories
+
+            itemStatus = inventoryKeys[str(i.get('InventoryStatus'))]
+            newInventory.append({'stockLevel': itemStatus, 'availableToSell': i.get('AvailableStockStore'), 'locationId': storeCode, 'utcTimestamp': utcTimestamp, 'upc': i.get('upc')})     
+            # deconstuct into Items
+            itemDoc = {'description': i.get('Description'), 'upc': i.get('UPC'), 'images': [{'url': i.get('image'), 'perspective': 'front', 'main': True, 'size': 'xlarge'}],\
+                'soldInStore': i.get('isSellable'), 'ratings': {'avg': i.get('AverageRating'), 'ct': i.get('RatingReviewCount'), 'categories': i.get('Category').split('|'),\
+                    "modalities": modalities}}
+
+            for ky in boolean.get('items'):
+                if i[ky]:
+                    itemDoc[ky] = i[ky]
+                if ky=='isShipToHome' and i[ky]:
+                    itemDoc['maximumOrderQuantity'] = i.get('shipToHomeQuantity')
+
+        
+
+    return None
+
+def deconstructDollars(folder='./requests/server/collections/digital/dollars/'):
+    for head, _, files in os.walk(folder):
+        for file in files:
+            if file.endswith('DG'):
+                with open(file, mode='r', encoding='utf-8') as f:
+                    data = json.loads(f.read())
+                pass
+            elif file.endswith('FD'):
+                pass
+
+
 
 
 #newOperation('./requests/server/collections/digital/dollars')
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
 # getMyData() 
 # getDigitalPromotions()
-simulateUser("cashback")
+#simulateUser("dollarGeneral")
 # newOperation()
