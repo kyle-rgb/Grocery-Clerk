@@ -444,11 +444,13 @@ def deconstructExtensions(filename, **madeCollections):
             # static: 
 
     startingArray=[]
-    upcsRegex = re.compile(r'https://www.kroger.com/cl/api/couponDetails/(\d+)/upcs')
-    couponsDetailsRegex = re.compile(r'https://www.kroger.com/cl/api/coupons\?.+')
-    productsRegex = re.compile(r'https://www.kroger.com/atlas/v1/product/v2/products\?.+')
-    tripRegex = re.compile(r'https://www.kroger.com/mypurchases/api/v1/receipt.+')
+    upcsRegex = re.compile(r'https://www\.kroger\.com/cl/api/couponDetails/(\d+)/upcs')
+    couponsDetailsRegex = re.compile(r'https://www\.kroger\.com/cl/api/coupons\?.+')
+    productsRegex = re.compile(r'https://www\.kroger\.com/atlas/v1/product/v2/products\?.+')
+    tripRegex = re.compile(r'https://www\.kroger\.com/mypurchases/api/v1/receipt.+')
+    storeRegex = re.compile(r'https://www\.(.+)\.com.+')
     productErrorsRegex = re.compile(r'\.gtin13s=(\d+)')
+    storeDict = {'kroger': 'Kroger', 'ice-familydollar': 'Family Dollar', 'dollargeneral': 'Dollar General'}
     
     if os.path.exists(filename):
         with open(filename, 'r', encoding='utf-8') as file:
@@ -456,7 +458,7 @@ def deconstructExtensions(filename, **madeCollections):
 
         cDict={}
         try:
-            startingArray = sorted(startingArray, key=lambda x: x['url'])
+            startingArray = sorted(startingArray, key=lambda x: x['url'], reverse=True)
         except TypeError:
             print(start)
         except KeyError:
@@ -608,10 +610,11 @@ def deconstructExtensions(filename, **madeCollections):
             elif re.match(productsRegex, url): # products?
                 # products => {the final item collection, adds to prices collection, creates and adds to inventory collection, creates promotions}
                 itemKeep = {"bool": {"alcoholFlag", "bounceFlag", "hazmatFlag", "heatSensitive", "prop65",\
-                    "snapEligible", "shipToHomeItem", "soldInStore", "homeDeliveryItem", "shipsWithColdPack"},
-                    "keep": {"prop65Warning", "images", "mainImagePerspective", "romanceDescription", "categories",\
-                        "familyTree", "taxonomies", "brand", "familyCode", "taxGroupCode","familyCode", "taxGroupCode",\
-                            "temperatureIndicator", "minimumOrderQuantity", "maximumOrderQuantity"}}
+                    "shipsWithColdPack"},
+                    "keep": {"prop65Warning", "images", "romanceDescription", "categories", "dimensions",\
+                        "familyTree", "taxonomies", "brand", "taxGroupCode","familyCode", "taxGroupCode", "snapEligible", "shipToHomeItem", "soldInStore", "homeDeliveryItem", \
+                            "temperatureIndicator", "minimumOrderQuantity", "maximumOrderQuantity", "countriesOfOrigin", "customerFacingSize",\
+                                "description", 'nutrition', "familyTreeV1", "idV1", "tareValue", "upc", "weight", "weightPerUnit", 'orderBy', 'sellBy'}}
 
 
                 if data==None:
@@ -738,11 +741,10 @@ def deconstructExtensions(filename, **madeCollections):
                             elif key in itemKeep['keep']:
                                 if key=='mainImagePerspective':
                                     imgs = list(filter(lambda x: x.get('perspective')==value, itemDoc.get('images')))
-                                    [im.setdefault('main', True) for im in imgs]
-                        pprint(itemDoc)
-                        itemDoc = {k:v for k,v in itemDoc.items() if (k not in toPop )and( k in itemKeep['keep'].union(itemKeep['bool']))}
-                        pprint(itemDoc)
-                        1/0
+                                    imgs = sorted(imgs, key=lambda i: i.get('size'))
+                                    imgs[0].setdefault('main', True)
+                        
+                        itemDoc = {k:v for k,v in itemDoc.items() if (k not in toPop and k in itemKeep['bool']) or  (k in itemKeep['keep'])}
                         if itemDoc.get('upc') in forGeneralItems.keys():
                             moreInfo = forGeneralItems[itemDoc.get('upc')]
                             itemDoc.update(moreInfo)

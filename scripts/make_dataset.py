@@ -510,8 +510,8 @@ def getDigitalPromotions():
 
 
 def simulateUser(link):
-    neededLinks = {'cashback': {"no": 98, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
-        'digital': {"no":662, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
+    neededLinks = {'cashback': {"no": 183, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
+        'digital': {"no":583, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
             'dollarGeneral': {'no': 141, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
                  'initalScroll': -1650}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
@@ -659,10 +659,6 @@ def newOperation(dataFolder):
                 #         elif k in o.keys() and bool(i[k]):
                 #             o[k]+=1
                 # pprint(sorted(o.items(), key=lambda x: x[1], reverse=True))
-            
-
-                1/0
-
 
     # need to then break down [the see order details link]
 
@@ -690,18 +686,20 @@ def f(file, specKey='stockLevel'):
         data = json.loads(fd.read())
     summary = {}
     newS = set()
-    for d in data:
-        if specKey in d and bool(d[specKey]):
-            for k in d[specKey]:
-                if k not in summary.keys():
-                    summary[k]=1
-                else:
-                    summary[k]+=1
-                if k==specKey and d[k] not in newS:
-                    newS.add(d[k])
-    pprint(summary)
+    j = []
+    [j.extend(i.get('eligibleProductsResult').get('Items')) for i in data if 'eligibleProductsResult' in i.keys()]
+    for d in j:
+        for k in d.keys():
+            if k not in summary.keys():
+                summary[k]=1
+            else:
+                summary[k]+=1
+                # if k==specKey and d[k] not in newS:
+                #     newS.add(d[k])
+    pprint(sorted(summary.items(), key=lambda v: v[1]))
+    
+
     # pprint(list(filter(lambda v: bool(v.get('availableToSell'))and(v.get('availableToSell')>0), data))[0])
-    print(f'{specKey} = {newS}')
     return None
 
 def seeDollars(file='./requests/server/collections/digital/dollars/digital060422DG.json'):
@@ -722,11 +720,10 @@ def seeDollars(file='./requests/server/collections/digital/dollars/digital060422
         utcTimestamp = item["acquisition_timestamp"]
         url = item['url']
         if bool(storeCode)==False:
-            params = urllib.parse.parse_qsl()
-            storeCode = filter(lambda x: x[0]=='store', params)[0][1]
-        itemList = item.get('eligibleProductsResults').get('Items')
+            params = urllib.parse.parse_qsl(url)
+            storeCode = list(filter(lambda x: x[0]=='store', params))[0][1]
+        itemList = item.get('eligibleProductsResult').get('Items')
         for i in itemList:
-        
             modalities = []
             for key, val in booleans.get('prices').items():
                 if i[key]:
@@ -738,19 +735,36 @@ def seeDollars(file='./requests/server/collections/digital/dollars/digital060422
                 newPrices.append({'value': i.get('Price'), 'type': 'Sale', 'isPurchase': False, 'locationId': storeCode, 'utcTimestamp': utcTimestamp,\
                 'upc': i.get('UPC'), 'quantity': 1 , 'modalities': modalities, })
             # deconstruct to inventories
-
             itemStatus = inventoryKeys[str(i.get('InventoryStatus'))]
             newInventory.append({'stockLevel': itemStatus, 'availableToSell': i.get('AvailableStockStore'), 'locationId': storeCode, 'utcTimestamp': utcTimestamp, 'upc': i.get('upc')})     
             # deconstuct into Items
             itemDoc = {'description': i.get('Description'), 'upc': i.get('UPC'), 'images': [{'url': i.get('image'), 'perspective': 'front', 'main': True, 'size': 'xlarge'}],\
-                'soldInStore': i.get('isSellable'), 'ratings': {'avg': i.get('AverageRating'), 'ct': i.get('RatingReviewCount'), 'categories': i.get('Category').split('|'),\
+                'soldInStore': i.get('isSellable'), 'ratings': {'avg': i.get('AverageRating'), 'ct': i.get('RatingReviewCount'),\
                     "modalities": modalities}}
 
-            for ky in boolean.get('items'):
+            if 'Category' in i:
+                itemDoc['categories'] = i.get('Category').split('|')
+            
+            for ky in booleans.get('items'):
                 if i[ky]:
                     itemDoc[ky] = i[ky]
                 if ky=='isShipToHome' and i[ky]:
                     itemDoc['maximumOrderQuantity'] = i.get('shipToHomeQuantity')
+
+    for coupon in coupons:
+        # Dollar General:
+            # uuid: OfferGS1, OfferID, OfferCode
+            # values: Recemption Freq, RewardQuantity, RedemptionLimitQuantity, MinQuantity, RewardOfferValue
+            # categories: isManufacturerCoupon, OfferType, BrandName, Companyname, OfferSummary='Save $3.00', TargetType, RewardedCategoryName
+            # web: Image1, Image2, OfferDescription, OfferDisclaimer
+            # dates: OfferActivationDate, OfferExpirationDate
+        # Family Dollar:
+            # uuid: mid
+            # categories: brand, category{}, clipType, offerType, redemptionGating, redemptionChannels, group, groups, status, tags, badge
+            # web: imageUrl, enhancedImageUrl, description{text}, shortDescription{text}, terms, type{text='mfg'}
+            # dates: clipEndDate(Time),clipStartDate(Time), redemptionnStartDateTime, expirationDateTime,
+            # values: clippedCount, popularity, minPurchase, offerSort, value, valueSort, valueText, redemptionsPerTransaction, isActive
+        pass
 
         
 
@@ -767,11 +781,11 @@ def deconstructDollars(folder='./requests/server/collections/digital/dollars/'):
                 pass
 
 
-
-
+seeDollars()
+#f('./requests/server/collections/digital/dollars/digital060622DG.json')
 #newOperation('./requests/server/collections/digital/dollars')
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
 # getMyData() 
 # getDigitalPromotions()
-#simulateUser("dollarGeneral")
+#simulateUser("digital")
 # newOperation()
