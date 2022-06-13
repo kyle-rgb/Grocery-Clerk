@@ -5,8 +5,8 @@ var masterArray = []
 async function createType(){
   let typeT = await browser.tabs.query({active: true}).then((tabs)=>{
     var t = ''
-    let reg = /mypurchases|cashback|coupon/
-    var fileTypes = {'mypurchases': 'trips', 'cashback': 'cashback', "coupon": 'digital'}
+    let reg = /mypurchases|cashback|coupon|specials/
+    var fileTypes = {'mypurchases': 'trips', 'cashback': 'cashback', "coupon": 'digital', "specials": "digital"}
     for (let tab of tabs){
       if (tab.url.match(reg)!=null){
         let match = tab.url.match(reg)[0]
@@ -115,7 +115,10 @@ chrome.contextMenus.onClicked.addListener(function(info, tab) {
 
 chrome.webRequest.onBeforeRequest.addListener(
   listener,
-  {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*",  "*://ice-familydollar.dpn.inmar.com/v2/offers*","*://*.kroger.com/mypurchases/api/v1/receipt*", "*://*.dollargeneral.com/bin/omni/coupons/products*", "*://*.dollargeneral.com/bin/omni/coupons/recommended*"], types: ["xmlhttprequest", "object"]}, // 
+  {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*",  "*://ice-familydollar.dpn.inmar.com/v2/offers*","*://*.kroger.com/mypurchases/api/v1/receipt*", "*://*.dollargeneral.com/bin/omni/coupons/products*", "*://*.dollargeneral.com/bin/omni/coupons/recommended*",
+  "*://*.noq-servers.net/api/v1/application/stores/*/products?*"
+
+  ], types: ["xmlhttprequest", "object"]}, // 
   ["blocking"]
 )
 
@@ -128,7 +131,8 @@ chrome.webRequest.onBeforeRequest.addListener(
 
 chrome.webRequest.onCompleted.removeListener(
   listener,
-  {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*",  "*://ice-familydollar.dpn.inmar.com/v2/offers*", "*://*.kroger.com/mypurchases/api/v1/receipt*", "*://*.dollargeneral.com/bin/omni/coupons/products*", "*://*.dollargeneral.com/bin/omni/coupons/recommended*"], types: ["xmlhttprequest", "object"]}, // 
+  {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*",  "*://ice-familydollar.dpn.inmar.com/v2/offers*", "*://*.kroger.com/mypurchases/api/v1/receipt*", "*://*.dollargeneral.com/bin/omni/coupons/products*", "*://*.dollargeneral.com/bin/omni/coupons/recommended*",
+  "*://*.noq-servers.net/api/v1/application/stores/*/products?*"], types: ["xmlhttprequest", "object"]}, // 
   ["blocking"]
 )
 

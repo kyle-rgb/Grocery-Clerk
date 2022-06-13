@@ -458,7 +458,7 @@ def deconstructExtensions(filename, **madeCollections):
 
         cDict={}
         try:
-            startingArray = sorted(startingArray, key=lambda x: x['url'], reverse=True)
+            startingArray = sorted(startingArray, key=lambda x: x['url'], reverse=False)
         except TypeError:
             print(start)
         except KeyError:

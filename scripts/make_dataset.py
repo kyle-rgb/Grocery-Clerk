@@ -681,25 +681,35 @@ def loadMoreAppears(png='./requests/server/moreContent.png'):
     return None
 
 
-def f(file, specKey='stockLevel'):
+def f(file, specKey='RewardQuantity'):
     with open(file, 'r', encoding='utf-8') as fd:
         data = json.loads(fd.read())
     summary = {}
     newS = set()
-    j = []
-    [j.extend(i.get('eligibleProductsResult').get('Items')) for i in data if 'eligibleProductsResult' in i.keys()]
-    for d in j:
+    if 'DG' in file:
+        j= []
+        [j.extend(i.get('Coupons')) for i in data if 'Coupons' in i.keys()]
+        data = j
+    for d in data:
         for k in d.keys():
-            if k not in summary.keys():
+            if k not in summary.keys() and bool(d[k]):
                 summary[k]=1
-            else:
+            elif bool(d[k]):
                 summary[k]+=1
-                # if k==specKey and d[k] not in newS:
-                #     newS.add(d[k])
-    pprint(sorted(summary.items(), key=lambda v: v[1]))
-    
-
-    # pprint(list(filter(lambda v: bool(v.get('availableToSell'))and(v.get('availableToSell')>0), data))[0])
+            else:
+                summary[k] -= 1
+            if k==specKey:
+                if type(d[k])==str:
+                    newS.add(d[k])
+                elif type(d[k])==list:
+                    [newS.add(len(d[k])) for x in d[k]]
+                elif type(d[k])==dict:
+                    [newS.add(x) for z, x in d[k].items()]
+                else:
+                    newS.add(d[k])
+            
+    pprint(sorted(summary.items(), key=lambda v: v[1], reverse=1))
+    print(specKey, " = ", newS)
     return None
 
 def seeDollars(file='./requests/server/collections/digital/dollars/digital060422DG.json'):
@@ -716,18 +726,26 @@ def seeDollars(file='./requests/server/collections/digital/dollars/digital060422
     storeCode = ''
     booleans = {'prices': {'IsSellable': 'IN_STORE', 'IsBopisEligible': 'PICKUP', 'isShipToHome': 'SHIP'}, 'items': {'IsGenericBrand', 'IsBopisEligible', 'isShipToHome'}}
     inventoryKeys= {'1': 'TEMPORARILY_OUT_OF_STOCK', '2': "LOW", "3": 'HIGH'}
+    productsForCoupons = {}
     for item in products:
         utcTimestamp = item["acquisition_timestamp"]
         url = item['url']
+        params = urllib.parse.parse_qsl(url)
         if bool(storeCode)==False:
-            params = urllib.parse.parse_qsl(url)
             storeCode = list(filter(lambda x: x[0]=='store', params))[0][1]
+        couponId = list(filter(lambda x: x[0]=='couponId', params))[0][1]
         itemList = item.get('eligibleProductsResult').get('Items')
         for i in itemList:
             modalities = []
             for key, val in booleans.get('prices').items():
                 if i[key]:
                     modalities.append(val)
+            if i.get('UPC') not in productsForCoupons.keys():
+                productsForCoupons[couponId] = {i.get('UPC')}
+            else:
+                productsForCoupons[couponId].add(i.get('UPC'))
+
+
             # deconconstuct to prices
             newPrices.append({'value': i.get('OriginalPrice'), 'type': 'Regular', 'isPurchase': False, 'locationId': storeCode, 'utcTimestamp': utcTimestamp,\
                 'upc': i.get('UPC'), 'quantity': 1 , 'modalities': modalities, })
@@ -753,17 +771,15 @@ def seeDollars(file='./requests/server/collections/digital/dollars/digital060422
 
     for coupon in coupons:
         # Dollar General:
-            # uuid: OfferGS1, OfferID, OfferCode
-            # values: Recemption Freq, RewardQuantity, RedemptionLimitQuantity, MinQuantity, RewardOfferValue
-            # categories: isManufacturerCoupon, OfferType, BrandName, Companyname, OfferSummary='Save $3.00', TargetType, RewardedCategoryName
-            # web: Image1, Image2, OfferDescription, OfferDisclaimer
+            # categories:  
+            # web: Image1, Image2, OfferDescription, OfferDisclaimer, OfferSummary='Save $3.00',
             # dates: OfferActivationDate, OfferExpirationDate
         # Family Dollar:
-            # uuid: mid
-            # categories: brand, category{}, clipType, offerType, redemptionGating, redemptionChannels, group, groups, status, tags, badge
-            # web: imageUrl, enhancedImageUrl, description{text}, shortDescription{text}, terms, type{text='mfg'}
-            # dates: clipEndDate(Time),clipStartDate(Time), redemptionnStartDateTime, expirationDateTime,
-            # values: clippedCount, popularity, minPurchase, offerSort, value, valueSort, valueText, redemptionsPerTransaction, isActive
+            # uuid: mid //
+            # categories: brand, category{}, // clipType, offerType, redemptionGating, redemptionChannels, group, groups, status, tags, badge, isActive
+            # web: imageUrl, enhancedImageUrl, description{text}, shortDescription{text}, terms, type{text='mfg'}, valueText='Save $3.00',
+            # dates: clipEndDate(Time),clipStartDate(Time), redemptionStartDateTime, expirationDateTime,
+            # values: minPurchase, value, valueSort, offerSortValue, redemptionsPerTransaction // clippedCount, popularity, 
         pass
 
         
@@ -781,8 +797,10 @@ def deconstructDollars(folder='./requests/server/collections/digital/dollars/'):
                 pass
 
 
-seeDollars()
-#f('./requests/server/collections/digital/dollars/digital060622DG.json')
+#seeDollars()
+f('../data/promotions/collection.json')
+#f('./requests/server/collections/digital/dollars/digital052822FD.json')
+#f('./requests/server/collections/digital/dollars/digital052822DG.json')
 #newOperation('./requests/server/collections/digital/dollars')
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
 # getMyData() 
