@@ -22,7 +22,7 @@ services:
       # One-way volume to use node_modules from inside image
       - /app/node_modules
     ports:
-      - "80:3000"
+      - "80:80"
     environment:
       - NODE_ENV=development
     depends_on:
@@ -48,3 +48,17 @@ services:
       ME_CONFIG_MONGODB_ADMINUSERNAME: $MONGO_ADMIN_USER
       ME_CONFIG_MONGODB_ADMINPASSWORD: $MONGO_ADMIN_PASS
       ME_CONFIG_MONGODB_URL: $MONGO_CONN_URL
+
+  firefox:
+    image: lscr.io/linuxserver/firefox:latest
+    container_name: firefox
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - ./config:/config
+    ports:
+      - 3000:3000
+    shm_size: "1gb"
+    restart: unless-stopped

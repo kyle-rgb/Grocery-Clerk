@@ -489,8 +489,8 @@ def deconstructExtensions(filename, **madeCollections):
             elif re.match(couponsDetailsRegex, url):
                 coupons = data.get('coupons')
                 coupSchema = {'keep':{"id", "krogerCouponNumber", "brandName", "categories", "productUpcs", "type", "expirationDate",\
-                     "redemptionsAllowed", "value", "requirementQuantity", "displayStartDate", "imageUrl", "title", "requirementDescription"},\
-                     "bool": {"cashbackCashoutType", "isSharable", "forCampaign", "specialSavings"}}
+                     "redemptionsAllowed", "value", "requirementQuantity", "displayStartDate", "imageUrl", "title", "requirementDescription",},\
+                     "bool": {"cashbackCashoutType", "isSharable", "forCampaign", "specialSavings",  "longDescription"}}
                 for k,v in coupons.items():
                     promo = {}
                     if k in cDict:
@@ -501,7 +501,10 @@ def deconstructExtensions(filename, **madeCollections):
                     for coupKey, coupVal in v.items():
                         if coupKey in coupSchema['bool']:
                             if bool(coupVal):
-                                promo[coupKey] = coupVal
+                                if coupKey=='longDescription':
+                                    promo['terms'] = coupVal
+                                else:
+                                    promo[coupKey] = coupVal
                         elif coupKey in coupSchema['keep']:
                             if coupKey=='displayStartDate':
                                 promo['startDate'] = coupVal

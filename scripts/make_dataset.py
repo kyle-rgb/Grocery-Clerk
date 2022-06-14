@@ -3,8 +3,7 @@ from pprint import pprint
 import time, re, random, datetime as dt, os, json, urllib
 import pyautogui as pag
 
-from apiCalls import parse_ingredients, getFuzzyMatch
-from pymongo import MongoClient, ASCENDING, DESCENDING
+from pymongo import MongoClient
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -510,9 +509,9 @@ def getDigitalPromotions():
 
 
 def simulateUser(link):
-    neededLinks = {'cashback': {"no": 183, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
-        'digital': {"no":583, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
-            'dollarGeneral': {'no': 141, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
+    neededLinks = {'cashback': {"no": 176, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
+        'digital': {"no":575, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
+            'dollarGeneral': {'no': 127, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
                  'initalScroll': -1650}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
@@ -681,7 +680,7 @@ def loadMoreAppears(png='./requests/server/moreContent.png'):
     return None
 
 
-def f(file, specKey='RewardQuantity'):
+def f(file, specKey='redemptionsAllowed'):
     with open(file, 'r', encoding='utf-8') as fd:
         data = json.loads(fd.read())
     summary = {}
@@ -692,9 +691,11 @@ def f(file, specKey='RewardQuantity'):
         data = j
     for d in data:
         for k in d.keys():
-            if k not in summary.keys() and bool(d[k]):
+            if k not in summary.keys():
                 summary[k]=1
             elif bool(d[k]):
+                summary[k]+=1
+            elif d[k]==0:
                 summary[k]+=1
             else:
                 summary[k] -= 1
@@ -710,6 +711,7 @@ def f(file, specKey='RewardQuantity'):
             
     pprint(sorted(summary.items(), key=lambda v: v[1], reverse=1))
     print(specKey, " = ", newS)
+    pprint(data[0])
     return None
 
 def seeDollars(file='./requests/server/collections/digital/dollars/digital060422DG.json'):
@@ -717,8 +719,7 @@ def seeDollars(file='./requests/server/collections/digital/dollars/digital060422
         data = sorted(json.loads(fd.read()), key=lambda x: x.get('url'))
         products = filter(lambda p: 'eligibleProductsResult' in p.keys(), data)
         coupons = filter(lambda p: 'Coupons' in p.keys(), data)
-        
-    # pprint(list(products)[1].get('eligibleProductsResult').get('Items'))  
+        storeID = re.findall(r'[A-Z]+\.json', file)[0]
     newProducts=[]
     newCoupons=[]
     newPrices = []
@@ -798,12 +799,12 @@ def deconstructDollars(folder='./requests/server/collections/digital/dollars/'):
 
 
 #seeDollars()
-f('../data/promotions/collection.json')
-#f('./requests/server/collections/digital/dollars/digital052822FD.json')
+#f('../data/promotions/collection.json')
+#f('./requests/server/collections/digital/digital052722.json')
 #f('./requests/server/collections/digital/dollars/digital052822DG.json')
 #newOperation('./requests/server/collections/digital/dollars')
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
 # getMyData() 
 # getDigitalPromotions()
-#simulateUser("digital")
+simulateUser("dollarGeneral")
 # newOperation()
