@@ -21,7 +21,11 @@ def docs():
             with open(f'./collections/{contentType}/{contentType}{dateCode}.json', 'r', encoding='utf-8') as file:
                 past_data = json.loads(file.read())
                 data.extend(past_data)
-
+        else:
+            try:
+                os.mkdir(f"./collections/{contentType}")
+            except FileExistsError():
+                print('skipping directory creation')
         with open(f'./collections/{contentType}/{contentType}{dateCode}.json', 'w', encoding='utf-8') as file:
             file.write(json.dumps(data))
         print(f'successfly wrote {length} to disk. have received {i} objects')
