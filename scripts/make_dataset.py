@@ -509,9 +509,9 @@ def getDigitalPromotions():
 
 
 def simulateUser(link):
-    neededLinks = {'cashback': {"no": 176, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
-        'digital': {"no":575, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
-            'dollarGeneral': {'no': 127, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
+    neededLinks = {'cashback': {"no": 214, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
+        'digital': {"no":256, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
+            'dollarGeneral': {'no': 125, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
                  'initalScroll': -1650}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
@@ -679,42 +679,107 @@ def loadMoreAppears(png='./requests/server/moreContent.png'):
 
     return None
 
-
-def f(file, specKey='redemptionsAllowed'):
-    with open(file, 'r', encoding='utf-8') as fd:
-        data = json.loads(fd.read())
-    summary = {}
-    newS = set()
-    if 'DG' in file:
-        j= []
-        [j.extend(i.get('Coupons')) for i in data if 'Coupons' in i.keys()]
-        data = j
-    for d in data:
-        for k in d.keys():
-            if k not in summary.keys():
-                summary[k]=1
-            elif bool(d[k]):
-                summary[k]+=1
-            elif d[k]==0:
-                summary[k]+=1
-            else:
-                summary[k] -= 1
-            if k==specKey:
-                if type(d[k])==str:
-                    newS.add(d[k])
-                elif type(d[k])==list:
-                    [newS.add(len(d[k])) for x in d[k]]
-                elif type(d[k])==dict:
-                    [newS.add(x) for z, x in d[k].items()]
-                else:
-                    newS.add(d[k])
-            
-    pprint(sorted(summary.items(), key=lambda v: v[1], reverse=1))
-    print(specKey, " = ", newS)
-    pprint(data[0])
-    return None
-
 def seeDollars(file='./requests/server/collections/digital/dollars/digital060422DG.json'):
+    # Promotions.categories <List> -> {Condiments & Sauces, Beverages, Pasta Sauces Grain, International, Cleaning Products, Baby, Apparel, General, Beauty, Garden & Patio, Meat & Seafood,\
+            # Home Decor, Deli, Health, Breakfast, Bakery, Sporting Goods, Pet Care, Hardware, Entertainment, Gift Cards, Dairy, Personal Care, Canned & Packaged, Candy, Tobacco,
+            # Frozen, Produce, Snacks, Adult Beverages, Health & Beauty, Baking Goods, Kitchen, Natural & Organic, Electronics, Party}
+        # Promotions.type <String> -> {CASH_BACK, STANDARD}
+        # Promotions.cashbackCashoutType <String> -> {UNRESTRICTED, NON_RETAILER_ONLY}
+        # Promotions.specialSavings <List[<Dicts>]>.name -> {HOTP5: Use up to 5 Times in a Single Transaction, 5X: <-ibid, 4XGCEVENT: GiftCard/Fuel Points, HOTP3:Use Up to Five Times in a Single Transaction, HOMECHEF:Private Label Ready Made Meals,\
+            # BPCS:Beauty & Personal Care Savings, SFY:Personalized Savings, CL:Pickup&Delivery Only, NSK:<-ibid, WDD:Weekly Digital Deals}
+        # Promotions.modalities <List> -> {DELIVERY, PICKUP, IN_STORE, SHIP}
+        # Promotions.redemptionsAllowed -> {-1, 1, 2, 3, 4, 5} <- -1 often corresponds to multiple redemptions in a single trip, should change to reflect this
+
+        # type summarys:
+            # strings: krogerCouponNumber, brandName, type, ?cashbackCashoutType, shortDescription, requirementDescription, imageUrl, ?longDescription,
+                # value[float as value]    
+            # dates: startDate, expirationDate [as UtcTimestamps with timezones]
+            # integers: id, requirementQuantity, redemptionsAllowed
+            # lists: categories, modalities
+            # list of dicts: ?specialSavings
+            # booleans: ?isSharable, ?forCampaign,
+
+        # family dollar:
+            # all available :
+                # integer: clippedCount, popularity, 
+
+                #
+                # clippedCount => social amount coupon clipped <Int>
+                # popularity  => social amount coupon clipped <Int>
+                # brand => Company Promotions <String>
+                # category => Code value, name and key for promotional items and promtion <HashMap> 
+                # clipEndDate => ISO Datetime String w/o Time for promotion clip end <HashMap>
+                # clipStartDate => ISO Datetime String w/o Time for promotion clip start <HashMap>
+                # clipType => clip type {'consumer clip'} <String>
+                # description => "Save ${valueSort} on any ONE ..."<String> ~= shortDescription w/ more exclusions/terms baked in short form
+                # expirationDate => ISO Datetime String w/o Time for promotion redemption end <HashMap>
+                # imageUrl => href for Promotion Image <String>
+                # minPurchase => Amount Necessary for promotion to execute <Integer>
+                # offerSortValue => String Amount of valueSort of Promotion <String>
+                # offerType => Promotion Category <String> {bogo, cents off, order total, percent off}
+                # redemptionChannels => Promotion Redemption Category <String>
+                # redemptionGating => Brand Gating Switch {NO_GATING} <String>
+                # shortDescription =>  "Save ${valueSort} on any ONE ..."<String>
+                # terms => Manufacture Legalese <String>
+                # type => Coupon Type <String> {mfg, store}
+                # value => cents amount of offer or percentage off for offer <Integer>
+                # valueSort => Best Value Proxy for Coupon (ie. better than value) <Integer>
+                # valueText => "Save ${valueSort/100}" <String>
+                # mdid => uuid for promotion <Integer>
+                # group => <String> {'available'}
+                # groups => <List> {'available'}
+                # status => <String> {'available'}
+                # enhancedImageUrl => Additional IMG Data for Promotion, Higher Resolution <String>
+                # redemptionsPerTransaction => Amount of Times Coupon Can Be Used in A Transaction <Integer>
+                # clipped => User Has Clipped Coupon to Account/Wallet <Boolean>
+                # clipStartDateTime => ISO Datetime String w/ Time for promotion clip start <HashMap>
+                # clipEndDateTime => ISO Datetime String w/ Time for promotion clip end <HashMap>
+                # isActive => Coupon Can Still Be Used As of Time of Acquisition <Boolean>
+                # expirationDateTime => ISO Datetime String w/ Time for promotion redemption end <HashMap>
+                # redemptionStartDateTime  => ISO Datetime String w/ Time for promotion redemption start <HashMap>
+                # ?tags => Family Dollar's Product Categories / slugs <List>
+                # ?badge => Visual Code for Web Widgets <String> {'', 'new', 'expiring'}
+                # ?clippedDates => User Clip Dates for Specific Promotion <List>
+                # ?redeemedDates => User Redemption Dates for Promtoion <List>
+                # ?contextTypes =>  all empty <List>
+                # ?clipRedemptionChannel => all empty <String>
+
+        # dollar general:
+            # all available;
+                # DiscountIndicator={0} <Int>,
+                # OfferID => UNIQUE KEY TO CONNECT TO ITEMS api request <HEX STRING>
+                # OfferCode => unique string id to link offer to offer's product page <String>
+                # Image1 => unique string
+                # Image2 => unique string
+                # OfferType => {'BuyXGetYFree', 'AmountOff', 'PercentOff'} <String>
+                # RecemptionFrequency => {'OnceTimeOffer'} <String>
+                # OfferActivationDate => Date When Coupon Can Be Applied <Date String w/ TZ>
+                # OfferExpirationDate => Date When Coupon Ends <Date String w/ TZ> 
+                # OfferDescription => 'Save {amt} on {product}' <String>
+                # Brandname => Brand of Products Which Coupon Applies, <String>
+                # Companyname => Company That Owns Brand <String>
+                # OfferSummary => Short Representation of Deal, similar to Kroger's Title, "SAVE $1.00", "$1.50 OFF", "Buy 4, Get 1 Free" <String>
+                # IsAutoActivated => {0} <Int>
+                # TargetType => "recommended" <String>
+                # ActivationDate => User DT when clippes <Date w/TZ>
+                # RedemptionLimitQuantity => {1} <Integer> 
+                # MinBasketValue => {0} <Integer>
+                # MinTripCount => {0} <Integer>
+                # TimesShopQuantity => {0} <Integer>
+                # MinQuantity => {1, 2, 3, 4, 5} <Integer>
+                # RewaredOfferValue => Specific Amount Saved with Coupon <Float/Int>
+                # RewaredCategoryName => String Product Category {'Baby & Toddler', 'Beverages', 'Personal Care & Beauty', 'Baby Care','Household & Paper Products', 'Foods', 'Pet Care', 'Household', 'Dollar General', 'Personal Care', 'Flowers & Gifts', 'Health Care'}
+                # RewardQuantity => Items rewarded by Coupon Redemption <Integer> {0, 1}
+                # IsClipped => Customer specific coupon action <Int> {0, 1}
+                # IsManufactureCoupon => Coupon Originator <Int> {0, 1}
+                # ?OfferDisclaimer => Legalese for Coupon <Stromg> 
+                # ?OfferFinePrint => all empty <String>
+                # ?OfferGS1 => Not all have gs1, OfferCodes Have X in them  <String>
+                # ?UPCs => all empty <List>
+                # ?OfferFeaturedText => all empty <String>
+                # ?Visible => all empty <String>
+                # ?AssociationCode => all empty
+                # ?MinQuantityDescription => all empty
     with open(file, 'r', encoding='utf-8') as fd:
         data = sorted(json.loads(fd.read()), key=lambda x: x.get('url'))
         products = filter(lambda p: 'eligibleProductsResult' in p.keys(), data)
@@ -798,13 +863,10 @@ def deconstructDollars(folder='./requests/server/collections/digital/dollars/'):
                 pass
 
 
-#seeDollars()
-#f('../data/promotions/collection.json')
-#f('./requests/server/collections/digital/digital052722.json')
-#f('./requests/server/collections/digital/dollars/digital052822DG.json')
+seeDollars()
 #newOperation('./requests/server/collections/digital/dollars')
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
 # getMyData() 
 # getDigitalPromotions()
-simulateUser("dollarGeneral")
+#simulateUser("cashback")
 # newOperation()

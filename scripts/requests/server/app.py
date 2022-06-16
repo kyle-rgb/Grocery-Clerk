@@ -24,7 +24,7 @@ def docs():
         else:
             try:
                 os.mkdir(f"./collections/{contentType}")
-            except FileExistsError():
+            except:
                 print('skipping directory creation')
         with open(f'./collections/{contentType}/{contentType}{dateCode}.json', 'w', encoding='utf-8') as file:
             file.write(json.dumps(data))
