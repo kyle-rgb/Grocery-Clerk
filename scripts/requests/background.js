@@ -5,15 +5,18 @@ var masterArray = []
 async function createType(){
   let typeT = await browser.tabs.query({active: true}).then((tabs)=>{
     var t = ''
-    let reg = /mypurchases|cashback|coupon|specials|savings|collections/
-    var fileTypes = {'mypurchases': 'trips', 'cashback': 'cashback', "coupon": 'digital', "specials": "digital", "savings": "publix", "collections": "aldi"}
+    let t2 =''
+    let reg = /kroger|aldi|publix|dollargeneral|familydollar/
+    let reg2 = /mypurchases|cashback|savings/
+    var fileTypes = {'mypurchases': 'trips', 'cashback': 'cashback', "savings": "digital"}
     for (let tab of tabs){
       if (tab.url.match(reg)!=null){
         let match = tab.url.match(reg)[0]
-        t = fileTypes[match]
+        t = match
+        match=='kroger'? t2=fileTypes[tab.url.match(reg2)[0]]: t2='';
       }
     }
-    return t
+    return `${t}&folder=${t2}`
   })
   return typeT  
 
@@ -82,7 +85,7 @@ function pruneArray(array){
   if (array.length >35){
     createType().then((t) => {
       let type = t ;
-      response = fetch(`http://127.0.0.1:5000/docs?type=${type}`, {method: "POST", body: JSON.stringify(array)})
+      response = fetch(`http://127.0.0.1:5000/docs?${type}`, {method: "POST", body: JSON.stringify(array)})
       return null
   })
     return []
@@ -131,7 +134,7 @@ chrome.webRequest.onBeforeRequest.addListener(
 chrome.webRequest.onCompleted.removeListener(
   listener,
   {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*",  "*://ice-familydollar.dpn.inmar.com/v2/offers*", "*://dollartree-cors.groupbycloud.com/api*", "*://*.kroger.com/mypurchases/api/v1/receipt*", "*://*.dollargeneral.com/bin/omni/coupons/products*", "*://*.dollargeneral.com/bin/omni/coupons/recommended*",
-  "*://*.noq-servers.net/api/v1/application/stores/*/products?*"], types: ["xmlhttprequest", "object"]}, // 
+  "*://*.noq-servers.net/api/v1/application/stores/*/products?*", "*://services.publix.com/api*", "*://shop.aldi.us/graphql?operationName=Items*", "*://shop.aldi.us/*/view/item_attributes*"], types: ["xmlhttprequest", "object"]}, // 
   ["blocking"]
 )
 

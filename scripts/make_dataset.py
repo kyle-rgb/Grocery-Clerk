@@ -4,6 +4,7 @@ import time, re, random, datetime as dt, os, json, urllib
 import pyautogui as pag
 
 from pymongo import MongoClient
+import pyperclip as clip
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -511,7 +512,7 @@ def getDigitalPromotions():
 def simulateUser(link):
     neededLinks = {'cashback': {"no": 214, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
         'digital': {"no":256, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
-            'dollarGeneral': {'no': 125, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
+            'dollarGeneral': {'no': 126, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
                  'initalScroll': -1650}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
@@ -554,13 +555,14 @@ def simulateUser(link):
                 # expand items
                 pag.keyDown('ctrlleft')
                 pag.click()
+                time.sleep(3)
                 # switch to tab
-                pag.keyDown('shiftleft')
-                pag.keyDown('tab')
+                # pag.keyDown('shiftleft')
+                # pag.keyDown('tab')
 
                 pag.keyUp('ctrlleft')
-                pag.keyUp('shiftleft')
-                pag.keyUp('tab')
+                # pag.keyUp('shiftleft')
+                # pag.keyUp('tab')
                 time.sleep(6)
                 pag.press('pagedown', 3, interval=0.5)
                 # escape out of portal
@@ -699,11 +701,15 @@ def seeDollars(file='./requests/server/collections/digital/dollars/digital060422
             # list of dicts: ?specialSavings
             # booleans: ?isSharable, ?forCampaign,
 
+            # integer: clippecCount, popularity, minPurchase, value, valueSort, mdid, group, status, redemptionsPerTransaction, 
+            # string: brand, clipType, description, imageUrl, offerSortValue, offerType, redemptionChannels, redemptionGating, shortDescription, terms, type,
+                # valueText, enhancedImageUrl, badge, 
+            # dict: category, clipEndDate, clipStartDate, expirationDate, clipStartDateTime, clipEndDateTime, expirationDateTime, redemptionStartDateTime  
+            # list: groups, tags, !!clippedDates, !!redeemedDates, !!contextTypes, !!clip Redemption Channels 
+            # bool: clipped, isActive, 
+
         # family dollar:
             # all available :
-                # integer: clippedCount, popularity, 
-
-                #
                 # clippedCount => social amount coupon clipped <Int>
                 # popularity  => social amount coupon clipped <Int>
                 # brand => Company Promotions <String>
@@ -768,11 +774,11 @@ def seeDollars(file='./requests/server/collections/digital/dollars/digital060422
                 # TimesShopQuantity => {0} <Integer>
                 # MinQuantity => {1, 2, 3, 4, 5} <Integer>
                 # RewaredOfferValue => Specific Amount Saved with Coupon <Float/Int>
-                # RewaredCategoryName => String Product Category {'Baby & Toddler', 'Beverages', 'Personal Care & Beauty', 'Baby Care','Household & Paper Products', 'Foods', 'Pet Care', 'Household', 'Dollar General', 'Personal Care', 'Flowers & Gifts', 'Health Care'}
+                # RewaredCategoryName => <String> Product Category {'Baby & Toddler', 'Beverages', 'Personal Care & Beauty', 'Baby Care','Household & Paper Products', 'Foods', 'Pet Care', 'Household', 'Dollar General', 'Personal Care', 'Flowers & Gifts', 'Health Care'}
                 # RewardQuantity => Items rewarded by Coupon Redemption <Integer> {0, 1}
                 # IsClipped => Customer specific coupon action <Int> {0, 1}
                 # IsManufactureCoupon => Coupon Originator <Int> {0, 1}
-                # ?OfferDisclaimer => Legalese for Coupon <Stromg> 
+                # ?OfferDisclaimer => Legalese for Coupon <String> 
                 # ?OfferFinePrint => all empty <String>
                 # ?OfferGS1 => Not all have gs1, OfferCodes Have X in them  <String>
                 # ?UPCs => all empty <List>
@@ -780,6 +786,17 @@ def seeDollars(file='./requests/server/collections/digital/dollars/digital060422
                 # ?Visible => all empty <String>
                 # ?AssociationCode => all empty
                 # ?MinQuantityDescription => all empty
+
+            # integer: DiscountIndicator, IsAutoActivated, RedemptionLimitQuantity, MinBasketValue, MinTripCount, TimesShopQuantity, MinQuantity, RewardQuantity
+                # IsClipped, IsManufactureCoupon,   
+            # float: RewaredOFfferValue, 
+            # string: OfferID, OfferCode, Image1, Image2, OfferType, RecemptionFrequency, OfferActivationDate, OfferExpirationDate, OfferDescription, Brandname,
+                # Companyname, OfferSummary, TargetType, !!ActivationDate, RewardedCategoryName, ?OfferDisclaimer, ?OfferGS1, !!OfferFinePrint, !!OfferFeaturedText, !!Visible, !!AssociationCode,
+                # !!MinQuantityDescription
+            # list: !!UPCs
+            # dict:
+
+
     with open(file, 'r', encoding='utf-8') as fd:
         data = sorted(json.loads(fd.read()), key=lambda x: x.get('url'))
         products = filter(lambda p: 'eligibleProductsResult' in p.keys(), data)
@@ -852,21 +869,48 @@ def seeDollars(file='./requests/server/collections/digital/dollars/digital060422
 
     return None
 
-def deconstructDollars(folder='./requests/server/collections/digital/dollars/'):
-    for head, _, files in os.walk(folder):
-        for file in files:
-            if file.endswith('DG'):
-                with open(file, mode='r', encoding='utf-8') as f:
-                    data = json.loads(f.read())
-                pass
-            elif file.endswith('FD'):
-                pass
+def switchUrl(x=327, y=59, url="https://www.dollargeneral.com/dgpickup/deals/coupons?"):
+    pag.moveTo(x, y, duration=2.2)
+    pag.click(clicks=2, interval=.5)
+    clip.copy(url)
+    time.sleep(1)
+    pag.keyDown('ctrlleft')
+    pag.keyDown('v')
+    pag.keyUp('ctrlleft')
+    pag.keyUp('v')
+    return None    
 
+def updateGasoline(files=['061622.json', 'trips061522.json']):
+    for file in files:
+        with open(f'./requests/server/collections/kroger/trips/{file}', mode='r', encoding='utf-8') as f:
+            j = json.loads(f.read())
+            tripsData = []
+            indices = ''
+            for gi, t in enumerate(j):
+                if 'mypurchases' in t.get('url'):
+                    for trip_index, trip in enumerate(t.get('data')):
+                        for item_index, item in enumerate(trip.get('items')):
+                            if item.get('quantity')==0:
+                                indices = gi, trip_index, item_index
 
-seeDollars()
+            # j[indices[0]]['data'][indices[1]]['items'][indices[2]].get('pricePaid')
+            # j[indices[0]]['data'][indices[1]]['items'][indices[2]].get('totalSavings')
+            # j[indices[0]]['data'][indices[1]]['items'][indices[2]].get('priceModifiers')
+            j[indices[0]]['data'][indices[1]]['items'][indices[2]-1]['pricePaid'] = round(j[indices[0]]['data'][indices[1]]['items'][indices[2]-1]['pricePaid']+j[indices[0]]['data'][indices[1]]['items'][indices[2]]['pricePaid'], 2)
+            j[indices[0]]['data'][indices[1]]['items'][indices[2]-1]['totalSavings'] = round(j[indices[0]]['data'][indices[1]]['items'][indices[2]-1]['totalSavings']+j[indices[0]]['data'][indices[1]]['items'][indices[2]]['totalSavings'], 2)
+            j[indices[0]]['data'][indices[1]]['items'][indices[2]-1]['priceModifiers'].extend(j[indices[0]]['data'][indices[1]]['items'][indices[2]]['priceModifiers'])
+            j[indices[0]]['data'][indices[1]]['items'].pop(indices[2])
+        with open(f'./requests/server/collections/kroger/trips/{file}', mode='w', encoding='utf-8') as f:
+            f.write(json.dumps(j))
+
+    return None
+
+updateGasoline()
+#seeDollars()
 #newOperation('./requests/server/collections/digital/dollars')
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
 # getMyData() 
 # getDigitalPromotions()
-#simulateUser("cashback")
+#simulateUser("dollarGeneral")
 # newOperation()
+#switchUrl()

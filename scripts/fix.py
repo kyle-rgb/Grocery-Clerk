@@ -450,7 +450,7 @@ def deconstructExtensions(filename, **madeCollections):
     tripRegex = re.compile(r'https://www\.kroger\.com/mypurchases/api/v1/receipt.+')
     storeRegex = re.compile(r'https://www\.(.+)\.com.+')
     productErrorsRegex = re.compile(r'\.gtin13s=(\d+)')
-    storeDict = {'kroger': 'Kroger', 'ice-familydollar': 'Family Dollar', 'dollargeneral': 'Dollar General'}
+    storeDict = filename.split('/')[-2]
     
     if os.path.exists(filename):
         with open(filename, 'r', encoding='utf-8') as file:
@@ -834,7 +834,7 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list):
 
 
 # provideSummary('./requests/server/collections/trips/trips052822.json')
-createDecompositions('./requests/server/collections', wantedPaths=['cashback', 'digital', 'trips'])
+createDecompositions('./requests/server/collections/kroger', wantedPaths=['cashback', 'digital', 'trips'])
 #deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
 # summarizeCollection('./requests/server/collections/recipes/recipes.json')
 # forceClose("./requests/server/collections/digital/digital42822.txt", streams=False)
