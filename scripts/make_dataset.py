@@ -631,14 +631,7 @@ def newOperation(dataFolder):
 
                         # for t in d.get('Coupons'):
                         #     coups.append(t)
-                    elif 'Items' in d.keys():
-                        # TODO Decompose::-> To Equivalent Kroger Document Level Attributes
-                            # items: Description, UPC, Image, IsGenericBrand, IsSellable, IsBopisEligible, Ratings {AverageRating, RatingReviewCount, }, Category(| separated string)
-                                # shipToHomeQuantity, isShipToHome
-                            # inventories: AvailableQty, AvailableStockStore, InventoryStatus,
-                            # prices: Price, OriginalPrice,
-                            # quasiPriceModifiers: DealsAvailable, DealStatus, SponsoredProductId, SponsoredAgreementId, SponsoredDisplayRow
-                            # <bool>: CartQuantity,                    
+                    elif 'Items' in d.keys():       
                         for t in d.get('Items'):
                             items.append(t)
                         
@@ -681,7 +674,7 @@ def loadMoreAppears(png='./requests/server/moreContent.png'):
 
     return None
 
-def seeDollars(file='./requests/server/collections/digital/dollars/digital060422DG.json'):
+def deconstructDollars(file='./requests/server/collections/dollargeneral/digital060422DG.json'):
     # Promotions.categories <List> -> {Condiments & Sauces, Beverages, Pasta Sauces Grain, International, Cleaning Products, Baby, Apparel, General, Beauty, Garden & Patio, Meat & Seafood,\
             # Home Decor, Deli, Health, Breakfast, Bakery, Sporting Goods, Pet Care, Hardware, Entertainment, Gift Cards, Dairy, Personal Care, Canned & Packaged, Candy, Tobacco,
             # Frozen, Produce, Snacks, Adult Beverages, Health & Beauty, Baking Goods, Kitchen, Natural & Organic, Electronics, Party}
@@ -692,7 +685,86 @@ def seeDollars(file='./requests/server/collections/digital/dollars/digital060422
         # Promotions.modalities <List> -> {DELIVERY, PICKUP, IN_STORE, SHIP}
         # Promotions.redemptionsAllowed -> {-1, 1, 2, 3, 4, 5} <- -1 often corresponds to multiple redemptions in a single trip, should change to reflect this
 
-        # type summarys:
+        # family dollar:
+            # all available :
+                # XclippedCount => social amount coupon clipped <Int>
+                # Xpopularity  => social amount coupon clipped <Int>
+                # Xbrand => Company Promotions <String>
+                # Xcategory => Code value, name and key for promotional items and promtion <HashMap> 
+                # XclipEndDate => ISO Datetime String w/o Time for promotion clip end <HashMap>
+                # XclipStartDate => ISO Datetime String w/o Time for promotion clip start <HashMap>
+                # XclipType => clip type  <String> {'consumer clip'}
+                # Xdescription => "Save ${valueSort} on any ONE ..."<String> ~= shortDescription w/ more exclusions/terms baked in short form
+                # XexpirationDate => ISO Datetime String w/o Time for promotion redemption end <HashMap>
+                # XimageUrl => href for Promotion Image <String>
+                # XminPurchase => Amount Necessary for promotion to execute <Integer>
+                # XofferSortValue => String Amount of valueSort of Promotion <String>
+                # XofferType => Promotion Category <String> {bogo, cents off, order total, percent off}
+                # XredemptionChannels => Promotion Redemption Category <List> {coupon}
+                # XredemptionGating => Brand Gating Switch  <String> {NO_GATING}
+                # XshortDescription =>  "Save ${valueSort} on any ONE ..."<String>
+                # Xterms => Manufacture Legalese <String>
+                # Xtype => Coupon Type <String> {mfg, store}
+                # Xvalue => cents amount of offer or percentage off for offer <Integer>
+                # XvalueSort => Best Value Best Proxy for Coupon (ie. better than value) <Integer>
+                # XvalueText => "Save ${valueSort/100}" <String>
+                # Xmdid => uuid for promotion <Integer>
+                # Xgroup => <String> {'available'}
+                # Xgroups => <List> {'available'}
+                # Xstatus => <String> {'available'}
+                # XenhancedImageUrl => Additional IMG Data for Promotion, Higher Resolution <String>
+                # XredemptionsPerTransaction => Amount of Times Coupon Can Be Used in A Transaction <Integer>
+                # Xclipped => User Has Clipped Coupon to Account/Wallet <Boolean>
+                # XclipStartDateTime => ISO Datetime String w/ Time for promotion clip start <HashMap>
+                # XclipEndDateTime => ISO Datetime String w/ Time for promotion clip end <HashMap>
+                # XisActive => Coupon Can Still Be Used As of Time of Acquisition <Boolean>
+                # XexpirationDateTime => ISO Datetime String w/ Time for promotion redemption end <HashMap>
+                # XredemptionStartDateTime  => ISO Datetime String w/ Time for promotion redemption start <HashMap>
+                # X?tags => Family Dollar's Product Categories / slugs <List>
+                # X?badge => Visual Code for Web Widgets <String> {'', 'new', 'expiring'}
+                # X?clippedDates => User Clip Dates for Specific Promotion <List>
+                # X?redeemedDates => User Redemption Dates for Promtoion <List>
+                # X?contextTypes =>  all empty <List>
+                # X?clipRedemptionChannel => all empty <String>
+
+        # dollar general:
+            # all available;
+                # XDiscountIndicator={0} <Int>,
+                # XOfferID => UNIQUE KEY TO CONNECT TO ITEMS api request <HEX STRING>
+                # XOfferCode => unique string id to link offer to offer's product page <String>
+                # XImage1 => unique string
+                # XImage2 => unique string
+                # XOfferType => {'BuyXGetYFree', 'AmountOff', 'PercentOff'} <String>
+                # XRecemptionFrequency => {'OnceTimeOffer'} <String>
+                # XOfferActivationDate => Date When Coupon Can Be Applied <Date String w/ TZ>
+                # XOfferExpirationDate => Date When Coupon Ends <Date String w/ TZ> 
+                # XOfferDescription => 'Save {amt} on {product}' <String>
+                # XBrandname => Brand of Products Which Coupon Applies, <String>
+                # XCompanyname => Company That Owns Brand <String>
+                # XOfferSummary => Short Representation of Deal, similar to Kroger's Title, "SAVE $1.00", "$1.50 OFF", "Buy 4, Get 1 Free" <String>
+                # XIsAutoActivated => {0} <Int>
+                # XTargetType => "recommended" <String>
+                # XActivationDate => User DT when clippes <Date w/TZ>
+                # XRedemptionLimitQuantity => {1} <Integer> 
+                # XMinBasketValue => {0} <Integer>
+                # XMinTripCount => {0} <Integer>
+                # XTimesShopQuantity => {0} <Integer>
+                # XMinQuantity => {1, 2, 3, 4, 5} <Integer>
+                # XRewaredOfferValue => Specific Amount Saved with Coupon <Float/Int>
+                # XRewaredCategoryName => <String> Product Category {'Baby & Toddler', 'Beverages', 'Personal Care & Beauty', 'Baby Care','Household & Paper Products', 'Foods', 'Pet Care', 'Household', 'Dollar General', 'Personal Care', 'Flowers & Gifts', 'Health Care'}
+                # XRewardQuantity => Items rewarded by Coupon Redemption <Integer> {0, 1}
+                # XIsClipped => Customer specific coupon action <Int> {0, 1}
+                # XIsManufactureCoupon => Coupon Originator <Int> {0, 1}
+                # X?OfferDisclaimer => Legalese for Coupon <String> 
+                # X?OfferFinePrint => all empty <String>
+                # X?OfferGS1 => Not all have gs1, OfferCodes Have X in them  <String>
+                # X?UPCs => all empty <List>
+                # X?OfferFeaturedText => all empty <String>
+                # X?Visible => all empty <String>
+                # X?AssociationCode => all empty
+                # X?MinQuantityDescription => all empty
+
+    # type summarys:
             # strings: krogerCouponNumber, brandName, type, ?cashbackCashoutType, shortDescription, requirementDescription, imageUrl, ?longDescription,
                 # value[float as value]    
             # dates: startDate, expirationDate [as UtcTimestamps with timezones]
@@ -706,86 +778,7 @@ def seeDollars(file='./requests/server/collections/digital/dollars/digital060422
                 # valueText, enhancedImageUrl, badge, 
             # dict: category, clipEndDate, clipStartDate, expirationDate, clipStartDateTime, clipEndDateTime, expirationDateTime, redemptionStartDateTime  
             # list: groups, tags, !!clippedDates, !!redeemedDates, !!contextTypes, !!clip Redemption Channels 
-            # bool: clipped, isActive, 
-
-        # family dollar:
-            # all available :
-                # clippedCount => social amount coupon clipped <Int>
-                # popularity  => social amount coupon clipped <Int>
-                # brand => Company Promotions <String>
-                # category => Code value, name and key for promotional items and promtion <HashMap> 
-                # clipEndDate => ISO Datetime String w/o Time for promotion clip end <HashMap>
-                # clipStartDate => ISO Datetime String w/o Time for promotion clip start <HashMap>
-                # clipType => clip type {'consumer clip'} <String>
-                # description => "Save ${valueSort} on any ONE ..."<String> ~= shortDescription w/ more exclusions/terms baked in short form
-                # expirationDate => ISO Datetime String w/o Time for promotion redemption end <HashMap>
-                # imageUrl => href for Promotion Image <String>
-                # minPurchase => Amount Necessary for promotion to execute <Integer>
-                # offerSortValue => String Amount of valueSort of Promotion <String>
-                # offerType => Promotion Category <String> {bogo, cents off, order total, percent off}
-                # redemptionChannels => Promotion Redemption Category <String>
-                # redemptionGating => Brand Gating Switch {NO_GATING} <String>
-                # shortDescription =>  "Save ${valueSort} on any ONE ..."<String>
-                # terms => Manufacture Legalese <String>
-                # type => Coupon Type <String> {mfg, store}
-                # value => cents amount of offer or percentage off for offer <Integer>
-                # valueSort => Best Value Proxy for Coupon (ie. better than value) <Integer>
-                # valueText => "Save ${valueSort/100}" <String>
-                # mdid => uuid for promotion <Integer>
-                # group => <String> {'available'}
-                # groups => <List> {'available'}
-                # status => <String> {'available'}
-                # enhancedImageUrl => Additional IMG Data for Promotion, Higher Resolution <String>
-                # redemptionsPerTransaction => Amount of Times Coupon Can Be Used in A Transaction <Integer>
-                # clipped => User Has Clipped Coupon to Account/Wallet <Boolean>
-                # clipStartDateTime => ISO Datetime String w/ Time for promotion clip start <HashMap>
-                # clipEndDateTime => ISO Datetime String w/ Time for promotion clip end <HashMap>
-                # isActive => Coupon Can Still Be Used As of Time of Acquisition <Boolean>
-                # expirationDateTime => ISO Datetime String w/ Time for promotion redemption end <HashMap>
-                # redemptionStartDateTime  => ISO Datetime String w/ Time for promotion redemption start <HashMap>
-                # ?tags => Family Dollar's Product Categories / slugs <List>
-                # ?badge => Visual Code for Web Widgets <String> {'', 'new', 'expiring'}
-                # ?clippedDates => User Clip Dates for Specific Promotion <List>
-                # ?redeemedDates => User Redemption Dates for Promtoion <List>
-                # ?contextTypes =>  all empty <List>
-                # ?clipRedemptionChannel => all empty <String>
-
-        # dollar general:
-            # all available;
-                # DiscountIndicator={0} <Int>,
-                # OfferID => UNIQUE KEY TO CONNECT TO ITEMS api request <HEX STRING>
-                # OfferCode => unique string id to link offer to offer's product page <String>
-                # Image1 => unique string
-                # Image2 => unique string
-                # OfferType => {'BuyXGetYFree', 'AmountOff', 'PercentOff'} <String>
-                # RecemptionFrequency => {'OnceTimeOffer'} <String>
-                # OfferActivationDate => Date When Coupon Can Be Applied <Date String w/ TZ>
-                # OfferExpirationDate => Date When Coupon Ends <Date String w/ TZ> 
-                # OfferDescription => 'Save {amt} on {product}' <String>
-                # Brandname => Brand of Products Which Coupon Applies, <String>
-                # Companyname => Company That Owns Brand <String>
-                # OfferSummary => Short Representation of Deal, similar to Kroger's Title, "SAVE $1.00", "$1.50 OFF", "Buy 4, Get 1 Free" <String>
-                # IsAutoActivated => {0} <Int>
-                # TargetType => "recommended" <String>
-                # ActivationDate => User DT when clippes <Date w/TZ>
-                # RedemptionLimitQuantity => {1} <Integer> 
-                # MinBasketValue => {0} <Integer>
-                # MinTripCount => {0} <Integer>
-                # TimesShopQuantity => {0} <Integer>
-                # MinQuantity => {1, 2, 3, 4, 5} <Integer>
-                # RewaredOfferValue => Specific Amount Saved with Coupon <Float/Int>
-                # RewaredCategoryName => <String> Product Category {'Baby & Toddler', 'Beverages', 'Personal Care & Beauty', 'Baby Care','Household & Paper Products', 'Foods', 'Pet Care', 'Household', 'Dollar General', 'Personal Care', 'Flowers & Gifts', 'Health Care'}
-                # RewardQuantity => Items rewarded by Coupon Redemption <Integer> {0, 1}
-                # IsClipped => Customer specific coupon action <Int> {0, 1}
-                # IsManufactureCoupon => Coupon Originator <Int> {0, 1}
-                # ?OfferDisclaimer => Legalese for Coupon <String> 
-                # ?OfferFinePrint => all empty <String>
-                # ?OfferGS1 => Not all have gs1, OfferCodes Have X in them  <String>
-                # ?UPCs => all empty <List>
-                # ?OfferFeaturedText => all empty <String>
-                # ?Visible => all empty <String>
-                # ?AssociationCode => all empty
-                # ?MinQuantityDescription => all empty
+            # bool: clipped, isActive
 
             # integer: DiscountIndicator, IsAutoActivated, RedemptionLimitQuantity, MinBasketValue, MinTripCount, TimesShopQuantity, MinQuantity, RewardQuantity
                 # IsClipped, IsManufactureCoupon,   
@@ -793,15 +786,22 @@ def seeDollars(file='./requests/server/collections/digital/dollars/digital060422
             # string: OfferID, OfferCode, Image1, Image2, OfferType, RecemptionFrequency, OfferActivationDate, OfferExpirationDate, OfferDescription, Brandname,
                 # Companyname, OfferSummary, TargetType, !!ActivationDate, RewardedCategoryName, ?OfferDisclaimer, ?OfferGS1, !!OfferFinePrint, !!OfferFeaturedText, !!Visible, !!AssociationCode,
                 # !!MinQuantityDescription
-            # list: !!UPCs
-            # dict:
+            # list: !!UPC
+
+    # TODO Decompose::-> To Equivalent Kroger Document Level Attributes
+        # items: Description, UPC, Image, IsGenericBrand, IsSellable, IsBopisEligible, Ratings {AverageRating, RatingReviewCount, }, Category(| separated string)
+            # shipToHomeQuantity, isShipToHome
+        # inventories: AvailableQty, AvailableStockStore, InventoryStatus,
+        # prices: Price, OriginalPrice,
+        # quasiPriceModifiers: DealsAvailable, DealStatus, SponsoredProductId, SponsoredAgreementId, SponsoredDisplayRow
+        # <bool>: CartQuantity,                         
 
 
     with open(file, 'r', encoding='utf-8') as fd:
         data = sorted(json.loads(fd.read()), key=lambda x: x.get('url'))
-        products = filter(lambda p: 'eligibleProductsResult' in p.keys(), data)
+        products = list(filter(lambda p: 'eligibleProductsResult' in p.keys(), data))
         coupons = filter(lambda p: 'Coupons' in p.keys(), data)
-        storeID = re.findall(r'[A-Z]+\.json', file)[0]
+        storeID = file.split('/')[-2]
     newProducts=[]
     newCoupons=[]
     newPrices = []
@@ -816,18 +816,17 @@ def seeDollars(file='./requests/server/collections/digital/dollars/digital060422
         params = urllib.parse.parse_qsl(url)
         if bool(storeCode)==False:
             storeCode = list(filter(lambda x: x[0]=='store', params))[0][1]
-        couponId = list(filter(lambda x: x[0]=='couponId', params))[0][1]
+        couponId = list(filter(lambda x: x[0].endswith('couponId'), params))[0][1]
         itemList = item.get('eligibleProductsResult').get('Items')
         for i in itemList:
             modalities = []
             for key, val in booleans.get('prices').items():
                 if i[key]:
                     modalities.append(val)
-            if i.get('UPC') not in productsForCoupons.keys():
+            if couponId not in productsForCoupons.keys():
                 productsForCoupons[couponId] = {i.get('UPC')}
             else:
                 productsForCoupons[couponId].add(i.get('UPC'))
-
 
             # deconconstuct to prices
             newPrices.append({'value': i.get('OriginalPrice'), 'type': 'Regular', 'isPurchase': False, 'locationId': storeCode, 'utcTimestamp': utcTimestamp,\
@@ -840,32 +839,115 @@ def seeDollars(file='./requests/server/collections/digital/dollars/digital060422
             newInventory.append({'stockLevel': itemStatus, 'availableToSell': i.get('AvailableStockStore'), 'locationId': storeCode, 'utcTimestamp': utcTimestamp, 'upc': i.get('upc')})     
             # deconstuct into Items
             itemDoc = {'description': i.get('Description'), 'upc': i.get('UPC'), 'images': [{'url': i.get('image'), 'perspective': 'front', 'main': True, 'size': 'xlarge'}],\
-                'soldInStore': i.get('isSellable'), 'ratings': {'avg': i.get('AverageRating'), 'ct': i.get('RatingReviewCount'),\
-                    "modalities": modalities}}
+                'soldInStore': i.get('IsSellable'),"modalities": modalities}
 
+            if i.get('RatingReviewCount')!=0:
+                itemDoc['ratings'] = {'avg': i.get('AverageRating'), 'ct': i.get('RatingReviewCount')}
+ 
             if 'Category' in i:
                 itemDoc['categories'] = i.get('Category').split('|')
             
             for ky in booleans.get('items'):
-                if i[ky]:
+                if bool(i[ky]):
                     itemDoc[ky] = i[ky]
-                if ky=='isShipToHome' and i[ky]:
+                if ky=='isShipToHome' and bool(i[ky]):
+                    print(i)
                     itemDoc['maximumOrderQuantity'] = i.get('shipToHomeQuantity')
+            
+            newProducts.append(itemDoc)
+
 
     for coupon in coupons:
-        # Dollar General:
-            # categories:  
-            # web: Image1, Image2, OfferDescription, OfferDisclaimer, OfferSummary='Save $3.00',
-            # dates: OfferActivationDate, OfferExpirationDate
-        # Family Dollar:
-            # uuid: mid //
-            # categories: brand, category{}, // clipType, offerType, redemptionGating, redemptionChannels, group, groups, status, tags, badge, isActive
-            # web: imageUrl, enhancedImageUrl, description{text}, shortDescription{text}, terms, type{text='mfg'}, valueText='Save $3.00',
-            # dates: clipEndDate(Time),clipStartDate(Time), redemptionStartDateTime, expirationDateTime,
-            # values: minPurchase, value, valueSort, offerSortValue, redemptionsPerTransaction // clippedCount, popularity, 
-        pass
+        if 'acquistion_timestamp' in coupon.keys():
+            utcTimestamp = coupon.pop('acquistion_timestamp')
+        else:
+            utcTimestamp = os.path.getctime(file)
 
+        if storeID == 'dollargeneral':
+            for coup in coupon.get('Coupons'):
+                newC = {}
+                # ids => OfferID=id, OfferCode=offerCode, bool(get OfferGS1)
+                newC['id'] = coup.get('OfferID')
+                newC['offerCode'] = coup.get('OfferCode')
+                if bool(coup.get('OfferGS1')):
+                    newC['offerGS1'] = coup.get('OfferGS1')
+                # Brandname => brandName, CompanyName => companyName, offerType=> type
+                # OfferSummary + OfferDescription => shortDescription
+                # OfferDisclaimer => terms
+                # RewaredCategoryName => categories[]
+                newC['brandName'] = coup.get('BrandName') 
+                newC['companyName'] = coup.get('CompanyName') 
+                newC['offerType'] = coup.get('OfferType')
+                if bool(coup.get('OfferDisclaimer')):
+                    newC['terms'] = coup.get('OffeDisclaimer') 
+                newC['isManufacturerCoupon'] = coup.get('IsManufacturerCoupon') 
+                newC['categories'] = [coup.get('RewaredCategoryName')] 
+                # OfferActivationDate => startDate  %Y-%m-%dT%H:%M:%S
+                # OfferExpirationDate => endDate %Y-%m-%dT%H:%M:%S
+                newC['startDate'] = dt.datetime.strptime(coup.get('OfferActivationDate'), '%Y-%m-%dT%H:%M:%S').timestamp()
+                newC['endDate'] = dt.datetime.strptime(coup.get('OfferExpirationDate'), '%Y-%m-%dT%H:%M:%S').timestamp()
+                # RewaredOfferValue => value
+                newC['value'] = coup.get('RewaredOfferValue')
+                # MinQuantity => requirementQuantity 
+                newC['requirementQuantity'] = coup.get('MinQuantity')
+                # RedemptionLimitQuantity => redemptionsAllowed
+                newC['redemptionsAllowed'] = coup.get('RedemptionLimitQuantity')
+                # + MinTripCount, MinBasketValue, TimesShopQuantity, RecemptionFrequency
+                newC['redemptionFreq'] = coup.get('RecemptionFrequency')
+                # Image1 => imageUrl, +Image2
+                newC['imageUrl'] = coup.get('Image1') 
+                newC['imageUrl2'] = coup.get('Image2') 
+                booleans = ['MinTripCount', 'MinBasketValue', 'TimesShopQuantity']
+                for b in booleans:
+                    if bool(coup.get(b)):
+                        newC[b] = coup.get(b)
         
+        # !!! Family Dollar
+        elif storeID == 'familydollar':
+        # mid => id
+            newC['id'] = coup.get('mid')
+        # brand => brandName
+            newC['brandName'] = coup.get('brand')
+        # offerType => type
+            newC['type'] = coup.get('offerType')
+        # description => shortDescription
+            newC['shortDescription'] = coup.get('description')
+        # terms => terms
+            newC['terms'] = coup.get('terms')
+        # category.get('name') => categories
+            newC['categories'] = coup.get('category').get('name')
+        # [x.replace('fd-', '').strip().title() for x in tags] +=> categories
+            newC['categories'].extend([x.replace('fd-', '').strip().title() for x in coup.get("tags")])
+        # redemptionStartDateTime => startDate %Y-%m-%dT%H:%M:%S
+        # redemptionEndDateTime => expirationDate %Y-%m-%dT%H:%M:%S
+            newC['startDate'] = dt.datetime.strptime(coup.get('redemptionStartDateTime'), '%Y-%m-%dT%H:%M:%S').timestamp()
+            newC['endDate'] = dt.datetime.strptime(coup.get('redemptionEndDateTime'), '%Y-%m-%dT%H:%M:%S').timestamp()
+        # clipStartDateTime %Y-%m-%dT%H:%M:%S
+        # clipEndDateTime
+            newC['clipStartDate'] = dt.datetime.strptime(coup.get('clipStartDateTime'), '%Y-%m-%dT%H:%M:%S').timestamp()
+            newC['clipEndDate'] = dt.datetime.strptime(coup.get('clipEndDateTime'), '%Y-%m-%dT%H:%M:%S').timestamp()
+        # offerSortValue => value
+            newC['value'] = coup.get('offerSortValue')
+        # minPurchase => requirementQuantity
+            newC['requirementQuantity'] = coup.get('minPurchase')
+        # redemptionsPerTransaction => redemptionsAllowed
+            newC['redemptionsAllowed'] = coup.get('redemptionsPerTransaction')
+        # imageUrl => imageUrl, + enchancedImageUrl
+            newC['imageUrl'] = coup.get('imageUrl')
+            newC['enhancedImageUrl'] = coup.get('enhancedImageUrl')
+            if coup.get('type')=='mfg':
+                newC['isManufacturerCoupon'] = True
+            else:
+                newC['isManufacturerCoupon'] = False
+        
+        # type => isManufacturerCoupon if type=mfg else False
+        # +socials :: popularity, clippedCount
+            newC['popularity'] = coup.get('popularity')
+            newC['clippedCount'] = coup.get('clippedCount')
+
+        newCoupons.append(newC)
+        
+
 
     return None
 
@@ -880,12 +962,12 @@ def switchUrl(x=327, y=59, url="https://www.dollargeneral.com/dgpickup/deals/cou
     pag.keyUp('v')
     return None    
 
-def updateGasoline(files=['061622.json', 'trips061522.json']):
+def updateGasoline(files=['061722.json']):
     for file in files:
         with open(f'./requests/server/collections/kroger/trips/{file}', mode='r', encoding='utf-8') as f:
             j = json.loads(f.read())
             tripsData = []
-            indices = ''
+            indices = '' 
             for gi, t in enumerate(j):
                 if 'mypurchases' in t.get('url'):
                     for trip_index, trip in enumerate(t.get('data')):
@@ -893,9 +975,7 @@ def updateGasoline(files=['061622.json', 'trips061522.json']):
                             if item.get('quantity')==0:
                                 indices = gi, trip_index, item_index
 
-            # j[indices[0]]['data'][indices[1]]['items'][indices[2]].get('pricePaid')
-            # j[indices[0]]['data'][indices[1]]['items'][indices[2]].get('totalSavings')
-            # j[indices[0]]['data'][indices[1]]['items'][indices[2]].get('priceModifiers')
+           
             j[indices[0]]['data'][indices[1]]['items'][indices[2]-1]['pricePaid'] = round(j[indices[0]]['data'][indices[1]]['items'][indices[2]-1]['pricePaid']+j[indices[0]]['data'][indices[1]]['items'][indices[2]]['pricePaid'], 2)
             j[indices[0]]['data'][indices[1]]['items'][indices[2]-1]['totalSavings'] = round(j[indices[0]]['data'][indices[1]]['items'][indices[2]-1]['totalSavings']+j[indices[0]]['data'][indices[1]]['items'][indices[2]]['totalSavings'], 2)
             j[indices[0]]['data'][indices[1]]['items'][indices[2]-1]['priceModifiers'].extend(j[indices[0]]['data'][indices[1]]['items'][indices[2]]['priceModifiers'])
@@ -905,8 +985,8 @@ def updateGasoline(files=['061622.json', 'trips061522.json']):
 
     return None
 
-updateGasoline()
-#seeDollars()
+#updateGasoline()
+#deconstructDollars()
 #newOperation('./requests/server/collections/digital/dollars')
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
 # getMyData() 

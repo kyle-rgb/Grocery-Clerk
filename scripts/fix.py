@@ -509,6 +509,8 @@ def deconstructExtensions(filename, **madeCollections):
                         elif coupKey in coupSchema['keep']:
                             if coupKey=='displayStartDate':
                                 promo['startDate'] = coupVal
+                            elif coupKey=='shortDescription':
+                                promo[coupKey] = coupVal.strip()
                             else:
                                 promo[coupKey] = coupVal
                     isProcessed = bool(list(filter(lambda x: x.get('krogerCouponNumber')==promo.get('krogerCouponNumber'), promotionsCollection)))
