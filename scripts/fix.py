@@ -1,6 +1,7 @@
 from functools import reduce
 import json, re, os, unicodedata, itertools, sys, time
 from pprint import pprint
+from make_dataset import deconstructDollars
 
 startTime = time.perf_counter()
 
@@ -766,7 +767,7 @@ def deconstructExtensions(filename, **madeCollections):
     return promotionsCollection, itemCollection, pricesCollection, inventoryCollection, tripCollection, priceModifierCollection, userCollection, sellerCollection
         
 
-def createDecompositions(dataRepoPath: str, wantedPaths: list):
+def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: dict):
     # add stores via api and previously scraped prices to new price collection schema
 
     with open('data/API/myStoresAPI.json', 'r', encoding='utf-8') as storeFile:
@@ -825,18 +826,16 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list):
             file.write(json.dumps(finalCollection))
             print(f"Wrote {size} to Disk. {len(finalCollection)} items in {listTranslater[str(i)]}")
 
-    
+    for repo in additionalPaths:
+        pathName = dataRepoPath.replace('kroger', repo)
+        for _, __, files in os.walk(pathName):
+            for ofile in files:
+                deconstructDollars(pathName+'/'+ofile)
     
     return None
 
-
-
-
-
-
-
 # provideSummary('./requests/server/collections/trips/trips052822.json')
-createDecompositions('./requests/server/collections/kroger', wantedPaths=['cashback', 'digital', 'trips'])
+#createDecompositions('./requests/server/collections/kroger', wantedPaths=['cashback', 'digital', 'trips'], additionalPaths=['familydollar', 'dollargeneral'])
 #deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
 # summarizeCollection('./requests/server/collections/recipes/recipes.json')
 # forceClose("./requests/server/collections/digital/digital42822.txt", streams=False)
@@ -846,6 +845,14 @@ createDecompositions('./requests/server/collections/kroger', wantedPaths=['cashb
 
 
 
+
+
+dataRepoPath = './requests/server/collections/kroger'
+additionalPaths=["dollargeneral"]
+for repo in additionalPaths:
+    pathName = dataRepoPath.replace('kroger', repo)
+    for _, __, files in os.walk(pathName):
+        for ofile in files:
+            deconstructDollars(pathName+'/'+ofile)
+
 print(f"Finsihed in {time.perf_counter()-startTime} seconds")
-
-

@@ -510,9 +510,9 @@ def getDigitalPromotions():
 
 
 def simulateUser(link):
-    neededLinks = {'cashback': {"no": 214, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
-        'digital': {"no":256, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
-            'dollarGeneral': {'no': 126, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
+    neededLinks = {'cashback': {"no": 179, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
+        'digital': {"no":253, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
+            'dollarGeneral': {'no': 128, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
                  'initalScroll': -1650}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
@@ -674,7 +674,7 @@ def loadMoreAppears(png='./requests/server/moreContent.png'):
 
     return None
 
-def deconstructDollars(file='./requests/server/collections/dollargeneral/digital060422DG.json'):
+def deconstructDollars(file='./requests/server/collections/familydollar/digital052122FD.json'):
     # Promotions.categories <List> -> {Condiments & Sauces, Beverages, Pasta Sauces Grain, International, Cleaning Products, Baby, Apparel, General, Beauty, Garden & Patio, Meat & Seafood,\
             # Home Decor, Deli, Health, Breakfast, Bakery, Sporting Goods, Pet Care, Hardware, Entertainment, Gift Cards, Dairy, Personal Care, Canned & Packaged, Candy, Tobacco,
             # Frozen, Produce, Snacks, Adult Beverages, Health & Beauty, Baking Goods, Kitchen, Natural & Organic, Electronics, Party}
@@ -795,13 +795,7 @@ def deconstructDollars(file='./requests/server/collections/dollargeneral/digital
         # prices: Price, OriginalPrice,
         # quasiPriceModifiers: DealsAvailable, DealStatus, SponsoredProductId, SponsoredAgreementId, SponsoredDisplayRow
         # <bool>: CartQuantity,                         
-
-
-    with open(file, 'r', encoding='utf-8') as fd:
-        data = sorted(json.loads(fd.read()), key=lambda x: x.get('url'))
-        products = list(filter(lambda p: 'eligibleProductsResult' in p.keys(), data))
-        coupons = filter(lambda p: 'Coupons' in p.keys(), data)
-        storeID = file.split('/')[-2]
+    storeID = file.split('/')[-2]
     newProducts=[]
     newCoupons=[]
     newPrices = []
@@ -810,129 +804,137 @@ def deconstructDollars(file='./requests/server/collections/dollargeneral/digital
     booleans = {'prices': {'IsSellable': 'IN_STORE', 'IsBopisEligible': 'PICKUP', 'isShipToHome': 'SHIP'}, 'items': {'IsGenericBrand', 'IsBopisEligible', 'isShipToHome'}}
     inventoryKeys= {'1': 'TEMPORARILY_OUT_OF_STOCK', '2': "LOW", "3": 'HIGH'}
     productsForCoupons = {}
-    for item in products:
-        utcTimestamp = item["acquisition_timestamp"]
-        url = item['url']
-        params = urllib.parse.parse_qsl(url)
-        if bool(storeCode)==False:
-            storeCode = list(filter(lambda x: x[0]=='store', params))[0][1]
-        couponId = list(filter(lambda x: x[0].endswith('couponId'), params))[0][1]
-        itemList = item.get('eligibleProductsResult').get('Items')
-        for i in itemList:
-            modalities = []
-            for key, val in booleans.get('prices').items():
-                if i[key]:
-                    modalities.append(val)
-            if couponId not in productsForCoupons.keys():
-                productsForCoupons[couponId] = {i.get('UPC')}
+
+    if storeID=='dollargeneral':
+        with open(file, 'r', encoding='utf-8') as fd:
+            data = sorted(json.loads(fd.read()), key=lambda x: x.get('url'))
+            products = list(filter(lambda p: 'eligibleProductsResult' in p.keys(), data))
+            coupons = filter(lambda p: 'Coupons' in p.keys(), data)
+        for item in products:
+            utcTimestamp = item["acquisition_timestamp"]
+            url = item['url']
+            params = urllib.parse.parse_qsl(url)
+            if bool(storeCode)==False:
+                storeCode = list(filter(lambda x: x[0]=='store', params))[0][1]
+            couponId = list(filter(lambda x: x[0].endswith('couponId'), params))[0][1]
+            itemList = item.get('eligibleProductsResult').get('Items')
+            for i in itemList:
+                modalities = []
+                for key, val in booleans.get('prices').items():
+                    if i[key]:
+                        modalities.append(val)
+                if couponId not in productsForCoupons.keys():
+                    productsForCoupons[couponId] = {i.get('UPC')}
+                else:
+                    productsForCoupons[couponId].add(i.get('UPC'))
+
+                # deconconstuct to prices
+                newPrices.append({'value': i.get('OriginalPrice'), 'type': 'Regular', 'isPurchase': False, 'locationId': storeCode, 'utcTimestamp': utcTimestamp,\
+                    'upc': i.get('UPC'), 'quantity': 1 , 'modalities': modalities, })
+                if i.get('OriginalPrice')!=i.get('Price'):
+                    newPrices.append({'value': i.get('Price'), 'type': 'Sale', 'isPurchase': False, 'locationId': storeCode, 'utcTimestamp': utcTimestamp,\
+                    'upc': i.get('UPC'), 'quantity': 1 , 'modalities': modalities, })
+                # deconstruct to inventories
+                itemStatus = inventoryKeys[str(i.get('InventoryStatus'))]
+                newInventory.append({'stockLevel': itemStatus, 'availableToSell': i.get('AvailableStockStore'), 'locationId': storeCode, 'utcTimestamp': utcTimestamp, 'upc': i.get('upc')})     
+                # deconstuct into Items
+                itemDoc = {'description': i.get('Description'), 'upc': i.get('UPC'), 'images': [{'url': i.get('image'), 'perspective': 'front', 'main': True, 'size': 'xlarge'}],\
+                    'soldInStore': i.get('IsSellable'),"modalities": modalities}
+
+                if i.get('RatingReviewCount')!=0:
+                    itemDoc['ratings'] = {'avg': i.get('AverageRating'), 'ct': i.get('RatingReviewCount')}
+    
+                if 'Category' in i:
+                    itemDoc['categories'] = i.get('Category').split('|')
+                
+                for ky in booleans.get('items'):
+                    if bool(i[ky]):
+                        itemDoc[ky] = i[ky]
+                    if ky=='isShipToHome' and bool(i[ky]):
+                        print(i)
+                        itemDoc['maximumOrderQuantity'] = i.get('shipToHomeQuantity')
+                
+                newProducts.append(itemDoc)
+  
+            for coupon in coupons:
+                utcTimestamp = coupon.pop('acquisition_timestamp')
+                for coup in coupon.get('Coupons'):
+                    newC = {}
+                    # ids => OfferID=id, OfferCode=offerCode, bool(get OfferGS1)
+                    newC['id'] = coup.get('OfferID')
+                    newC['offerCode'] = coup.get('OfferCode')
+                    if bool(coup.get('OfferGS1')):
+                        newC['offerGS1'] = coup.get('OfferGS1')
+                    # Brandname => brandName, CompanyName => companyName, offerType=> type
+                    # OfferSummary + OfferDescription => shortDescription
+                    # OfferDisclaimer => terms
+                    # RewaredCategoryName => categories[]
+                    newC['brandName'] = coup.get('BrandName') 
+                    newC['companyName'] = coup.get('CompanyName') 
+                    newC['offerType'] = coup.get('OfferType')
+                    if bool(coup.get('OfferDisclaimer')):
+                        newC['terms'] = coup.get('OffeDisclaimer') 
+                    newC['isManufacturerCoupon'] = coup.get('IsManufacturerCoupon') 
+                    newC['categories'] = [coup.get('RewaredCategoryName')] 
+                    # OfferActivationDate => startDate  %Y-%m-%dT%H:%M:%S
+                    # OfferExpirationDate => endDate %Y-%m-%dT%H:%M:%S
+                    newC['startDate'] = dt.datetime.strptime(coup.get('OfferActivationDate'), '%Y-%m-%dT%H:%M:%S').timestamp()
+                    newC['endDate'] = dt.datetime.strptime(coup.get('OfferExpirationDate'), '%Y-%m-%dT%H:%M:%S').timestamp()
+                    # RewaredOfferValue => value
+                    newC['value'] = coup.get('RewaredOfferValue')
+                    # MinQuantity => requirementQuantity 
+                    newC['requirementQuantity'] = coup.get('MinQuantity')
+                    # RedemptionLimitQuantity => redemptionsAllowed
+                    newC['redemptionsAllowed'] = coup.get('RedemptionLimitQuantity')
+                    # + MinTripCount, MinBasketValue, TimesShopQuantity, RecemptionFrequency
+                    newC['redemptionFreq'] = coup.get('RecemptionFrequency')
+                    # Image1 => imageUrl, +Image2
+                    newC['imageUrl'] = coup.get('Image1') 
+                    newC['imageUrl2'] = coup.get('Image2') 
+                    booleans2 = ['MinTripCount', 'MinBasketValue', 'TimesShopQuantity']
+                    for b in booleans2:
+                        if bool(coup.get(b)):
+                            newC[b] = coup.get(b)
+                
+    # !!! Family Dollar
+    elif storeID == 'familydollar':
+        with open(file, 'r', encoding='utf-8') as fd:
+            data = json.loads(fd.read())
+            if type(data[0])==dict:
+                coupons = data[0].get('data')
             else:
-                productsForCoupons[couponId].add(i.get('UPC'))
-
-            # deconconstuct to prices
-            newPrices.append({'value': i.get('OriginalPrice'), 'type': 'Regular', 'isPurchase': False, 'locationId': storeCode, 'utcTimestamp': utcTimestamp,\
-                'upc': i.get('UPC'), 'quantity': 1 , 'modalities': modalities, })
-            if i.get('OriginalPrice')!=i.get('Price'):
-                newPrices.append({'value': i.get('Price'), 'type': 'Sale', 'isPurchase': False, 'locationId': storeCode, 'utcTimestamp': utcTimestamp,\
-                'upc': i.get('UPC'), 'quantity': 1 , 'modalities': modalities, })
-            # deconstruct to inventories
-            itemStatus = inventoryKeys[str(i.get('InventoryStatus'))]
-            newInventory.append({'stockLevel': itemStatus, 'availableToSell': i.get('AvailableStockStore'), 'locationId': storeCode, 'utcTimestamp': utcTimestamp, 'upc': i.get('upc')})     
-            # deconstuct into Items
-            itemDoc = {'description': i.get('Description'), 'upc': i.get('UPC'), 'images': [{'url': i.get('image'), 'perspective': 'front', 'main': True, 'size': 'xlarge'}],\
-                'soldInStore': i.get('IsSellable'),"modalities": modalities}
-
-            if i.get('RatingReviewCount')!=0:
-                itemDoc['ratings'] = {'avg': i.get('AverageRating'), 'ct': i.get('RatingReviewCount')}
- 
-            if 'Category' in i:
-                itemDoc['categories'] = i.get('Category').split('|')
-            
-            for ky in booleans.get('items'):
-                if bool(i[ky]):
-                    itemDoc[ky] = i[ky]
-                if ky=='isShipToHome' and bool(i[ky]):
-                    print(i)
-                    itemDoc['maximumOrderQuantity'] = i.get('shipToHomeQuantity')
-            
-            newProducts.append(itemDoc)
-
-
-    for coupon in coupons:
-        if 'acquistion_timestamp' in coupon.keys():
-            utcTimestamp = coupon.pop('acquistion_timestamp')
-        else:
-            utcTimestamp = os.path.getctime(file)
-
-        if storeID == 'dollargeneral':
-            for coup in coupon.get('Coupons'):
-                newC = {}
-                # ids => OfferID=id, OfferCode=offerCode, bool(get OfferGS1)
-                newC['id'] = coup.get('OfferID')
-                newC['offerCode'] = coup.get('OfferCode')
-                if bool(coup.get('OfferGS1')):
-                    newC['offerGS1'] = coup.get('OfferGS1')
-                # Brandname => brandName, CompanyName => companyName, offerType=> type
-                # OfferSummary + OfferDescription => shortDescription
-                # OfferDisclaimer => terms
-                # RewaredCategoryName => categories[]
-                newC['brandName'] = coup.get('BrandName') 
-                newC['companyName'] = coup.get('CompanyName') 
-                newC['offerType'] = coup.get('OfferType')
-                if bool(coup.get('OfferDisclaimer')):
-                    newC['terms'] = coup.get('OffeDisclaimer') 
-                newC['isManufacturerCoupon'] = coup.get('IsManufacturerCoupon') 
-                newC['categories'] = [coup.get('RewaredCategoryName')] 
-                # OfferActivationDate => startDate  %Y-%m-%dT%H:%M:%S
-                # OfferExpirationDate => endDate %Y-%m-%dT%H:%M:%S
-                newC['startDate'] = dt.datetime.strptime(coup.get('OfferActivationDate'), '%Y-%m-%dT%H:%M:%S').timestamp()
-                newC['endDate'] = dt.datetime.strptime(coup.get('OfferExpirationDate'), '%Y-%m-%dT%H:%M:%S').timestamp()
-                # RewaredOfferValue => value
-                newC['value'] = coup.get('RewaredOfferValue')
-                # MinQuantity => requirementQuantity 
-                newC['requirementQuantity'] = coup.get('MinQuantity')
-                # RedemptionLimitQuantity => redemptionsAllowed
-                newC['redemptionsAllowed'] = coup.get('RedemptionLimitQuantity')
-                # + MinTripCount, MinBasketValue, TimesShopQuantity, RecemptionFrequency
-                newC['redemptionFreq'] = coup.get('RecemptionFrequency')
-                # Image1 => imageUrl, +Image2
-                newC['imageUrl'] = coup.get('Image1') 
-                newC['imageUrl2'] = coup.get('Image2') 
-                booleans = ['MinTripCount', 'MinBasketValue', 'TimesShopQuantity']
-                for b in booleans:
-                    if bool(coup.get(b)):
-                        newC[b] = coup.get(b)
-        
-        # !!! Family Dollar
-        elif storeID == 'familydollar':
-        # mid => id
+                coupons = data[0]
+        for coup in coupons:
+            newC = {}
+            # mid => id
             newC['id'] = coup.get('mid')
-        # brand => brandName
+            # brand => brandName
             newC['brandName'] = coup.get('brand')
-        # offerType => type
+            # offerType => type
             newC['type'] = coup.get('offerType')
-        # description => shortDescription
+            # description => shortDescription
             newC['shortDescription'] = coup.get('description')
-        # terms => terms
+            # terms => terms
             newC['terms'] = coup.get('terms')
-        # category.get('name') => categories
-            newC['categories'] = coup.get('category').get('name')
-        # [x.replace('fd-', '').strip().title() for x in tags] +=> categories
+            # category.get('name') => categories
+            newC['categories'] = [coup.get('category').get('name')]
+            # [x.replace('fd-', '').strip().title() for x in tags] +=> categories
             newC['categories'].extend([x.replace('fd-', '').strip().title() for x in coup.get("tags")])
-        # redemptionStartDateTime => startDate %Y-%m-%dT%H:%M:%S
-        # redemptionEndDateTime => expirationDate %Y-%m-%dT%H:%M:%S
-            newC['startDate'] = dt.datetime.strptime(coup.get('redemptionStartDateTime'), '%Y-%m-%dT%H:%M:%S').timestamp()
-            newC['endDate'] = dt.datetime.strptime(coup.get('redemptionEndDateTime'), '%Y-%m-%dT%H:%M:%S').timestamp()
-        # clipStartDateTime %Y-%m-%dT%H:%M:%S
-        # clipEndDateTime
-            newC['clipStartDate'] = dt.datetime.strptime(coup.get('clipStartDateTime'), '%Y-%m-%dT%H:%M:%S').timestamp()
-            newC['clipEndDate'] = dt.datetime.strptime(coup.get('clipEndDateTime'), '%Y-%m-%dT%H:%M:%S').timestamp()
-        # offerSortValue => value
+            # redemptionStartDateTime => startDate %Y-%m-%dT%H:%M:%S
+            # redemptionEndDateTime => expirationDate %Y-%m-%dT%H:%M:%S
+            newC['startDate'] = dt.datetime.strptime(coup.get('redemptionStartDateTime').get('iso'), '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
+            newC['endDate'] = dt.datetime.strptime(coup.get('expirationDateTime').get('iso'), '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
+            # clipStartDateTime %Y-%m-%dT%H:%M:%S
+            # clipEndDateTime
+            newC['clipStartDate'] = dt.datetime.strptime(coup.get('clipStartDateTime').get('iso'), '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
+            newC['clipEndDate'] = dt.datetime.strptime(coup.get('clipEndDateTime').get('iso'), '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
+            # offerSortValue => value
             newC['value'] = coup.get('offerSortValue')
-        # minPurchase => requirementQuantity
+            # minPurchase => requirementQuantity
             newC['requirementQuantity'] = coup.get('minPurchase')
-        # redemptionsPerTransaction => redemptionsAllowed
+            # redemptionsPerTransaction => redemptionsAllowed
             newC['redemptionsAllowed'] = coup.get('redemptionsPerTransaction')
-        # imageUrl => imageUrl, + enchancedImageUrl
+            # imageUrl => imageUrl, + enchancedImageUrl
             newC['imageUrl'] = coup.get('imageUrl')
             newC['enhancedImageUrl'] = coup.get('enhancedImageUrl')
             if coup.get('type')=='mfg':
@@ -940,14 +942,47 @@ def deconstructDollars(file='./requests/server/collections/dollargeneral/digital
             else:
                 newC['isManufacturerCoupon'] = False
         
-        # type => isManufacturerCoupon if type=mfg else False
-        # +socials :: popularity, clippedCount
+            # type => isManufacturerCoupon if type=mfg else False
+            # +socials :: popularity, clippedCount
             newC['popularity'] = coup.get('popularity')
             newC['clippedCount'] = coup.get('clippedCount')
 
-        newCoupons.append(newC)
-        
+            newCoupons.append(newC)
 
+    # newPrices, newCoupons, newInventory, newProducts
+
+    with open('../data/prices/collection.json', 'r', encoding='utf-8') as old_file:
+        prices = json.loads(old_file.read())
+        prices.extend(newPrices)
+
+    with open('../data/promotions/collection.json', 'r', encoding='utf-8') as old_file:
+        promotions = json.loads(old_file.read())
+        promotions.extend(newCoupons)
+    
+    with open('../data/inventories/collection.json', 'r', encoding='utf-8') as old_file:
+        inventory = json.loads(old_file.read())
+        inventory.extend(newInventory)
+
+    with open('../data/items/collection.json', 'r', encoding='utf-8') as old_file:
+        products = json.loads(old_file.read())
+        products.extend(newProducts)
+
+
+
+    with open('../data/prices/collection.json', 'w', encoding='utf-8') as old_file:
+        old_file.write(json.dumps(prices))
+
+    with open('../data/promotions/collection.json', 'w', encoding='utf-8') as old_file:
+        old_file.write(json.dumps(promotions))
+    
+    with open('../data/inventories/collection.json', 'w', encoding='utf-8') as old_file:
+        old_file.write(json.dumps(inventory))
+
+    with open('../data/items/collection.json', 'w', encoding='utf-8') as old_file:
+        old_file.write(json.dumps(products))
+
+        
+    print(f"Finished with {file}")
 
     return None
 
@@ -962,7 +997,7 @@ def switchUrl(x=327, y=59, url="https://www.dollargeneral.com/dgpickup/deals/cou
     pag.keyUp('v')
     return None    
 
-def updateGasoline(files=['061722.json']):
+def updateGasoline(files=['061822.json']):
     for file in files:
         with open(f'./requests/server/collections/kroger/trips/{file}', mode='r', encoding='utf-8') as f:
             j = json.loads(f.read())
@@ -991,6 +1026,6 @@ def updateGasoline(files=['061722.json']):
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
 # getMyData() 
 # getDigitalPromotions()
-#simulateUser("dollarGeneral")
+# simulateUser("cashback")
 # newOperation()
-#switchUrl()
+# switchUrl()

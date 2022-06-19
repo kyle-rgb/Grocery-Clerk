@@ -7,8 +7,8 @@ async function createType(){
     var t = ''
     let t2 =''
     let reg = /kroger|aldi|publix|dollargeneral|familydollar/
-    let reg2 = /mypurchases|cashback|savings/
-    var fileTypes = {'mypurchases': 'trips', 'cashback': 'cashback', "savings": "digital"}
+    let reg2 = /mypurchases|cashback|coupons/
+    var fileTypes = {'mypurchases': 'trips', 'cashback': 'cashback', "coupons": "digital"}
     for (let tab of tabs){
       if (tab.url.match(reg)!=null){
         let match = tab.url.match(reg)[0]
@@ -16,7 +16,7 @@ async function createType(){
         match=='kroger'? t2=fileTypes[tab.url.match(reg2)[0]]: t2='';
       }
     }
-    return `${t}&folder=${t2}`
+    return `type=${t}&folder=${t2}`
   })
   return typeT  
 
@@ -102,7 +102,7 @@ chrome.contextMenus.create({
 chrome.contextMenus.onClicked.addListener(function(info, tab) {
     createType().then((t) => {
       let type = t ;
-      response = fetch(`http://127.0.0.1:5000/docs?type=${type}`, {method: "POST", body: JSON.stringify(masterArray)})
+      response = fetch(`http://127.0.0.1:5000/docs?${type}`, {method: "POST", body: JSON.stringify(masterArray)})
       return null
     })
   })
