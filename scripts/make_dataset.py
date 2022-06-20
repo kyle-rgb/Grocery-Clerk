@@ -510,9 +510,9 @@ def getDigitalPromotions():
 
 
 def simulateUser(link):
-    neededLinks = {'cashback': {"no": 179, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
-        'digital': {"no":253, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
-            'dollarGeneral': {'no': 128, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
+    neededLinks = {'cashback': {"no": 186, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
+        'digital': {"no":264, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
+            'dollarGeneral': {'no': 110, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
                  'initalScroll': -1650}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
@@ -895,6 +895,12 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
                     for b in booleans2:
                         if bool(coup.get(b)):
                             newC[b] = coup.get(b)
+                    
+                    joinID = coup.get('CouponID')
+                    if joinID in productsForCoupons.keys():
+                        newC['productUpcs'] = list(productsForCoupons.get(joinID))
+                    
+                    newCoupons.append(newC)
                 
     # !!! Family Dollar
     elif storeID == 'familydollar':
@@ -997,7 +1003,7 @@ def switchUrl(x=327, y=59, url="https://www.dollargeneral.com/dgpickup/deals/cou
     pag.keyUp('v')
     return None    
 
-def updateGasoline(files=['061822.json']):
+def updateGasoline(files=['061922.json']):
     for file in files:
         with open(f'./requests/server/collections/kroger/trips/{file}', mode='r', encoding='utf-8') as f:
             j = json.loads(f.read())
@@ -1026,6 +1032,6 @@ def updateGasoline(files=['061822.json']):
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
 # getMyData() 
 # getDigitalPromotions()
-# simulateUser("cashback")
+#simulateUser("cashback")
 # newOperation()
 # switchUrl()

@@ -805,8 +805,8 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
                 else:
                     returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=returnTuple[0], itemCollection=returnTuple[1], pricesCollection=returnTuple[2], inventoryCollection=returnTuple[3], tripCollection=returnTuple[4], priceModifierCollection=returnTuple[5], userCollection=returnTuple[6], sellerCollection=returnTuple[7])
                 print(f'processed {file}.')
+    
     listTranslater={"0": "promotions", "1": "items", "2": "prices", "3": "inventories", "4":"trips", "5":"priceModifiers", "6":"users", "7":"sellers"}
-
     for i, finalCollection in enumerate(returnTuple):
         if not os.path.exists('../data/'):
             os.mkdir("../data/")
@@ -835,7 +835,7 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
     return None
 
 # provideSummary('./requests/server/collections/trips/trips052822.json')
-#createDecompositions('./requests/server/collections/kroger', wantedPaths=['cashback', 'digital', 'trips'], additionalPaths=['familydollar', 'dollargeneral'])
+createDecompositions('./requests/server/collections/kroger', wantedPaths=['cashback', 'digital', 'trips'], additionalPaths=['familydollar', 'dollargeneral'])
 #deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
 # summarizeCollection('./requests/server/collections/recipes/recipes.json')
 # forceClose("./requests/server/collections/digital/digital42822.txt", streams=False)
@@ -843,16 +843,5 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
 #partitionString('{"type": "boose", "cost": 129.99, "tax": 23.22, "devices": ["soundbar", "voice remote", "smart alexa"], "customerInfo": {"address": "4501 Brekley Ridge", "zipCode": "75921", "repeat": true, "_id": {"oid": 2391312084123, "REF": 129031923}}}',
 #openChar="{", closeChar="}")
 
-
-
-
-
-dataRepoPath = './requests/server/collections/kroger'
-additionalPaths=["dollargeneral"]
-for repo in additionalPaths:
-    pathName = dataRepoPath.replace('kroger', repo)
-    for _, __, files in os.walk(pathName):
-        for ofile in files:
-            deconstructDollars(pathName+'/'+ofile)
 
 print(f"Finsihed in {time.perf_counter()-startTime} seconds")
