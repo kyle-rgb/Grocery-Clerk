@@ -27,7 +27,7 @@ from selenium.webdriver.common.keys import Keys
 
 # Use API to get prices of past purchases and estimate future trips
 # Use API to create same carts for Pickup
-
+startTime = time.perf_counter()
 
 def insertData(entries, collection_name):
     # Going to add Entries to Locally running DB w/ same structure as Container application
@@ -994,13 +994,15 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
 
 def switchUrl(x=327, y=59, url="https://www.dollargeneral.com/dgpickup/deals/coupons?"):
     pag.moveTo(x, y, duration=2.2)
-    pag.click(clicks=2, interval=.5)
+    pag.click(clicks=1, interval=.25)
     clip.copy(url)
     time.sleep(1)
     pag.keyDown('ctrlleft')
     pag.keyDown('v')
     pag.keyUp('ctrlleft')
     pag.keyUp('v')
+    pag.press('enter')
+    time.sleep(5)
     return None    
 
 def updateGasoline(files=['061922.json']):
@@ -1026,6 +1028,77 @@ def updateGasoline(files=['061922.json']):
 
     return None
 
+def getArrow(sleep=2, image="./requests/server/fdBtn.png"):
+    time.sleep(sleep)
+    arrows = pag.locateAllOnScreen(image, confidence=.66)
+    pts = [pag.center(a) for a in arrows]
+    print(pts)
+    [pag.moveTo(pt, duration=2.5) for pt in pts]
+    time.sleep(sleep)
+    pag.click() 
+    return None
+
+def scrollDown(sleep=10):
+    time.sleep(sleep)
+    pag.press('end')
+    return None
+
+# https://www.familydollar.com/categories?N=categories.1%3ADepartment%2Bcategories.2%3AHousehold&No=0&Nr=product.active:1
+def getFamilyDollars(results):
+    results = results // 96
+    startingSleep=10
+    pag.click()
+    time.sleep(startingSleep)
+    startTime = time.perf_counter()
+
+    for i in range(results):
+        scrollDown(startingSleep)
+        getArrow()
+        if i%6==0:
+            print(f"finished with {i}. {results-i} to go. Data Sent")
+            startingSleep=60
+        else:
+            salt = random.randint(1, 25)
+            startingSleep=10+salt
+
+    print(f"finished in {time.perf_counter()-startTime} seconds. Obtainted {results} objects.")
+    
+    return None
+
+def getScrollingData(base_url, urls):
+    pageEndColor = (205, 205, 205)
+    continueColor = (240, 240, 240)
+    noScrollColor = (255, 255, 255)
+    noScrollColor2 = (248, 248, 248)
+    # switch to first url
+    for url in urls:
+        switchUrl(url=base_url+url)
+        scrollDown(sleep=5)
+        scroll_color = pag.pixel(x=1911, y=1016)
+        # checks to see if scroll bar has more room to go
+        while scroll_color!=pageEndColor:
+            if scroll_color==noScrollColor or scroll_color==noScrollColor2:
+                break
+            else:
+                scrollDown(sleep=6)
+                scroll_color=pag.pixel(x=1911, y=1016)
+        print('Done with ', url)
+    print(f"finished in {time.perf_counter()-startTime} seconds. Obtainted {results} objects.")
+    return None
+
+# aldi
+# getScrollingData(base_url="https://shop.aldi.us/store/aldi/collections/", urls = ["d295-alcohol" ,"d282-produce", "d297-dairy-eggs", "d292-snacks",
+#     "d299-frozen", "d290-pantry", "d298-meat-seafood", "d294-bakery",
+#     "d289-canned-goods", "d17068-aldi-finds-limited-time", "d296-beverages",
+#     "d286-household", "d291-dry-goods-pasta", "d288-breakfast", "d283-deli",
+#     "d293-babies", "d285-personal-care", "d284-pets",
+#     "d12951-organic", "d6517-floral", "d287-international", "d18863-vegan",
+#     "d13031-gluten-free", "d26015-seasonal", "dynamic_collection-sales"])
+# food depot
+# getScrollingData(base_url="https://shop.fooddepot.com/online/fooddepot40-douglasvillehwy5/shop/", urls = ["produce", "meatseafood", "bakery", "deli", "dairyeggs",
+#     "beverages", "breakfast","cannedgoods", "drygoodspasta", "frozen",
+#     "household", "international", "pantry", "personalcare", "pets", "snacks", "alcohol", "babies", "seasonal"])
+#getFamilyDollars(5184) 
 #updateGasoline()
 #deconstructDollars()
 #newOperation('./requests/server/collections/digital/dollars')

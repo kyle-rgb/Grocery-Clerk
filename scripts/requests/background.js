@@ -134,7 +134,7 @@ chrome.webRequest.onBeforeRequest.addListener(
 chrome.webRequest.onCompleted.removeListener(
   listener,
   {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*",  "*://ice-familydollar.dpn.inmar.com/v2/offers*", "*://dollartree-cors.groupbycloud.com/api*", "*://*.kroger.com/mypurchases/api/v1/receipt*", "*://*.dollargeneral.com/bin/omni/coupons/products*", "*://*.dollargeneral.com/bin/omni/coupons/recommended*",
-  "*://*.noq-servers.net/api/v1/application/stores/*/products?*", "*://services.publix.com/api*", "*://shop.aldi.us/graphql?operationName=Items*", "*://shop.aldi.us/*/view/item_attributes*", "*://*.appcard.com/baseapi/1.0/token/*/offers/unclipped_recommendation_flag*"], types: ["xmlhttprequest", "object"]}, // 
+  "*://*.noq-servers.net/api/v1/application/stores/*/products?*", "*://services.publix.com/api*", "*://shop.aldi.us/graphql?operationName=CollectionProductsWithFeaturedProducts*", ,"*://shop.aldi.us/graphql?operationName=Items*", "*://shop.aldi.us/*/view/item_attributes*", "*://*.appcard.com/baseapi/1.0/token/*/offers/unclipped_recommendation_flag*"], types: ["xmlhttprequest", "object"]}, // 
   ["blocking"]
 )
 
