@@ -1,6 +1,6 @@
 
 from pprint import pprint
-import time, re, random, datetime as dt, os, json, urllib
+import time, re, random, datetime as dt, os, json, urllib, pytz
 import pyautogui as pag
 
 from pymongo import MongoClient
@@ -510,9 +510,9 @@ def getDigitalPromotions():
 
 
 def simulateUser(link):
-    neededLinks = {'cashback': {"no": 186, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
-        'digital': {"no":264, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
-            'dollarGeneral': {'no': 110, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
+    neededLinks = {'cashback': {"no": 182, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
+        'digital': {"no":258, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
+            'dollarGeneral': {'no': 109, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
                  'initalScroll': -1650}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
@@ -992,7 +992,7 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
 
     return None
 
-def switchUrl(x=327, y=59, url="https://www.dollargeneral.com/dgpickup/deals/coupons?"):
+def switchUrl(x=468, y=63, url="https://www.dollargeneral.com/dgpickup/deals/coupons?"):
     pag.moveTo(x, y, duration=2.2)
     pag.click(clicks=1, interval=.25)
     clip.copy(url)
@@ -1005,7 +1005,7 @@ def switchUrl(x=327, y=59, url="https://www.dollargeneral.com/dgpickup/deals/cou
     time.sleep(5)
     return None    
 
-def updateGasoline(files=['061922.json']):
+def updateGasoline(files=['062122.json']):
     for file in files:
         with open(f'./requests/server/collections/kroger/trips/{file}', mode='r', encoding='utf-8') as f:
             j = json.loads(f.read())
@@ -1080,12 +1080,81 @@ def getScrollingData(base_url, urls):
             if scroll_color==noScrollColor or scroll_color==noScrollColor2:
                 break
             else:
-                scrollDown(sleep=6)
+                scrollDown(sleep=15)
                 scroll_color=pag.pixel(x=1911, y=1016)
         print('Done with ', url)
-    print(f"finished in {time.perf_counter()-startTime} seconds. Obtainted {results} objects.")
+    print(f"finished in {time.perf_counter()-startTime} seconds. Obtainted {len(urls)} pages.")
     return None
 
+def addSpecialPromotion(file='./requests/server/collections/kroger/buy5save1/062122.json'):
+    with open(file, "r", encoding='utf-8') as f:
+        data = json.loads(f.read())
+        data = list(filter(lambda g: 'details-basic' in g.get('url'), data))
+        # get the upcs
+        allUpcs = set()
+        allOffers = set()
+        for d in data:
+            qualifiers = d.get('products')
+            for q in qualifiers:
+                allUpcs.add(q.get('upc'))
+                for o in q.get('offers'):
+                    allOffers.add(str(o).replace("'", "\""))
+
+    allOffers = json.loads(list(allOffers)[0])
+    newPromotion = {}
+    # couponAmount => value
+    newPromotion['value'] = allOffers.get('couponAmount')
+    # couponNumber => krogerCouponNumber # offerId => krogerCouponNumber
+    newPromotion['krogerCouponNumber'] = allOffers.get('couponNumber')
+    # effectiveDate => startDate + T00:00:00Z
+    startDate = allOffers.get('effectiveDate') + "T00:00:00"
+    startDate = pytz.timezone('America/New_York').localize(dt.datetime.strptime(startDate, "%Y-%m-%dT%H:%M:%S")).astimezone(pytz.timezone('UTC'))
+    startDate = dt.datetime.strftime(startDate, "%Y-%m-%dT%H:%M:%S")
+    newPromotion['startDate'] = startDate
+    # expirationDate => expirationDate + T11:59:59Z
+    expirationDate = allOffers.get('expirationDate') + "T00:00:00"
+    expirationDate = pytz.timezone('America/New_York').localize(dt.datetime.strptime(startDate, "%Y-%m-%dT%H:%M:%S")).astimezone(pytz.timezone('UTC'))
+    expirationDate = dt.datetime.strftime(expirationDate, "%Y-%m-%dT%H:%M:%S")
+    newPromotion['expirationDate'] = expirationDate
+    # rewardTypeDescription => "Amount off"
+    newPromotion['type'] = allOffers.get('rewardTypeDescription')
+    # totalPurchaseQty => requirementQuantity
+    newPromotion['requirementQuantity'] = allOffers.get('totalPurchaseQty')
+    # webDescription => shortDescription
+    newPromotion['shortDescription'] = allOffers.get('webDescription')
+    # upcs => productUpcs[]
+    newPromotion['productUpcs'] = list(allUpcs)
+        
+    with open('../data/promotions/collection.json', 'r', encoding='utf-8') as fd:
+        data = json.loads(fd.read())
+        data.append(newPromotion)
+    with open('../data/promotions/collection.json', 'w', encoding='utf-8') as fd:
+        fd.write(json.dumps(data))
+
+    return None
+
+def getPublixData(deals=673):
+    loadMoreColor = (171, 205, 159)
+    loadMorePosition = (1091, 344)
+    iterations = 673 // 36
+    pag.click()
+    for i in range(iterations):
+        time.sleep(2)
+        pag.press('end')
+        time.sleep(2)
+        pag.scroll(400)
+        time.sleep(2)
+        pag.moveTo(*loadMorePosition)
+        positionColor = pag.pixel(*loadMorePosition)
+        if positionColor == loadMoreColor:
+            time.sleep(2)
+            pag.click()
+        
+
+    return None
+
+
+#getPublixData()
 # aldi
 # getScrollingData(base_url="https://shop.aldi.us/store/aldi/collections/", urls = ["d295-alcohol" ,"d282-produce", "d297-dairy-eggs", "d292-snacks",
 #     "d299-frozen", "d290-pantry", "d298-meat-seafood", "d294-bakery",
@@ -1099,12 +1168,14 @@ def getScrollingData(base_url, urls):
 #     "beverages", "breakfast","cannedgoods", "drygoodspasta", "frozen",
 #     "household", "international", "pantry", "personalcare", "pets", "snacks", "alcohol", "babies", "seasonal"])
 #getFamilyDollars(5184) 
-#updateGasoline()
+
+addSpecialPromotion()
+#updateGasoline(["062022.json", "062122.json"])
 #deconstructDollars()
 #newOperation('./requests/server/collections/digital/dollars')
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
 # getMyData() 
 # getDigitalPromotions()
-#simulateUser("cashback")
+# simulateUser("cashback")
 # newOperation()
 # switchUrl()
