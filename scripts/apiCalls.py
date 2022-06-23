@@ -41,6 +41,8 @@ from api_keys import CLIENT_ID, CLIENT_SECRET, RECIPE_KEY, recipe_base_url
     # Lets not waste certain pulls so only make api calls to distinct UPCs.
     # ...
     # The crucuial routes seem to map directly to my two routes as of now via. {Trips} => /Locations (One Trip of Many Items Occurs at One Location) 
+
+# counter() :: counts keys of json and checks for None-Like Values
 def counter(JSON):
     keyer = {}
 
@@ -87,7 +89,7 @@ def counter(JSON):
     #pprint.pprint(all_keys[0])
     return None
 
-
+# Ingredients still contained in string w/ commas and indicators
 def parse_ingredients(ingredient_string):
     # the important tokens are collection indicators and commas
     ingredients_regex = re.compile(r'([\(\{\[,])?([^\]\}\)\{\[\(]+)([\)\}\],]+)?')
@@ -116,18 +118,17 @@ def parse_ingredients(ingredient_string):
             last_seen = leading_indicator
         else:
             objects[-1]['note'] = list(map(str.title, ingredients.split(',')))
-    #pprint.pprint(objects)
     return objects
 
-
-
-
+# breaks down selenium scraped data from mongo collections into proper data types and feature names
+# was an intermediary for selenium scrape to alpha versions of product, prices and trips collections
 def parseUPC():
-    # this method functionally deals with uneven scraping procedures and updated data handling since I have come to learn the data some more
-    # these steps should be able to be reintegrated back into a refactored make_dataset.py
-    # the idea would be to reformat the item data based on the now known conditions that can also handle API calls for the same item.
-    # the items collection itself and the api items should now have a date_scraped feature to better pair a specific price to a specific location at a set instance in time.
-    # ???: the api calls for a specific product can be filtered by the specific locationId, where the response will return the information iff the product is currently available @ that location.
+    # this method functionally deals with uneven scraping procedures and updates data handling procedures I have come in contact with in the data,
+    # some of these steps should be able to be reintegrated back into a refactored make_dataset.py
+    # would need to reformat the item data based on the now known conditions that can also handle API calls for the same item.
+    # the items collection itself and the api items should now have a (acquisition_timestamp) feature to better pair a specific price to a specific location at a set instance in time.
+    # ???: the api calls for a specific product can be filtered by the specific locationId, where the response will return the information if and only if
+        # the product is currently available @ that location.
     # TODO:
         # breakdown serving size right now approx. \d+{count} \(\d+ g(ram(s))\) to metric equivalents (ml, L, mg, g, kg)
         # breakdown price equation (rn. ct x $\d\.\d+/each) <= though price equation always accounts for only product_original_price
@@ -345,6 +346,7 @@ def parseUPC():
 
     return upcs
 
+# helper for Kroger API. 3600 second token
 def getToken():
 #     curl -X POST \
 #   'https://api.kroger.com/v1/connect/oauth2/token' \
@@ -357,16 +359,16 @@ def getToken():
     res = requests.post('https://api.kroger.com/v1/connect/oauth2/token', data=data, headers=headers)
     acquistion_time = datetime.datetime.now()
     if res.status_code == 200:
-        object= json.loads(res.text)
+        obj= json.loads(res.text)
         print('ACQUIRED: ', acquistion_time)
-        print('EXPIRES: ', acquistion_time + datetime.timedelta(seconds=object.get('expires_in')))
-        pprint.pprint(object)
-        return object.get('access_token')
+        print('EXPIRES: ', acquistion_time + datetime.timedelta(seconds=obj.get('expires_in')))
+        pprint.pprint(obj)
+        return obj.get('access_token')
     else:
         raise ValidationError('The POST request failed')
 
 
-
+# Queries Location Endpoint of Kroger API. Adds acquisition_timestamp
 def getStoreLocation(ids):    
     # TODO: Add Location Id to the trip collection via the address attribute
     # /locations/<LOCATION_ID> :: address<Object>, chain<String>, phone<String>, departments<Array of Objects w/[departmentId, name, phone, hours<Object w/ weekdays<Objects w/ Hours>>]>, geolocation<Object>, hours<Object>, locationId<String>, name<String>
@@ -395,7 +397,9 @@ def getStoreLocation(ids):
 
     return None
 
-def getItemInfo(itemLocationPairs):
+# Queries Product Endpoint of KrogerAPI with Working Location Id 
+# Combines Prices of Customer Trips and Prices Obtained At Previous API calls and Adds New Prices of Objects to Collection
+def getItemInfo(itemLocationPairs): 
     # DOCS: https://developer.kroger.com/reference/#section/Refresh-Token-Grant
     ### HEADERS ####
     # Authorization: Basic {base64(client_id:client_secret)}
@@ -461,12 +465,12 @@ def getItemInfo(itemLocationPairs):
         req = endpoint+params+"?filter.locationId={}".format(location)
         response = requests.get(req, headers=headers)
         try:
-            object = json.loads(response.text)
-            object = object.get('data')
-            object = object.get('items')[0] 
+            obj = json.loads(response.text)
+            obj = obj.get('data')
+            obj = obj.get('items')[0] 
             # add the implicit queried location id to response
-            if 'price' in object:
-                price = object.get('price')
+            if 'price' in obj:
+                price = obj.get('price')
                 if price.get('promo')==0:
                     price['promo'] = price['regular']
                 data.append({'locationId': location, 'acquistion_timestamp': datetime.datetime.now().timestamp(), "isPurchase": False, "cart_number": None, "upc": upc,
@@ -498,6 +502,8 @@ def getItemInfo(itemLocationPairs):
 
     return None
 
+# Combine Selenium Scraped Data w/ API calls to Filled Out Item Collection
+# To Create Combined Prices and Combined Items 
 def combineItems(api, scraped):
     # Keys on all Objects
     # productId<String>, upc<String>, description<String>, acquisition_timestamp<Float>, locationId<String>, 
@@ -692,7 +698,7 @@ def combineItems(api, scraped):
     return final_product_array
 
 
-
+# Generator to Summarize Types & Counts for Nested Dicts/Lists  
 def extract_nested_values(it):
     if isinstance(it, list):
         for sub_it in it:
@@ -703,8 +709,7 @@ def extract_nested_values(it):
     else:
         yield {'count':1, 'type': type(it)}
     
-# now with combined items 
-
+# match receipt entries (in trips collection) to full product name (in item collection)
 def getFuzzyMatch(items, trips):
     removePriceRegex = r'\d+\.\d+.+'
     countRegex = r'^(\d)+.+\s*x'
@@ -772,7 +777,7 @@ def getFuzzyMatch(items, trips):
             
     return chx
 
-
+# decompose API prices into prices collection 
 def getPrices(api):
     more_prices = []
     for a in api:
@@ -794,6 +799,7 @@ def getPrices(api):
     
     return None
 
+# Work Within the Points-Based Confines of API to Gather Receipes by Meal Type and Ingredients
 def getRecipes(ingredients=None, route="recipes/findByIngredients", limit=10, generalInfo=True):
     # pork, beef, chicken, salmon, eggs, lettuce, jalapenos, flour, sugar, 
     # types = ["main course", "side dish", "dessert", "appetizer", "salad", "bread", "breakfast", "soup", "beverage", "sauce", "marinade", "fingerfood", "snack", "drink"]
