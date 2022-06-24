@@ -29,6 +29,34 @@ from selenium.webdriver.common.keys import Keys
 # Use API to create same carts for Pickup
 startTime = time.perf_counter()
 
+def runAndDocument(funcs:list, callNames:list, **kwargs):
+    if not os.path.exists('../data/runs'):
+        os.mkdir(os.path.join('..', 'data', 'runs'))
+        data = []
+    else:
+        with open('../data/runs/collection.json', 'r', encoding='utf-8') as f:
+            data = json.loads(f.read())
+
+
+    for name, func in zip(callNames, funcs):
+        if callable(func):
+            start = time.perf_counter()
+            func(**kwargs)
+            end = round(time.perf_counter() - start, 4)
+            funcName = [k for k, v in globals().items() if v==func]
+            data.append({'function': funcName, 'time': end, 'description': name})
+
+    with open("../data/runs/collection.json", "w", encoding='utf-8') as f:
+        f.write(json.dumps(data))
+
+    
+
+    return None
+
+
+
+
+
 def insertData(entries, collection_name):
     # Going to add Entries to Locally running DB w/ same structure as Container application
     # Then migrate them over to Container DB
@@ -1066,6 +1094,7 @@ def getFamilyDollars(results):
     return None
 
 def getScrollingData(base_url, urls):
+    # works for Aldi + Publix Instacart Sites as well as Food Depot's 1st Party Site
     pageEndColor = (205, 205, 205)
     continueColor = (240, 240, 240)
     noScrollColor = (255, 255, 255)
@@ -1080,13 +1109,13 @@ def getScrollingData(base_url, urls):
             if scroll_color==noScrollColor or scroll_color==noScrollColor2:
                 break
             else:
-                scrollDown(sleep=15)
+                scrollDown(sleep=22.2)
                 scroll_color=pag.pixel(x=1911, y=1016)
         print('Done with ', url)
     print(f"finished in {time.perf_counter()-startTime} seconds. Obtainted {len(urls)} pages.")
     return None
 
-def getPublixData(deals=673):
+def getPublixCouponData(deals=673):
     loadMoreColor = (171, 205, 159)
     loadMorePosition = (1091, 344)
     iterations = 673 // 36
@@ -1102,11 +1131,17 @@ def getPublixData(deals=673):
         if positionColor == loadMoreColor:
             time.sleep(2)
             pag.click()
-        
 
     return None
 
-#getPublixData()
+#  publix
+# runAndDocument([getScrollingData], ['getPublixInstacartData'], base_url='https://delivery.publix.com/store/publix/collections/', urls=['d1102-produce', 'd1090-dairy-eggs', 'd1106-frozen',
+# 'd1089-beverages', 'd1099-snacks', 'd1095-pantry', 'd1094-meat-seafood', 'd1088-bakery', 'd1091-deli', 'd1092-household', 'd1104-canned-goods',
+# 'd1100-dry-goods-pasta', 'd1097-personal-care', 'd1103-breakfast', 'd1093-international', 'd1101-babies', 'd1098-pets', 'd5626-greeting-cards',
+# 'd21232-wine', 'd21231-beer', 'd3152-popular', 'd5625-floral', 'd5630-platters', 'd50450-ready-to-eat-ready-to-cook', 'd1105-new-and-interesting',
+# 'd41671-storm-prep','d41622-tailgating', 'd51523-deli-grab-and-go', 'dynamic_collection-sales'])
+# getPublixCouponData()
+
 # aldi
 # getScrollingData(base_url="https://shop.aldi.us/store/aldi/collections/", urls = ["d295-alcohol" ,"d282-produce", "d297-dairy-eggs", "d292-snacks",
 #     "d299-frozen", "d290-pantry", "d298-meat-seafood", "d294-bakery",
@@ -1115,6 +1150,15 @@ def getPublixData(deals=673):
 #     "d293-babies", "d285-personal-care", "d284-pets",
 #     "d12951-organic", "d6517-floral", "d287-international", "d18863-vegan",
 #     "d13031-gluten-free", "d26015-seasonal", "dynamic_collection-sales"])
+
+# runAndDocument([getScrollingData], ['getAldiInstacartData'], base_url="https://shop.aldi.us/store/aldi/collections/", urls = ["d295-alcohol" ,"d282-produce", "d297-dairy-eggs", "d292-snacks",
+#     "d299-frozen", "d290-pantry", "d298-meat-seafood", "d294-bakery",
+#     "d289-canned-goods", "d17068-aldi-finds-limited-time", "d296-beverages",
+#     "d286-household", "d291-dry-goods-pasta", "d288-breakfast", "d283-deli",
+#     "d293-babies", "d285-personal-care", "d284-pets",
+#     "d12951-organic", "d6517-floral", "d287-international", "d18863-vegan",
+#     "d13031-gluten-free", "d26015-seasonal", "dynamic_collection-sales"])
+
 # food depot
 # getScrollingData(base_url="https://shop.fooddepot.com/online/fooddepot40-douglasvillehwy5/shop/", urls = ["produce", "meatseafood", "bakery", "deli", "dairyeggs",
 #     "beverages", "breakfast","cannedgoods", "drygoodspasta", "frozen",
@@ -1122,7 +1166,7 @@ def getPublixData(deals=673):
 #getFamilyDollars(5184) 
 #simulateUser('dollarGeneral')
 #addSpecialPromotion()
-#updateGasoline(["062222.json"])
+#updateGasoline(["062322.json"])
 #deconstructDollars()
 #newOperation('./requests/server/collections/digital/dollars')
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 

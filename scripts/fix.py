@@ -480,7 +480,7 @@ def deconstructExtensions(filename, **madeCollections):
             elif re.match(specialPromoRegex, url):
                 allUpcs = set()
                 allOffers = set()
-                qualifiers = api.get('products')
+                qualifiers = apiCall.get('products')
                 for q in qualifiers:
                     allUpcs.add(q.get('upc'))
                     for offer in q.get('offers'):
@@ -796,74 +796,103 @@ def deconstructExtensions(filename, **madeCollections):
 
 def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: dict):
     # add stores via api and previously scraped prices to new price collection schema
-
-    with open('data/API/myStoresAPI.json', 'r', encoding='utf-8') as storeFile:
-        stores = json.loads(storeFile.read())
-
+    iteration=0
+    listTranslater={"0": "promotions", "1": "items", "2": "prices", "3": "inventories", "4":"trips", "5":"priceModifiers", "6":"users", "7":"sellers"}
+    
+    # inital setup if data folders do not exist in repo
     if not os.path.exists('../data/stores/collection.json'):
         os.mkdir("../data/stores/")
+        with open('data/API/myStoresAPI.json', 'r', encoding='utf-8') as storeFile:
+            stores = json.loads(storeFile.read())
         with open('../data/stores/collection.json', 'w', encoding='utf-8') as storeFile:
             storeFile.write(json.dumps(stores))
 
-    with open('data/collections/combinedPrices.json', 'r', encoding='utf-8') as priceFile:
-        oldPrices = json.loads(priceFile.read())
-        oldPrices = list(filter(lambda y: y.get('isPurchase')==False, oldPrices)) # trip price data will already have been recorded
+        with open('data/collections/combinedPrices.json', 'r', encoding='utf-8') as priceFile:
+            oldPrices = json.loads(priceFile.read())
+            oldPrices = list(filter(lambda y: y.get('isPurchase')==False, oldPrices)) # trip price data will already have been recorded
 
-
-    newFromOldPrices = []
-    for oldPrice in oldPrices:
-        # turn promo and regular to value
-        if oldPrice.get('promo') == oldPrice.get('regular'):
-            newFromOldPrices.append({'locationId': oldPrice.get('locationId'), 'isPurchase': oldPrice.get('isPurchase'), 'value': oldPrice.get('regular'), 'quantity': oldPrice.get('quantity'),\
-                'upc': oldPrice.get('upc'), 'utcTimestamp': oldPrice.get('acquistion_timestamp'), "type": 'Regular'})
-        else:
-            newFromOldPrices.append({'locationId': oldPrice.get('locationId'), 'isPurchase': oldPrice.get('isPurchase'), 'value': oldPrice.get('regular'), 'quantity': oldPrice.get('quantity'),\
-                'upc': oldPrice.get('upc'), 'utcTimestamp': oldPrice.get('acquistion_timestamp'), "type": 'Regular'})
-            newFromOldPrices.append({'locationId': oldPrice.get('locationId'), 'isPurchase': oldPrice.get('isPurchase'), 'value': oldPrice.get('promo'), 'quantity': oldPrice.get('quantity'),\
-                'upc': oldPrice.get('upc'), 'utcTimestamp': oldPrice.get('acquistion_timestamp'), "type": 'Sale'})
-
-    iteration=0
-    for head, subfolders, files in os.walk(dataRepoPath):
-        if head.split('\\')[-1] in wantedPaths:
-            for file in files:
-                if iteration == 0 :                    
-                    returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=[], itemCollection=[], pricesCollection=[], inventoryCollection=[], tripCollection=[], priceModifierCollection=[], userCollection=[], sellerCollection=[])
-                    iteration+=1
-                else:
-                    returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=returnTuple[0], itemCollection=returnTuple[1], pricesCollection=returnTuple[2], inventoryCollection=returnTuple[3], tripCollection=returnTuple[4], priceModifierCollection=returnTuple[5], userCollection=returnTuple[6], sellerCollection=returnTuple[7])
-                print(f'processed {file}.')
-    
-    listTranslater={"0": "promotions", "1": "items", "2": "prices", "3": "inventories", "4":"trips", "5":"priceModifiers", "6":"users", "7":"sellers"}
-    for i, finalCollection in enumerate(returnTuple):
-        if not os.path.exists('../data/'):
-            os.mkdir("../data/")
-    
-        if not os.path.exists(os.path.join("..", "data", listTranslater[str(i)])):
-            os.mkdir(os.path.join("..", "data", listTranslater[str(i)]))
-        else:
-            with open(os.path.join("..", "data", listTranslater[str(i)], "collection.json"), "r", encoding='utf-8') as prevFile:
-                oldCollection = json.loads(prevFile.read())
-                finalCollection.extend(oldCollection)
+        newFromOldPrices = []
+        for oldPrice in oldPrices:
+            # turn promo and regular to value
+            if oldPrice.get('promo') == oldPrice.get('regular'):
+                newFromOldPrices.append({'locationId': oldPrice.get('locationId'), 'isPurchase': oldPrice.get('isPurchase'), 'value': oldPrice.get('regular'), 'quantity': oldPrice.get('quantity'),\
+                    'upc': oldPrice.get('upc'), 'utcTimestamp': oldPrice.get('acquistion_timestamp'), "type": 'Regular'})
+            else:
+                newFromOldPrices.append({'locationId': oldPrice.get('locationId'), 'isPurchase': oldPrice.get('isPurchase'), 'value': oldPrice.get('regular'), 'quantity': oldPrice.get('quantity'),\
+                    'upc': oldPrice.get('upc'), 'utcTimestamp': oldPrice.get('acquistion_timestamp'), "type": 'Regular'})
+                newFromOldPrices.append({'locationId': oldPrice.get('locationId'), 'isPurchase': oldPrice.get('isPurchase'), 'value': oldPrice.get('promo'), 'quantity': oldPrice.get('quantity'),\
+                    'upc': oldPrice.get('upc'), 'utcTimestamp': oldPrice.get('acquistion_timestamp'), "type": 'Sale'})
         
+        for head, subfolders, files in os.walk(dataRepoPath):
+            if head.split('\\')[-1] in wantedPaths:
+                for file in files:
+                    if iteration == 0 :                    
+                        returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=[], itemCollection=[], pricesCollection=[], inventoryCollection=[], tripCollection=[], priceModifierCollection=[], userCollection=[], sellerCollection=[])
+                        iteration+=1
+                    else:
+                        returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=returnTuple[0], itemCollection=returnTuple[1], pricesCollection=returnTuple[2], inventoryCollection=returnTuple[3], tripCollection=returnTuple[4], priceModifierCollection=returnTuple[5], userCollection=returnTuple[6], sellerCollection=returnTuple[7])
+                    print(f'processed {file}.')
+        
+        
+        for i, finalCollection in enumerate(returnTuple):
+            if not os.path.exists('../data/'):
+                os.mkdir("../data/")
+        
+            if not os.path.exists(os.path.join("..", "data", listTranslater[str(i)])):
+                os.mkdir(os.path.join("..", "data", listTranslater[str(i)]))
+            else:
+                with open(os.path.join("..", "data", listTranslater[str(i)], "collection.json"), "r", encoding='utf-8') as prevFile:
+                    oldCollection = json.loads(prevFile.read())
+                    finalCollection.extend(oldCollection)
+            
 
-        with open(os.path.join("..", "data", listTranslater[str(i)], "collection.json"), "w", encoding="utf-8") as file:
-            if i==2:
-                finalCollection.extend(newFromOldPrices)
-            size = sys.getsizeof(finalCollection)
-            file.write(json.dumps(finalCollection))
-            print(f"Wrote {size} to Disk. {len(finalCollection)} items in {listTranslater[str(i)]}")
+            with open(os.path.join("..", "data", listTranslater[str(i)], "collection.json"), "w", encoding="utf-8") as file:
+                if i==2:
+                    finalCollection.extend(newFromOldPrices)
+                size = sys.getsizeof(finalCollection)
+                file.write(json.dumps(finalCollection))
+                print(f"Wrote {size} to Disk. {len(finalCollection)} items in {listTranslater[str(i)]}")
+    # files exist
+    else:
+        collectionsDict = {"promotionsCollection": "../data/promotions/", "itemCollection": "../data/items/", "pricesCollection": "../data/prices/", "inventoryCollection": "../data/inventories/",\
+            "tripCollection": "../data/trips/", "priceModifierCollection": "../data/priceModifiers/", "userCollection": "../data/users/", "sellerCollection": "../data/sellers/"}
+        
+        for varName, foldName in collectionsDict.items():
+            with open(foldName+"collection.json", mode='r', encoding='utf-8') as f:
+                data = json.loads(f.read())
+            collectionsDict[varName]=data
 
-    for repo in additionalPaths:
-        pathName = dataRepoPath.replace('kroger', repo)
-        couponFiles = list(os.walk(pathName))
-        couponFiles = couponFiles[0][2]
-        for ofile in couponFiles:
-            deconstructDollars(pathName+'/'+ofile)
+        for head, subfolders, files in os.walk(dataRepoPath):
+            if head.split('\\')[-1] in wantedPaths:
+                for file in files:
+                    if iteration == 0:                 
+                        returnTuple = deconstructExtensions(head+"\\"+file,  promotionsCollection=collectionsDict['promotionsCollection'],\
+                            itemCollection=collectionsDict['itemCollection'], pricesCollection=collectionsDict['pricesCollection'], inventoryCollection=collectionsDict['inventoryCollection'],\
+                                tripCollection=collectionsDict['tripCollection'], priceModifierCollection=collectionsDict['priceModifierCollection'],\
+                                     userCollection=collectionsDict['userCollection'], sellerCollection=collectionsDict['sellerCollection'])
+                        iteration+=1
+                    else:
+                        returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=returnTuple[0], itemCollection=returnTuple[1], pricesCollection=returnTuple[2], inventoryCollection=returnTuple[3], tripCollection=returnTuple[4], priceModifierCollection=returnTuple[5], userCollection=returnTuple[6], sellerCollection=returnTuple[7])
+                    print(f'processed {file}.')
+
+        for i, finalCollection in enumerate(returnTuple):
+            with open(os.path.join("..", "data", listTranslater[str(i)], "collection.json"), "w", encoding="utf-8") as file:
+                    size = sys.getsizeof(finalCollection)
+                    file.write(json.dumps(finalCollection))
+                    print(f"Wrote {size} to Disk. {len(finalCollection)} items in {listTranslater[str(i)]}")
+
+    if additionalPaths:
+        for repo in additionalPaths:
+            pathName = dataRepoPath.replace('kroger', repo)
+            couponFiles = list(os.walk(pathName))
+            couponFiles = couponFiles[0][2]
+            for ofile in couponFiles:
+                deconstructDollars(pathName+'/'+ofile)
     
     return None
 
 # provideSummary('./requests/server/collections/trips/trips052822.json')
-createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips', 'digital', 'cashback'], additionalPaths=['familydollar', 'dollargeneral'])
+createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips'], additionalPaths=[])
 #deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
 # summarizeCollection('./requests/server/collections/recipes/recipes.json')
 # forceClose("./requests/server/collections/digital/digital42822.txt", streams=False)
