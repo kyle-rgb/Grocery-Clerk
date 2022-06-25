@@ -538,8 +538,8 @@ def getDigitalPromotions():
 
 
 def simulateUser(link):
-    neededLinks = {'cashback': {"no": 335, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
-        'digital': {"no":344, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
+    neededLinks = {'cashback': {"no": 198, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
+        'digital': {"no":345, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
             'dollarGeneral': {'no': 110, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
                  'initalScroll': -1650}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
@@ -816,7 +816,6 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
                 # !!MinQuantityDescription
             # list: !!UPC
 
-    # TODO Decompose::-> To Equivalent Kroger Document Level Attributes
         # items: Description, UPC, Image, IsGenericBrand, IsSellable, IsBopisEligible, Ratings {AverageRating, RatingReviewCount, }, Category(| separated string)
             # shipToHomeQuantity, isShipToHome
         # inventories: AvailableQty, AvailableStockStore, InventoryStatus,
@@ -897,8 +896,8 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
                     # OfferSummary + OfferDescription => shortDescription
                     # OfferDisclaimer => terms
                     # RewaredCategoryName => categories[]
-                    newC['brandName'] = coup.get('BrandName') 
-                    newC['companyName'] = coup.get('CompanyName') 
+                    newC['brandName'] = coup.get('Brandname') 
+                    newC['companyName'] = coup.get('Companyname') 
                     newC['offerType'] = coup.get('OfferType')
                     if bool(coup.get('OfferDisclaimer')):
                         newC['terms'] = coup.get('OffeDisclaimer') 
@@ -907,7 +906,7 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
                     # OfferActivationDate => startDate  %Y-%m-%dT%H:%M:%S
                     # OfferExpirationDate => endDate %Y-%m-%dT%H:%M:%S
                     newC['startDate'] = dt.datetime.strptime(coup.get('OfferActivationDate'), '%Y-%m-%dT%H:%M:%S').timestamp()
-                    newC['endDate'] = dt.datetime.strptime(coup.get('OfferExpirationDate'), '%Y-%m-%dT%H:%M:%S').timestamp()
+                    newC['expirationDate'] = dt.datetime.strptime(coup.get('OfferExpirationDate'), '%Y-%m-%dT%H:%M:%S').timestamp()
                     # RewaredOfferValue => value
                     newC['value'] = coup.get('RewaredOfferValue')
                     # MinQuantity => requirementQuantity 
@@ -957,7 +956,7 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
             # redemptionStartDateTime => startDate %Y-%m-%dT%H:%M:%S
             # redemptionEndDateTime => expirationDate %Y-%m-%dT%H:%M:%S
             newC['startDate'] = dt.datetime.strptime(coup.get('redemptionStartDateTime').get('iso'), '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
-            newC['endDate'] = dt.datetime.strptime(coup.get('expirationDateTime').get('iso'), '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
+            newC['expirationDate'] = dt.datetime.strptime(coup.get('expirationDateTime').get('iso'), '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
             # clipStartDateTime %Y-%m-%dT%H:%M:%S
             # clipEndDateTime
             newC['clipStartDate'] = dt.datetime.strptime(coup.get('clipStartDateTime').get('iso'), '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
@@ -1134,6 +1133,32 @@ def getPublixCouponData(deals=673):
 
     return None
 
+def summarizeIt():
+    for head, subs, files in os.walk('../data/'):
+        if subs==[]:
+            with open(head+"/"+files[0], mode='r', encoding='utf-8') as f:
+                s = {}
+                data = json.loads(f.read())
+                for d in data:
+                    for k,v in d.items():
+                        if k not in s.keys():
+                            s[k] = {'count': 1, "type": type(v)}
+                        else:
+                            s[k]['count']+=1
+                print('#'*50)
+                print(head)
+                pprint(sorted(s.items(), key=lambda x: x[1].get('count'), reverse=True))
+                print('#'*50)
+                print('\n')
+
+
+
+
+
+
+
+
+#summarizeIt()
 #  publix
 # runAndDocument([getScrollingData], ['getPublixInstacartData'], base_url='https://delivery.publix.com/store/publix/collections/', urls=['d1102-produce', 'd1090-dairy-eggs', 'd1106-frozen',
 # 'd1089-beverages', 'd1099-snacks', 'd1095-pantry', 'd1094-meat-seafood', 'd1088-bakery', 'd1091-deli', 'd1092-household', 'd1104-canned-goods',
@@ -1166,12 +1191,12 @@ def getPublixCouponData(deals=673):
 #getFamilyDollars(5184) 
 #simulateUser('dollarGeneral')
 #addSpecialPromotion()
-#updateGasoline(["062322.json"])
+#updateGasoline(["062422.json"])
 #deconstructDollars()
 #newOperation('./requests/server/collections/digital/dollars')
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
 # getMyData() 
 # getDigitalPromotions()
-# simulateUser("cashback")
+# runAndDocument([simulateUser], ['getKrogerCashbackCouponsAndItems'], link='cashback')
 # newOperation()
 # switchUrl()

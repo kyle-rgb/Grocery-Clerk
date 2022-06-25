@@ -8,39 +8,197 @@ from datetime import datetime
 from pymongo.write_concern import WriteConcern
 from pymodm import MongoModel, fields
 
-class Receipts(MongoModel):
-    checkout_timestamp = fields.DateTimeField()
-    address = fields.CharField()
-    items = fields.ListField()
-    sales = fields.ListField()
-    cahsier = fields.CharField()
-    payment_type = fields.CharField()
-    fuel_points_earned = fields.IntegerField()
-    fuel_points_month = fields.IntegerField()
-    last_month_fuel_points = fields.IntegerField()
-
+class Inventories(MongoModel):
+    stockLevel = fields.CharField()
+    locationId = fields.CharField()
+    utcTimestamp = fields.IntegerField()
+    upc = fields.CharField()
+    availableToSell = fields.IntegerField()
+    sellerKey = fields.IntegerField()
 
     class Meta:
-        write_concern = WriteConcern(j=True)
-        connection_alias = 'receipts'
+        write_concern = WriteConcern(j=True) # to journal
+        connection_alias = 'inventories'
 
-    
-# One for Items
 class Items(MongoModel):
-    UPC = fields.IntegerField()
-    avg_rating = fields.FloatField()
-    reviews = fields.IntegerField()
-    ingredients = fields.ListField()
-    health_info = fields.DictField()
-    serving_size = fields.DictField()
-    images = fields.URLField()
-    product_name = fields.CharField()
-    item_link = fields.URLField()
-    price_equation = fields.CharField()
-    product_size = fields.CharField()
-    product_promotional_price = fields.FloatField()
-    product_original_price = fields.FloatField()
+    description = fields.CharField()
+    soldInStore = fields.BooleanField()
+    upc = fields.CharField()
+    images = fields.ListField()
+    categories = fields.ListField()
+    modalities = fields.ListField()
+    customerFacingSize = fields.CharField()
+    familyTree = fields.DictField()
+    homeDeliveryItem = fields.BooleanField()
+    shipToHome = fields.BooleanField()
+    snapEligible = fields.BooleanField()
+    taxonomies = fields.ListField()
+    temperatureIndicator = fields.CharField()
+    familyTreeV1 = fields.DictField()
+    idV1 = fields.CharField()
+    brand = fields.DictField()
+    IsBopisEligible = fields.BooleanField()
+    dimensions = fields.DictField()
+    sellBy = fields.CharField()
+    orderBy = fields.CharField()
+    countriesOfOrigin = fields.CharField() # 
+    weight = fields.CharField()
+    romanceDescription = fields.CharField()
+    ratings = fields.DictField()
+    familyCode = fields.ListField()
+    nutrition = fields.DictField()
+    taxGroupCode = fields.CharField()
+    hazmatFlag = fields.BooleanField()
+    mimimumOrderQuantity = fields.IntegerField()
+    maximumOrderQuantity = fields.IntegerField()
+    tareValue = fields.IntegerField()
+    alcoholFlag = fields.BooleanField()
+    heatSensitive = feilds.BooleanField()
+    prop65Warning = fields.CharField()
+    prop65 = fields.DictField()
+    weightPerUnit = fields.CharField()
+    monetizationId = fields.ListField()
+    shipsWithColdPack = fields.BooleanField()
+    isWeighted = fields.BooleanField()
+    barCodes = fields.ListField()
 
     class Meta:
         write_concern = WriteConcern(j=True)
         connection_alias = 'items'
+
+class priceModifiers(MongoModel):
+    type = fields.CharField()
+    amount = fields.FloatField()
+    promotionId = fields.CharField()
+    redemptions = fields.IntegerField()
+    redemptionKeys = fields.ListField()
+    total = fields.FloatField()
+    couponType = fields.CharField()
+    reportingCode = fields.CharField()
+
+    class Meta:
+        write_concern = WriteConcern(j=True)
+        connection_alias = 'priceModifiers'
+
+class Prices(MongoModel):
+    value = fields.FloatField()
+    quantity = fields.IntegerField()
+    type = fields.CharField()
+    upc = fields.CharField()
+    utcTimestamp = fields.IntegerField()
+    isPurchase = fields.BooleanField()
+    locationId = fields.CharField()
+    modalities = fields.ListField()
+    effectiveDate = fields.CharField()
+    expirationDate = fields.CharField()
+    sellerKey = fields.IntegerField()
+    offerIds = fields.CharField()
+    transactionId = fields.CharField()
+
+    class Meta:
+        write_concern = WriteConcern(j=True)
+        connection_alias = 'prices'
+
+class Promotions(MongoModel):
+    startDate = fields.CharField()
+    value = fields.CharField()
+    requirementQuantity = fields.IntegerField()
+    id = fields.IntegerField()
+    brandName = fields.CharField()
+    categories = fields.ListField()
+    imageUrl = fields.CharField()
+    redemptionsAllowed = fields.IntegerField()
+    terms = fields.CharField()
+    shortDescription = fields.CharField()
+    type = fields.CharField()
+    expirationDate = fields.CharField()
+    krogerCouponNumber = fields.CharField()
+    productUpcs = fields.ListField()
+    requirementDescription = fields.CharField()
+    modalities = fields.ListField()
+    endDate = fields.FloatField()
+    isManufacturerCoupon = fields.BooleanField()
+    offerCode = fields.CharField()
+    companyName = fields.CharField()
+    offerType = fields.CharField()
+    redemptionFreq = fields.CharField()
+    imageUrl2 = fields.CharField()
+    offerGS1 = fields.CharField()
+    cashbackCashoutType = fields.CharField()
+    specialSavings = fields.ListField()
+    clipStartDate = fields.FloatField()
+    clipEndDate = fields.FloatField()
+    enhancedImageUrl = fields.CharField()
+    popularity = fields.IntegerField()
+    clippedCount = fields.IntegerField()
+    isSharable = fields.BooleanField()
+    
+    class Meta:
+        write_concern = WriteConcern(j=True)
+        connection_alias = 'promotions'
+
+class Sellers(MongoModel):
+    sellerId = fields.CharField()
+    sellerName = fields.CharField()
+    id = fields.IntegerField()
+
+    class Meta:
+        write_concern = WriteConcern(j=True)
+        connection_alias = 'sellers'
+
+class Stores(MongoModel):
+    locationId = fields.CharField()
+    chain = fields.CharField()
+    address = fields.DictField()
+    geolocation = fields.DictField()
+    name = fields.CharField()
+    hours = fields.DictField()
+    phone = fields.CharField()
+    departments = fields.ListField()
+
+    class Meta:
+        write_concern = WriteConcern(j=True)
+        connection_alias = 'stores'
+
+class Trips(MongoModel):
+    totalSavings = fields.FloatField()
+    loyaltyId = fields.CharField()
+    locationId = fields.CharField()
+    terminalNumber = fields.CharField()
+    transactionId = fields.CharField()
+    tax = fields.ListField()
+    tenderType = fields.CharField()
+    total = fields.FloatField()
+    subtotal = fields.FloatField()
+    fulfillmentType = fields.CharField()
+    utcTimestamp = fields.CharField()
+
+    class Meta:
+        write_concern = WriteConcern(j=True)
+        connection_alias = 'trips'
+
+class Runs(MongoModel):
+    function = fields.ListField()
+    time = fields.FloatField()
+    description = fields.CharField()
+
+    class Meta:
+        write_concern = WriteConcern()
+        connection_alias = 'runs'
+
+class Users(MongoModel):
+    userId = fields.CharField()
+    loyaltyId = fields.CharField()
+    trips = fields.ListField()
+
+    class Meta:
+        write_concern = WriteConcern()
+        connection_alias = 'users'
+
+
+
+
+
+
+
+

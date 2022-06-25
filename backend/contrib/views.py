@@ -9,12 +9,9 @@ def get_items(request):
     # Initialize connection; Mongo will connect on first operation
     uri = os.environ.get("MONGO_CONN_URL")
     client = MongoClient(uri)
-    db = client.groceries # db
-    reqObj = []
-    items = db.items  # items
+    db = client.new # db
+    items = db.items.find_one({}, {'_id':0})  # items
     trips = db.trips.find_one({}, {'_id': 0})
-    for i in items.find({}, {'_id': 0}):
-        reqObj.append(i)
     
     text = request.GET.get("type", "")
     if text == 'items':

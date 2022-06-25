@@ -892,7 +892,7 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
     return None
 
 # provideSummary('./requests/server/collections/trips/trips052822.json')
-createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips'], additionalPaths=[])
+createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar'])
 #deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
 # summarizeCollection('./requests/server/collections/recipes/recipes.json')
 # forceClose("./requests/server/collections/digital/digital42822.txt", streams=False)
