@@ -7,13 +7,15 @@ async function createType(){
     var t = ''
     let t2 =''
     let reg = /kroger|aldi|publix|dollargeneral|familydollar|fooddepot/
-    let reg2 = /mypurchases|cashback|coupons|Buy5Save1/
-    var fileTypes = {'mypurchases': 'trips', 'cashback': 'cashback', "coupons": "digital", "Buy5Save1": "buy5save1"}
+    let regKroger = /mypurchases|cashback|coupons|Buy5Save1|\?N=/
+    let regFamilyDollar = /\?N=|smart-coupons/
+    var fileTypes = {'mypurchases': 'trips', 'cashback': 'cashback', "coupons": "digital", "Buy5Save1": "buy5save1", '?N=': 'items', 'smart-coupons': 'coupons'}
     for (let tab of tabs){
       if (tab.url.match(reg)!=null){
         let match = tab.url.match(reg)[0]
         t = match
-        match=='kroger'? t2=fileTypes[tab.url.match(reg2)[0]]: t2='';
+        match=='kroger'? t2=fileTypes[tab.url.match(regKroger)[0]]: t2='';
+        match=='familydollar'? t2=fileTypes[tab.url.match(regFamilyDollar)[0]] : t2;
       }
     }
     return `type=${t}&folder=${t2}`
