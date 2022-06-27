@@ -540,7 +540,7 @@ def getDigitalPromotions():
 def simulateUser(link):
     neededLinks = {'cashback': {"no": 198, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
         'digital': {"no":345, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
-            'dollarGeneral': {'no': 107, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
+            'dollarGeneral': {'no': 133, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
                  'initalScroll': -1650}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
@@ -1181,16 +1181,27 @@ def summarizeIt():
 #     "d12951-organic", "d6517-floral", "d287-international", "d18863-vegan",
 #     "d13031-gluten-free", "d26015-seasonal", "dynamic_collection-sales"])
 
+# family dollar Items
+# getFamilyDollars(5184) 
 # runAndDocument([getFamilyDollars], ['getFamilyDollarsItems'], results=5194)
-# runAndDocument([simulateUser], ['getDollarGeneralCouponsAndItems'], link='dollarGeneral')
+
 # food depot
 # getScrollingData(base_url="https://shop.fooddepot.com/online/fooddepot40-douglasvillehwy5/shop/", urls = ["produce", "meatseafood", "bakery", "deli", "dairyeggs",
 #     "beverages", "breakfast","cannedgoods", "drygoodspasta", "frozen",
 #     "household", "international", "pantry", "personalcare", "pets", "snacks", "alcohol", "babies", "seasonal"])
-#getFamilyDollars(5184) 
+
+# runAndDocument([getScrollingData], ['getFoodDepotItems'], base_url='https://shop.fooddepot.com/online/fooddepot40-douglasvillehwy5/shop/',
+# urls=['produce', 'meatseafood','bakery', 'deli', 'beverages', 'dairyeggs', 'beverages', 'breakfast',
+# 'cannedgoods', 'drygoodspasta', 'frozen', 'household', 'international', 'pantry', 'personalcare', 'pets', 'snacks', 'alcohol', 'babies', 'seasonal'])
+
+
+
+
+# dollar general 
 #simulateUser('dollarGeneral')
+# runAndDocument([simulateUser], ['getDollarGeneralCouponsAndItems'], link='dollarGeneral')
 #addSpecialPromotion()
-#updateGasoline(["062422.json"])
+#updateGasoline(["062522.json"])
 #deconstructDollars()
 #newOperation('./requests/server/collections/digital/dollars')
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
