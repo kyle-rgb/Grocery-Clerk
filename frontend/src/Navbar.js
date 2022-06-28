@@ -3,6 +3,7 @@ import {BrowserRouter as Router, Routes, Route, Link} from "react-router-dom"
 import Home from './Home';
 import Pantry from './pantry';
 import Constuction from './construction';
+import Trips from './trips';
 import logo from './logo.svg';
 import axios from 'axios';
 import './Home.css';
@@ -25,7 +26,7 @@ export default function Navbar() {
         </nav>
     </div>
     <Routes>
-        <Route path="/trips" element={<Constuction></Constuction>}></Route>
+        <Route path="/trips" element={<Trips></Trips>}></Route>
         <Route path="/pantry" element={<Pantry></Pantry>}></Route>
         <Route path="/promotions" element={<Constuction></Constuction>}></Route>
         <Route path="/stores" element={<Constuction></Constuction>}></Route>

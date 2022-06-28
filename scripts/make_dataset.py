@@ -1201,7 +1201,7 @@ def summarizeIt():
 #simulateUser('dollarGeneral')
 # runAndDocument([simulateUser], ['getDollarGeneralCouponsAndItems'], link='dollarGeneral')
 #addSpecialPromotion()
-#updateGasoline(["062522.json"])
+#updateGasoline(["062722.json"])
 #deconstructDollars()
 #newOperation('./requests/server/collections/digital/dollars')
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 

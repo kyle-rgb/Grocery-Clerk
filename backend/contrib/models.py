@@ -6,7 +6,9 @@ from datetime import datetime
 
 # One for Trips
 from pymongo.write_concern import WriteConcern
-from pymodm import MongoModel, fields
+from pymodm import MongoModel, fields, connect
+
+connect("mongodb://localhost:27017/my-app", alias='my-app')
 
 class Inventories(MongoModel):
     stockLevel = fields.CharField()
@@ -18,7 +20,7 @@ class Inventories(MongoModel):
 
     class Meta:
         write_concern = WriteConcern(j=True) # to journal
-        connection_alias = 'inventories'
+        connection_alias = 'my-app'
 
 class Items(MongoModel):
     description = fields.CharField()
@@ -53,7 +55,7 @@ class Items(MongoModel):
     maximumOrderQuantity = fields.IntegerField()
     tareValue = fields.IntegerField()
     alcoholFlag = fields.BooleanField()
-    heatSensitive = feilds.BooleanField()
+    heatSensitive = fields.BooleanField()
     prop65Warning = fields.CharField()
     prop65 = fields.DictField()
     weightPerUnit = fields.CharField()
@@ -64,7 +66,7 @@ class Items(MongoModel):
 
     class Meta:
         write_concern = WriteConcern(j=True)
-        connection_alias = 'items'
+        connection_alias = 'my-app'
 
 class priceModifiers(MongoModel):
     type = fields.CharField()
@@ -78,7 +80,7 @@ class priceModifiers(MongoModel):
 
     class Meta:
         write_concern = WriteConcern(j=True)
-        connection_alias = 'priceModifiers'
+        connection_alias = 'my-app'
 
 class Prices(MongoModel):
     value = fields.FloatField()
@@ -97,7 +99,7 @@ class Prices(MongoModel):
 
     class Meta:
         write_concern = WriteConcern(j=True)
-        connection_alias = 'prices'
+        connection_alias = 'my-app'
 
 class Promotions(MongoModel):
     startDate = fields.CharField()
@@ -135,7 +137,7 @@ class Promotions(MongoModel):
     
     class Meta:
         write_concern = WriteConcern(j=True)
-        connection_alias = 'promotions'
+        connection_alias = 'my-app'
 
 class Sellers(MongoModel):
     sellerId = fields.CharField()
@@ -144,7 +146,7 @@ class Sellers(MongoModel):
 
     class Meta:
         write_concern = WriteConcern(j=True)
-        connection_alias = 'sellers'
+        connection_alias = 'my-app'
 
 class Stores(MongoModel):
     locationId = fields.CharField()
@@ -158,7 +160,7 @@ class Stores(MongoModel):
 
     class Meta:
         write_concern = WriteConcern(j=True)
-        connection_alias = 'stores'
+        connection_alias = 'my-app'
 
 class Trips(MongoModel):
     totalSavings = fields.FloatField()
@@ -175,7 +177,7 @@ class Trips(MongoModel):
 
     class Meta:
         write_concern = WriteConcern(j=True)
-        connection_alias = 'trips'
+        connection_alias = 'my-app'
 
 class Runs(MongoModel):
     function = fields.ListField()
@@ -184,7 +186,7 @@ class Runs(MongoModel):
 
     class Meta:
         write_concern = WriteConcern()
-        connection_alias = 'runs'
+        connection_alias = 'my-app'
 
 class Users(MongoModel):
     userId = fields.CharField()
@@ -192,12 +194,8 @@ class Users(MongoModel):
     trips = fields.ListField()
 
     class Meta:
-        write_concern = WriteConcern()
-        connection_alias = 'users'
-
-
-
-
+        write_concern = WriteConcern(j=True)
+        connection_alias = 'my-app'
 
 
 

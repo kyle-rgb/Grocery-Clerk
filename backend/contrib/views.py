@@ -10,14 +10,13 @@ def get_items(request):
     uri = os.environ.get("MONGO_CONN_URL")
     client = MongoClient(uri)
     db = client.new # db
-    items = db.items.find_one({}, {'_id':0})  # items
-    trips = db.trips.find_one({}, {'_id': 0})
-    
+    print(db.collection_names())
     text = request.GET.get("type", "")
-    if text == 'items':
-        return JsonResponse(reqObj, safe=False)
-    else:
-        return JsonResponse(trips, safe=False)
+    try:
+        result = db[text].find_one({}, {"_id": 0})
+    except:
+        result = {'error': 'collection does not exist'}
+    return JsonResponse(result, safe=False)
 
 #### Backend Template Pages
 def start_page(request):

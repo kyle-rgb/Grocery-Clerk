@@ -34,6 +34,36 @@
   margin-bottom: 50px;
 }
 
+.showcase {
+ height: 300px;
+ width: 80%;
+ background: #000;
+ color: #fff;
+ position: relative;
+ display: flex;
+ flex-direction: row;
+ align-items: left;
+ justify-content: left;
+ text-align:left;   
+}
+
+.showcase h1 {
+  font-size: 20px;
+  margin-bottom: 0;
+}
+
+.showcase img {
+  margin: 50px;
+  max-height: 50%;
+  align-self: flex-start;
+}
+
+.showcase table {
+  margin: 50px;
+  max-height: 50%;
+  align-self: flex-start;
+}
+
 @keyframes App-logo-spin {
   from {
     transform: rotate(0deg);
