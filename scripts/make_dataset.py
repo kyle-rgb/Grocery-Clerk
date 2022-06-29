@@ -538,8 +538,8 @@ def getDigitalPromotions():
 
 
 def simulateUser(link):
-    neededLinks = {'cashback': {"no": 198, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
-        'digital': {"no":345, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
+    neededLinks = {'cashback': {"no": 182, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
+        'digital': {"no":359, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
             'dollarGeneral': {'no': 133, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
                  'initalScroll': -1650}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
@@ -1163,6 +1163,7 @@ def summarizeIt():
 # 'd21232-wine', 'd21231-beer', 'd3152-popular', 'd5625-floral', 'd5630-platters', 'd50450-ready-to-eat-ready-to-cook', 'd1105-new-and-interesting',
 # 'd41671-storm-prep','d41622-tailgating', 'd51523-deli-grab-and-go', 'dynamic_collection-sales'])
 # getPublixCouponData()
+# runAndDocument([getPublixCouponData], ['getPublixCouponData'], deals=998)
 
 # aldi
 # getScrollingData(base_url="https://shop.aldi.us/store/aldi/collections/", urls = ["d295-alcohol" ,"d282-produce", "d297-dairy-eggs", "d292-snacks",
@@ -1199,9 +1200,9 @@ def summarizeIt():
 
 # dollar general 
 #simulateUser('dollarGeneral')
-# runAndDocument([simulateUser], ['getDollarGeneralCouponsAndItems'], link='dollarGeneral')
+# runAndDocument([simulateUser], ['getKrogerDigitalCouponsAndItems'], link='cashback')
 #addSpecialPromotion()
-#updateGasoline(["062722.json"])
+# updateGasoline(["062822.json"])
 #deconstructDollars()
 #newOperation('./requests/server/collections/digital/dollars')
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 

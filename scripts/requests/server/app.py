@@ -35,6 +35,9 @@ def docs():
             file.write(json.dumps(data))
         print(f'successfly wrote {length} to disk. have received {i} objects')
 
+        if type(data)==list:
+            print("length = ", len(data))
+
         return({"data": {"length": length}, "continue": 1})
 
 if __name__ == "__main__":
