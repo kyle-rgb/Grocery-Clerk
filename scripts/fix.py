@@ -1,7 +1,7 @@
 from functools import reduce
 import json, re, os, unicodedata, itertools, sys, time, pytz, datetime as dt
 from pprint import pprint
-from make_dataset import deconstructDollars
+from make_dataset import deconstructDollars, insertData
 
 startTime = time.perf_counter()
 # find position where streaming data overlaps in early collected data 
@@ -804,8 +804,7 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
         os.mkdir("../data/stores/")
         with open('data/API/myStoresAPI.json', 'r', encoding='utf-8') as storeFile:
             stores = json.loads(storeFile.read())
-        with open('../data/stores/collection.json', 'w', encoding='utf-8') as storeFile:
-            storeFile.write(json.dumps(stores))
+        insertData(stores, 'stores')
 
         with open('data/collections/combinedPrices.json', 'r', encoding='utf-8') as priceFile:
             oldPrices = json.loads(priceFile.read())
@@ -835,23 +834,9 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
         
         
         for i, finalCollection in enumerate(returnTuple):
-            if not os.path.exists('../data/'):
-                os.mkdir("../data/")
-        
-            if not os.path.exists(os.path.join("..", "data", listTranslater[str(i)])):
-                os.mkdir(os.path.join("..", "data", listTranslater[str(i)]))
-            else:
-                with open(os.path.join("..", "data", listTranslater[str(i)], "collection.json"), "r", encoding='utf-8') as prevFile:
-                    oldCollection = json.loads(prevFile.read())
-                    finalCollection.extend(oldCollection)
-            
-
-            with open(os.path.join("..", "data", listTranslater[str(i)], "collection.json"), "w", encoding="utf-8") as file:
-                if i==2:
-                    finalCollection.extend(newFromOldPrices)
-                size = sys.getsizeof(finalCollection)
-                file.write(json.dumps(finalCollection))
-                print(f"Wrote {size} to Disk. {len(finalCollection)} items in {listTranslater[str(i)]}")
+            if i==2:
+                finalCollection.extend(newFromOldPrices)
+            insertData(finalCollection, listTranslater[str(i)])
     # files exist
     else:
         collectionsDict = {"promotionsCollection": "../data/promotions/", "itemCollection": "../data/items/", "pricesCollection": "../data/prices/", "inventoryCollection": "../data/inventories/",\
@@ -876,10 +861,7 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
                     print(f'processed {file}.')
 
         for i, finalCollection in enumerate(returnTuple):
-            with open(os.path.join("..", "data", listTranslater[str(i)], "collection.json"), "w", encoding="utf-8") as file:
-                    size = sys.getsizeof(finalCollection)
-                    file.write(json.dumps(finalCollection))
-                    print(f"Wrote {size} to Disk. {len(finalCollection)} items in {listTranslater[str(i)]}")
+            insertData(finalCollection, collection_name=listTranslator[str(i)])
 
     if additionalPaths:
         for repo in additionalPaths:

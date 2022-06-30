@@ -112,3 +112,4 @@ config/
 scripts/requests/server/collections/
 
 collection.json
+scripts/data/

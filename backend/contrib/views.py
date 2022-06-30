@@ -9,12 +9,12 @@ def get_items(request):
     # Initialize connection; Mongo will connect on first operation
     uri = os.environ.get("MONGO_CONN_URL")
     client = MongoClient(uri)
-    db = client.new # db
-    print(db.collection_names())
+    db = client["new"] # db
     text = request.GET.get("type", "")
     try:
-        result = db[text].find_one({}, {"_id": 0})
-    except:
+        result = list(db[text].find({}, projection={"_id": 0}, limit=2))
+    except BaseException as err:
+        print(err)
         result = {'error': 'collection does not exist'}
     return JsonResponse(result, safe=False)
 
