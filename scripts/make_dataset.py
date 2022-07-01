@@ -644,10 +644,10 @@ def getPublixCouponData(deals=673):
 
 
 # dollar general 
-#simulateUser('dollarGeneral')
+# simulateUser('dollarGeneral')
 # runAndDocument([simulateUser], ['getKrogerCashbackCouponsAndItems'], link='cashback')
 #addSpecialPromotion()
-# updateGasoline(["062822.json"])
+updateGasoline(["062922.json", "063022.json"])
 #deconstructDollars()
 #newOperation('./requests/server/collections/digital/dollars')
 ######## SCRAPING OPERATIONS # # # # # ## #  # ## # # # # # # # # #  ## # # 
