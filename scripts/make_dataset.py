@@ -8,6 +8,7 @@ import subprocess
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 import pyperclip as clip
+from api_keys import DB_ARCHIVE_KEY 
 
 # Inside Will Find:
     # Trip Level Data: Total Cost of Purchases, Locations of Store, Order Number, Payment Method, Items/Coupons Together, Tax
@@ -106,14 +107,14 @@ def insertData(entries, collection_name, db='new'):
     client = MongoClient(uri)
     db = client[db]
 
-    if collection_name not in db.list_collection_names():
-        e = sys.exc_info()[0]
-        d = ', '.join(db.list_collection_names())
-        raise CollectionInvalid(f'Collection {collection_name} does not exist. Valid Names in {db.name} are {d}')
-    else:
-        res = db[collection_name].insert_many(entries)
-        res = len(res.inserted_ids)
-        print(f"Inserted {res} documents in {collection_name}")
+    # if collection_name not in db.list_collection_names():
+    #     e = sys.exc_info()[0]
+    #     d = ', '.join(db.list_collection_names())
+    #     raise CollectionInvalid(f'Collection {collection_name} does not exist. Valid Names in {db.name} are {d}')
+    # else:
+    res = db[collection_name].insert_many(entries)
+    res = len(res.inserted_ids)
+    print(f"Inserted {res} documents in {collection_name}")
     client.close()
 
     return None
@@ -134,6 +135,7 @@ def runAndDocument(funcs:list, callNames:list, **kwargs):
             funcName = [k for k, v in globals().items() if v==func][0]
             functions.append({'function': funcName, 'time': end, 'description': name})
     duration = dt.datetime.now(tz=pytz.UTC) - startDateTime
+    duration = round(duration.total_seconds(), 4)
     data = {'executeVia': 'call', 'functions': functions, "startedAt": startDateTime, 'duration': duration}
     insertData(data, 'runs')
     return None
@@ -142,7 +144,7 @@ def runAndDocument(funcs:list, callNames:list, **kwargs):
 def simulateUser(link):
     neededLinks = {'cashback': {"no": 202, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
         'digital': {"no":354, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
-            'dollarGeneral': {'no': 133, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
+            'dollarGeneral': {'no': 143, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
                  'initalScroll': -1650}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
@@ -220,7 +222,7 @@ def simulateUser(link):
     print(f"Processed {neededLinks[link]['no']} in {time.perf_counter()} seconds")
     return None
 
-def updateGasoline(files=['062222.json']):
+def updateGasoline(files=['070222.json']):
     # cleaner function for Kroger trip data
     # Kroger Fuel Points (previously in price modifiers) now show up as duplicate entry of gasoline with a quantity of zero and a negative price paid to correspond to savings
     # Must be run before deconstructions.
@@ -272,9 +274,9 @@ def getFamilyDollarItems(results):
     
     return None
 
-def getScrollingData(base_url: str, urls: list, chain: str):
+def getScrollingData(chain: str):
     
-    scrollVars = [{'chain': 'fooddepot', 'base_url': 'https://shop.fooddepot.com/online/fooddepot40-douglasvillehwy5/shop', 'urls': ["produce", "meatseafood", "bakery", "deli", "dairyeggs", "beverages", "breakfast","cannedgoods", "drygoodspasta", "frozen", "household", "international", "pantry", "personalcare", "pets", "snacks", "alcohol", "babies", "seasonal"]},
+    scrollVars = [{'chain': 'fooddepot', 'base_url': 'https://shop.fooddepot.com/online/fooddepot40-douglasvillehwy5/shop/', 'urls': ["produce", "meatseafood", "bakery", "deli", "dairyeggs", "beverages", "breakfast","cannedgoods", "drygoodspasta", "frozen", "household", "international", "pantry", "personalcare", "pets", "snacks", "alcohol", "babies", "seasonal"]},
     {'chain': 'aldi', 'base_url': 'https://shop.aldi.us/store/aldi/collections/', 'urls': [
         "d295-alcohol" ,"d282-produce", "d297-dairy-eggs", "d292-snacks",
         "d299-frozen", "d290-pantry", "d298-meat-seafood", "d294-bakery",
@@ -290,7 +292,7 @@ def getScrollingData(base_url: str, urls: list, chain: str):
         'd21232-wine', 'd21231-beer', 'd3152-popular', 'd5625-floral', 'd5630-platters', 'd50450-ready-to-eat-ready-to-cook', 'd1105-new-and-interesting',
         'd41671-storm-prep','d41622-tailgating', 'd51523-deli-grab-and-go', 'dynamic_collection-sales']
     }]
-    base_url, urls = list(map(lambda x: x.get('base_url'), x.get('urls'), list(filter(lambda x: x.chain==chain, scrollVars))))
+    base_url, urls = list(map(lambda x: (x.get('base_url'), x.get('urls')), list(filter(lambda x: x['chain']==chain, scrollVars))))[0]
 
     # CATEGORY = Larger Web Task
     # works for Aldi + Publix Instacart Sites as well as Food Depot's 1st Party Site
@@ -1081,13 +1083,13 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
     # Where Best in the cleaning/processsing/insertion chain to apply that is most efficent will be key.    
     # add stores via api and previously scraped prices to new price collection schema
     iteration=0
-    listTranslater={"0": "promotions", "1": "items", "2": "prices", "3": "inventories", "4":"trips", "5":"priceModifiers", "6":"users", "7":"sellers"}
+    listTranslator={"0": "promotions", "1": "items", "2": "prices", "3": "inventories", "4":"trips", "5":"priceModifiers", "6":"users", "7":"sellers"}
     
     # inital setup if data folders do not exist in repo
     if os.path.exists('./data/API/collection.json'):
         with open('data/API/myStoresAPI.json', 'r', encoding='utf-8') as storeFile:
             stores = json.loads(storeFile.read())
-        insertData(stores, 'stores')
+            insertData(stores, 'stores')
 
         with open('data/collections/combinedPrices.json', 'r', encoding='utf-8') as priceFile:
             oldPrices = json.loads(priceFile.read())
@@ -1119,25 +1121,15 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
         for i, finalCollection in enumerate(returnTuple):
             if i==2:
                 finalCollection.extend(newFromOldPrices)
-            insertData(finalCollection, listTranslater[str(i)])
-    # files exist
+            insertData(finalCollection, listTranslator[str(i)])
+    
+    # file does not exist (clean up has happened therefore read from ../)
     else:
-        collectionsDict = {"promotionsCollection": "../data/promotions/", "itemCollection": "../data/items/", "pricesCollection": "../data/prices/", "inventoryCollection": "../data/inventories/",\
-            "tripCollection": "../data/trips/", "priceModifierCollection": "../data/priceModifiers/", "userCollection": "../data/users/", "sellerCollection": "../data/sellers/"}
-        
-        for varName, foldName in collectionsDict.items():
-            with open(foldName+"collection.json", mode='r', encoding='utf-8') as f:
-                data = json.loads(f.read())
-            collectionsDict[varName]=data
-
         for head, subfolders, files in os.walk(dataRepoPath):
             if head.split('\\')[-1] in wantedPaths:
                 for file in files:
                     if iteration == 0:                 
-                        returnTuple = deconstructExtensions(head+"\\"+file,  promotionsCollection=collectionsDict['promotionsCollection'],\
-                            itemCollection=collectionsDict['itemCollection'], pricesCollection=collectionsDict['pricesCollection'], inventoryCollection=collectionsDict['inventoryCollection'],\
-                                tripCollection=collectionsDict['tripCollection'], priceModifierCollection=collectionsDict['priceModifierCollection'],\
-                                     userCollection=collectionsDict['userCollection'], sellerCollection=collectionsDict['sellerCollection'])
+                        returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=[], itemCollection=[], pricesCollection=[], inventoryCollection=[], tripCollection=[], priceModifierCollection=[], userCollection=[], sellerCollection=[])
                         iteration+=1
                     else:
                         returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=returnTuple[0], itemCollection=returnTuple[1], pricesCollection=returnTuple[2], inventoryCollection=returnTuple[3], tripCollection=returnTuple[4], priceModifierCollection=returnTuple[5], userCollection=returnTuple[6], sellerCollection=returnTuple[7])
@@ -1157,8 +1149,18 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
     
     return None
 
+def backupDatabase():
+    # helper to dump bsons and zip files for archive
+    subprocess.Popen(['mongodump', "-d", "new", "-o", "../data/data"])
+    # 7zip archive w/ password 
+    subprocess.Popen(['7za', "a", "data.7z", "../data/data", f"-p{DB_ARCHIVE_KEY}", "-mhe"])
+    return None
+
+
 
 # setUpBrowser()
-# createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
+#runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
 # deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
-#updateGasoline(["070122.json"])
+# createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
+
+#updateGasoline(["070222.json"])
