@@ -10,17 +10,15 @@
 [![wakatime](https://wakatime.com/badge/github/kyle-rgb/Grocery-Clerk.svg)](https://wakatime.com/badge/github/kyle-rgb/Grocery-Clerk)
 
 # A Virtual Shopper 🛒, Deal Hunter 💸 and Personal Dietitian 👨‍🔬 Wrapped into a Single Application
-This Application will Leverage the Kroger API and Recipe data sources Across the Web to Create a Meal Plan, a Shopping List and a Savings Guide in one Integrated Web Based Application via Django, MongoDB, Reactive.js and Docker.
+This Application will Leverage the Kroger API and Recipe data sources Across the Web to Create a Meal Plan, a Shopping List and a Savings Guide in one Integrated Web Based Application via Django, MongoDB, Next.js and Docker.
 
 ## 🧰 Tools 🧰
 <div>
     <img src="https://img.icons8.com/fluency/96/000000/docker.png" style='margin-right: 15px'/>
     <img src="https://img.icons8.com/color/96/000000/django.png"  style='margin-right: 15px'/>
-    <img src="https://img.icons8.com/officel/80/000000/react.png"  style='margin-right: 15px'/>
+    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8e/Nextjs-logo.svg"  style='margin-right: 15px'/>
     <img src="https://img.icons8.com/color/96/000000/mongodb.png"  style='margin-right: 15px'/>
-    <img src="./frontend/src/static/icons8-python.gif" style="width:80px;height:80px;">
-
-
+    <img src="./frontend/public/images/icons8-python.gif" style="width:80px;height:80px;">
 </div>
 
 ## Local setup

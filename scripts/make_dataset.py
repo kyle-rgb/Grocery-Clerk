@@ -2,13 +2,13 @@
 from pprint import pprint
 import time, re, random, datetime as dt, os, json, urllib, pytz, sys
 import pyautogui as pag
-import subprocess
+import subprocess, shutil
 
 
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 import pyperclip as clip
-from api_keys import DB_ARCHIVE_KEY 
+from api_keys import DB_ARCHIVE_KEY, EXTENSION_ARCHIVE_KEY 
 
 # Inside Will Find:
     # Trip Level Data: Total Cost of Purchases, Locations of Store, Order Number, Payment Method, Items/Coupons Together, Tax
@@ -63,7 +63,7 @@ def setUpBrowser():
     return None
 
 
-def loadMoreAppears(png='./requests/server/moreContent.png'):
+def loadMoreAppears(png='./requests/server/images/moreContent.png'):
     # Evaluate if Dollar General's Promotional Page of Associated Items Has More Items
     # Returns location of button in y [419, 559] band of standard 1920 by 1080 screen 
     locations = list(pag.locateAllOnScreen(png, confidence=.6, grayscale=False))
@@ -142,9 +142,9 @@ def runAndDocument(funcs:list, callNames:list, **kwargs):
 
 
 def simulateUser(link):
-    neededLinks = {'cashback': {"no": 202, "button": "./requests/server/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
-        'digital': {"no":354, "button": "./requests/server/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
-            'dollarGeneral': {'no': 143, "button": "./requests/server/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/loadMore.png",\
+    neededLinks = {'cashback': {"no": 202, "button": "./requests/server/images/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
+        'digital': {"no":354, "button": "./requests/server/images/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
+            'dollarGeneral': {'no': 143, "button": "./requests/server/images/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/images/loadMore.png",\
                  'initalScroll': -1650}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
@@ -287,10 +287,10 @@ def getScrollingData(chain: str):
         "d13031-gluten-free", "d26015-seasonal", "dynamic_collection-sales"]
     },
     {'chain': 'publix', 'base_url': 'https://delivery.publix.com/store/publix/collections/', 'urls': [
-        'd1102-produce', 'd1090-dairy-eggs', 'd1106-frozen','d1089-beverages', 'd1099-snacks', 'd1095-pantry', 'd1094-meat-seafood', 'd1088-bakery', 'd1091-deli', 'd1092-household', 'd1104-canned-goods',
+        'd1102-produce', 'd1090-dairy-eggs', 'd1106-frozen','d1089-beverages', 'd1099-snacks', 'd1095-pantry', 'dynamic_collection-sales','d1094-meat-seafood', 'd1088-bakery', 'd1091-deli', 'd1092-household', 'd1104-canned-goods',
         'd1100-dry-goods-pasta', 'd1097-personal-care', 'd1103-breakfast', 'd1093-international', 'd1101-babies', 'd1098-pets', 'd5626-greeting-cards',
         'd21232-wine', 'd21231-beer', 'd3152-popular', 'd5625-floral', 'd5630-platters', 'd50450-ready-to-eat-ready-to-cook', 'd1105-new-and-interesting',
-        'd41671-storm-prep','d41622-tailgating', 'd51523-deli-grab-and-go', 'dynamic_collection-sales']
+        'd41671-storm-prep','d41622-tailgating', 'd51523-deli-grab-and-go']
     }]
     base_url, urls = list(map(lambda x: (x.get('base_url'), x.get('urls')), list(filter(lambda x: x['chain']==chain, scrollVars))))[0]
 
@@ -664,6 +664,17 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
     [insertData(v, k) for k,v in dollarCollections.items() if v]
     print(f"Finished with {file}")
 
+    return None
+
+def backupDatabase():
+    # move and compressed extension files to separate archive 
+    subprocess.Popen(['7z', "a", "../data/archive.7z", "../data/raw", f"-p{EXTENSION_ARCHIVE_KEY}", "-mhe", "-sdel"])
+    # helper to dump bsons and zip files for archive
+    subprocess.Popen(['mongodump', "-d", "new", "-o", "../data/data"])
+    # 7zip archive mongodumps w/ password
+    subprocess.Popen(['7z', "a", "../data/data.7z", "../data/data", f"-p{DB_ARCHIVE_KEY}", "-mhe", "-sdel"])
+    if os.path.exists("../data/data"):
+        shutil.rmtree('../data/data')
     return None
 
 # Deconstruct Extension Created Files into Final Collections
@@ -1084,17 +1095,26 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
     # add stores via api and previously scraped prices to new price collection schema
     iteration=0
     listTranslator={"0": "promotions", "1": "items", "2": "prices", "3": "inventories", "4":"trips", "5":"priceModifiers", "6":"users", "7":"sellers"}
-    
+
     # inital setup if data folders do not exist in repo
-    if os.path.exists('./data/API/collection.json'):
+    if os.path.exists('./data/API/myStoresAPI.json'):
+        # setup archive for preprocessed data
         with open('data/API/myStoresAPI.json', 'r', encoding='utf-8') as storeFile:
             stores = json.loads(storeFile.read())
             insertData(stores, 'stores')
+        os.makedirs('../data/raw/kroger/API', exist_ok=True)
+        os.rename("./data/API/myStoresAPI.json", "../data/raw/kroger/API/myStores.json")
+
+        # will be backed up by dbdump
+        with open('../data/runs/collection.json') as runFile:
+            runs = json.loads(runFile.read())
+            insertData(runs, 'runs')
 
         with open('data/collections/combinedPrices.json', 'r', encoding='utf-8') as priceFile:
             oldPrices = json.loads(priceFile.read())
             oldPrices = list(filter(lambda y: y.get('isPurchase')==False, oldPrices)) # trip price data will already have been recorded
-
+        
+        os.rename("./data/collections/combinedPrices.json", "../data/raw/kroger/API/combinedPrices.json")
         newFromOldPrices = []
         for oldPrice in oldPrices:
             # turn promo and regular to value
@@ -1108,13 +1128,16 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
                     'upc': oldPrice.get('upc'), 'utcTimestamp': oldPrice.get('acquistion_timestamp'), "type": 'Sale'})
         
         for head, subfolders, files in os.walk(dataRepoPath):
-            if head.split('\\')[-1] in wantedPaths:
+            folder = head.split('\\')[-1]
+            if folder in wantedPaths:
                 for file in files:
-                    if iteration == 0 :                    
+                    if iteration == 0 :                
                         returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=[], itemCollection=[], pricesCollection=[], inventoryCollection=[], tripCollection=[], priceModifierCollection=[], userCollection=[], sellerCollection=[])
                         iteration+=1
                     else:
                         returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=returnTuple[0], itemCollection=returnTuple[1], pricesCollection=returnTuple[2], inventoryCollection=returnTuple[3], tripCollection=returnTuple[4], priceModifierCollection=returnTuple[5], userCollection=returnTuple[6], sellerCollection=returnTuple[7])
+                    os.makedirs(f'../data/raw/kroger/{folder}/', exist_ok=True)
+                    os.rename(head+'\\'+file, f'../data/raw/kroger/{folder}/{file}')
                     print(f'processed {file}.')
         
         
@@ -1125,14 +1148,17 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
     
     # file does not exist (clean up has happened therefore read from ../)
     else:
-        for head, subfolders, files in os.walk(dataRepoPath):
+        for head, subfolders, files in os.walk(dataRepoPath):         
             if head.split('\\')[-1] in wantedPaths:
+                folder = head.split('\\')[-1]
                 for file in files:
-                    if iteration == 0:                 
+                    if iteration == 0:
                         returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=[], itemCollection=[], pricesCollection=[], inventoryCollection=[], tripCollection=[], priceModifierCollection=[], userCollection=[], sellerCollection=[])
                         iteration+=1
                     else:
                         returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=returnTuple[0], itemCollection=returnTuple[1], pricesCollection=returnTuple[2], inventoryCollection=returnTuple[3], tripCollection=returnTuple[4], priceModifierCollection=returnTuple[5], userCollection=returnTuple[6], sellerCollection=returnTuple[7])
+                    os.makedirs(f'../data/raw/kroger/{folder}/', exist_ok=True)
+                    os.rename(head+'\\'+file, f'../data/raw/kroger/{folder}/{file}')  
                     print(f'processed {file}.')
 
         for i, finalCollection in enumerate(returnTuple):
@@ -1146,21 +1172,24 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
             for ofile in couponFiles:
                 # handles insertion
                 deconstructDollars(pathName+'/'+ofile)
+                os.makedirs(f'../data/raw/{repo}', exist_ok=True)
+                os.rename(pathName+'\\'+ofile, f'../data/raw/{repo}/{ofile}')  
+                print(f'processed {ofile}.')
     
+    backupDatabase()
+    shutil.rmtree('./data')
+    shutil.rmtree('../data/stores')
+    shutil.rmtree('../data/runs')
+    
+
     return None
 
-def backupDatabase():
-    # helper to dump bsons and zip files for archive
-    subprocess.Popen(['mongodump', "-d", "new", "-o", "../data/data"])
-    # 7zip archive w/ password 
-    subprocess.Popen(['7za', "a", "data.7z", "../data/data", f"-p{DB_ARCHIVE_KEY}", "-mhe"])
-    return None
 
 
 
 # setUpBrowser()
-#runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
+# runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
+
+#updateGasoline(["070422.json"])
 # deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
-
-#updateGasoline(["070222.json"])
