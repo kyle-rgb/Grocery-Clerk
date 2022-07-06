@@ -176,12 +176,6 @@ def insertData(entries, collection_name, db='new'):
     uri = os.environ.get("MONGO_CONN_URL")
     client = MongoClient(uri)
     db = client[db]
-
-    # if collection_name not in db.list_collection_names():
-    #     e = sys.exc_info()[0]
-    #     d = ', '.join(db.list_collection_names())
-    #     raise CollectionInvalid(f'Collection {collection_name} does not exist. Valid Names in {db.name} are {d}')
-    # else:
     res = db[collection_name].insert_many(entries)
     res = len(res.inserted_ids)
     print(f"Inserted {res} documents in {collection_name}")
@@ -205,6 +199,22 @@ def retrieveData(collection_name, db='new'):
     client.close()
 
     return data
+
+def createDBSummaries(db='new'):
+    uri = os.environ.get("MONGO_CONN_URL")
+    client = MongoClient(uri)
+    db = client[db]
+    with open('../data/stats.json', 'w') as file:
+        dbStats = db.command('dbstats')
+        dbStats.setdefault('collectionStats', [])
+        for col in db.list_collections():
+            dbStats['collectionStats'].append({k:v for k, v in db.command('collstats', col.get('name')).items() if k!='wiredTiger' and k!='indexDetails'})
+        file.write(json.dumps(dbStats))
+
+    print('updated stats')
+
+    return None
+
 
 
 # document scraping functions via a description and function calls
@@ -765,13 +775,10 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
 
 def backupDatabase():
     # move and compressed extension files to separate archive 
-    if not os.path.exists("../data/archive.7z"):
-        subprocess.Popen(['7z', "a", "../data/archive.7z", "../data/raw", f"-p{EXTENSION_ARCHIVE_KEY}", "-mhe", "-sdel"])
-    else:
-        subprocess.Popen(['7z', "u", "../data/archive.7z", "../data/raw", f"-p{EXTENSION_ARCHIVE_KEY}", "-mhe", "-sdel"])
+    subprocess.Popen(['7z', "a", "../data/archive.7z", "../data/raw", f"-p{EXTENSION_ARCHIVE_KEY}", "-mhe", "-sdel"])
     # helper to dump bsons and zip files for archive
-    if os.path.exists("../data/archive.7z"):
-        os.remove('../data/archive.7z')
+    if os.path.exists("../data/archive/"):
+        os.remove('../data/archive/')
     subprocess.Popen(['mongodump', "-d", "new", "-o", "../data/data"])
     # 7zip archive mongodumps w/ password
     subprocess.Popen(['7z', "a", "../data/data.7z", "../data/data", f"-p{DB_ARCHIVE_KEY}", "-mhe", "-sdel"])
@@ -1258,8 +1265,8 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
             # priceModifierCollection (coupons applied a @ purchase. tied with trips. )
         # userCollection (nonTime bound in db, no duplicates preferrable, filter check)
         # sellerCollection (nonTime bound in db, no duplicates preferrable, filter check)
-        promotionsCollection = retrieveData('promotions')
-        itemCollection = retrieveData('items')
+        promotionsCollection = retrieveData('promotions') # 80 on promotions
+        itemCollection = retrieveData('items') # 384 on items
         tripCollection = retrieveData('trips')
         priceModifierCollection = retrieveData('priceModifiers')
         userCollection = retrieveData('users')
@@ -1313,4 +1320,5 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
 # runAndDocument([simulateUser], ['getKrogerCashbackCouponsAndItems'], link='cashback')
 # updateGasoline(["070522.json"])
 # deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
-createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback'], additionalPaths=[])
+# createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback'], additionalPaths=[])
+createDBSummaries('new')
