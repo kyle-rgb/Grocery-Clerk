@@ -2,13 +2,14 @@
 from pprint import pprint
 import time, re, random, datetime as dt, os, json, urllib, pytz, sys
 import pyautogui as pag
-import subprocess, shutil
+import subprocess, shutil, requests
 
 
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
-import pyperclip as clip
+import pyperclip as clip, inspect
 from api_keys import DB_ARCHIVE_KEY, EXTENSION_ARCHIVE_KEY 
+
 
 # Inside Will Find:
     # Trip Level Data: Total Cost of Purchases, Locations of Store, Order Number, Payment Method, Items/Coupons Together, Tax
@@ -43,14 +44,14 @@ def switchUrl(x=468, y=63, url="https://www.dollargeneral.com/dgpickup/deals/cou
     time.sleep(5)
     return None    
 
-def setUpBrowser():
-    # Run Browser
-    subprocess.Popen(['C:\Program Files\Mozilla Firefox\\firefox.exe'])
+
+def loadExtension(fromTab=True):
+    # load extension via tab
+    pag.keyDown('ctrlleft')
+    pag.keyDown('t')
+    pag.keyUp('ctrlleft')
+    pag.keyUp('t')
     time.sleep(3)
-    # Deal w/ Data
-    switchUrl(url='about:preferences')
-    time.sleep(2)
-    # Look Extension
     switchUrl(url='about:debugging#/runtime/this-firefox')
     time.sleep(2)
     pag.moveTo(x=895, y=300, duration=2)
@@ -59,8 +60,77 @@ def setUpBrowser():
     pag.typewrite("background.js")
     time.sleep(2)
     pag.press('enter')
+    time.sleep(2)
+    pag.keyDown('ctrlleft')
+    pag.keyDown('tab')
+    pag.keyUp('ctrlleft')
+    pag.keyUp('tab')
 
     return None
+
+
+def setUpBrowser():
+    subprocess.Popen(['C:\Program Files\Mozilla Firefox\\firefox.exe'])
+        # create setup for Kroger coupons (digital and cashback)
+    #switchUrl(url="https://www.kroger.com/savings/cl/coupons")
+    switchUrl(url="https://www.kroger.com/savings/cbk/cashback")
+    pag.moveTo(x=1214, y=297, duration=1.9)
+    pag.click()
+    time.sleep(2)
+    loadExtension()
+    pag.moveTo(x=1682, y=160, duration=1.9)
+    pag.click()
+    time.sleep(2)
+    pag.moveTo(x=1731, y=392, duration=1.9)
+    pag.click()
+    pag.typewrite(["backspace"]*5, interval=1)
+    time.sleep(2)
+    pag.typewrite(list("30084"), interval=1)
+    time.sleep(2)
+    pag.press('enter')
+    time.sleep(2)
+    pag.moveTo(x=1762, y=803, duration=1.9)
+    pag.click()
+    time.sleep(2)
+    pag.moveTo(x=1725, y=675, duration=1.9)
+    pag.click()
+    time.sleep(2)
+    # exit out modal
+    # load extension here
+    # (x=1214, y=297) | (x=1007, y=823)
+    # change loc
+    # press button (x=1682, y=160) -> (x=1731, y=392)
+    # send keys zipCode
+    # press enter
+    # press selectStore (x=1828, y=700)
+    # krogerAtlanta: (x=1773, y=671)
+    # simulateUser
+    # get amount by screenshot or initial API call
+    # exit out of modal (x=1217, y=392) // active (223, 225, 225) | non-active (255, 255, 255)  
+    # press selectStore (x=1802, y=792)
+    # krogerAtlanta: (x=1761, y=676)
+    # click
+    # this will trigger an api call with details on full amount deals. 
+    # simulateUser
+
+    # create setup for Aldi instacart
+    
+    # create setup for Publix instacart
+
+    # create setup for Publix coupons
+
+    # create setup for food depot internal site
+
+    # create setup for food depot coupons
+
+    # create setup for dollar general
+
+    # create setup for family dollar coupons
+
+    # create setup for family dollar items
+
+    return None
+
 
 
 def loadMoreAppears(png='./requests/server/images/moreContent.png'):
@@ -119,6 +189,23 @@ def insertData(entries, collection_name, db='new'):
 
     return None
 
+def retrieveData(collection_name, db='new'):
+    # Going to add Entries to Locally running DB w/ same structure as Container application
+    # Then migrate them over to Container DB
+    # Wrapper to always use insert many
+    uri = os.environ.get("MONGO_CONN_URL")
+    client = MongoClient(uri)
+    db = client[db]
+    res = db[collection_name].find({})
+    data = []
+    for r in res:
+        r.pop('_id')
+        data.append(r)
+    print(f"Found {len(data)} documents in {collection_name}")
+    client.close()
+
+    return data
+
 
 # document scraping functions via a description and function calls
 # Place into Runs Collections
@@ -133,7 +220,7 @@ def runAndDocument(funcs:list, callNames:list, **kwargs):
             func(**kwargs)
             end = round(time.perf_counter() - start, 4)
             funcName = [k for k, v in globals().items() if v==func][0]
-            functions.append({'function': funcName, 'time': end, 'description': name})
+            functions.append({'function': funcName, 'time': end, 'description': name, 'variables': kwargs})
     duration = dt.datetime.now(tz=pytz.UTC) - startDateTime
     duration = round(duration.total_seconds(), 4)
     data = {'executeVia': 'call', 'functions': functions, "startedAt": startDateTime, 'duration': duration}
@@ -142,16 +229,26 @@ def runAndDocument(funcs:list, callNames:list, **kwargs):
 
 
 def simulateUser(link):
-    neededLinks = {'cashback': {"no": 202, "button": "./requests/server/images/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
-        'digital': {"no":354, "button": "./requests/server/images/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
-            'dollarGeneral': {'no': 143, "button": "./requests/server/images/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/images/loadMore.png",\
+    neededLinks = {'cashback': {"no": 12, "button": "./requests/server/images/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
+        'digital': {"no":12, "button": "./requests/server/images/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
+            'dollarGeneral': {'no': 12, "button": "./requests/server/images/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/images/loadMore.png",\
                  'initalScroll': -1650}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
     # start at top of the screen 
     # align all items https://www.kroger.com/savings/cl/coupons/
-    iterations = neededLinks[link]["no"] // 12
-    iterations = iterations + 1
+    #iterations = neededLinks[link]["no"] // 12
+    #iterations = iterations + 1
+    response = requests.get("http://127.0.0.1:5000/i").json()
+    j = 0
+    while response.get('i')==None:
+        print(f"waiting for i from server for {j} seconds")
+        j+=1
+        time.sleep(1)
+        response = json.loads(requests.get("http://127.0.0.1:5000/i"))
+
+    iterations = (response.get('i') // neededLinks[link])+1
+
     if link!='dollarGeneral':
         time.sleep(3)
         pag.scroll(neededLinks[link]['initalScroll'])
@@ -668,8 +765,13 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
 
 def backupDatabase():
     # move and compressed extension files to separate archive 
-    subprocess.Popen(['7z', "a", "../data/archive.7z", "../data/raw", f"-p{EXTENSION_ARCHIVE_KEY}", "-mhe", "-sdel"])
+    if not os.path.exists("../data/archive.7z"):
+        subprocess.Popen(['7z', "a", "../data/archive.7z", "../data/raw", f"-p{EXTENSION_ARCHIVE_KEY}", "-mhe", "-sdel"])
+    else:
+        subprocess.Popen(['7z', "u", "../data/archive.7z", "../data/raw", f"-p{EXTENSION_ARCHIVE_KEY}", "-mhe", "-sdel"])
     # helper to dump bsons and zip files for archive
+    if os.path.exists("../data/archive.7z"):
+        os.remove('../data/archive.7z')
     subprocess.Popen(['mongodump', "-d", "new", "-o", "../data/data"])
     # 7zip archive mongodumps w/ password
     subprocess.Popen(['7z', "a", "../data/data.7z", "../data/data", f"-p{DB_ARCHIVE_KEY}", "-mhe", "-sdel"])
@@ -1148,12 +1250,27 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
     
     # file does not exist (clean up has happened therefore read from ../)
     else:
+        # promotions (nonTime bound in db; no duplicates preferrable, filter check)
+        # items (nonTime bound in db; no duplicates preferrable, filter check)
+        # prices (time bound, no duplicates possible)
+        # inventories (time bound, no duplicates possible)
+        # trips (past transactions; not time bound; no duplicates preferrable, filter check)
+            # priceModifierCollection (coupons applied a @ purchase. tied with trips. )
+        # userCollection (nonTime bound in db, no duplicates preferrable, filter check)
+        # sellerCollection (nonTime bound in db, no duplicates preferrable, filter check)
+        promotionsCollection = retrieveData('promotions')
+        itemCollection = retrieveData('items')
+        tripCollection = retrieveData('trips')
+        priceModifierCollection = retrieveData('priceModifiers')
+        userCollection = retrieveData('users')
+        sellerCollection = retrieveData('sellers') 
+
         for head, subfolders, files in os.walk(dataRepoPath):         
             if head.split('\\')[-1] in wantedPaths:
                 folder = head.split('\\')[-1]
                 for file in files:
                     if iteration == 0:
-                        returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=[], itemCollection=[], pricesCollection=[], inventoryCollection=[], tripCollection=[], priceModifierCollection=[], userCollection=[], sellerCollection=[])
+                        returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=promotionsCollection, itemCollection=itemCollection, pricesCollection=[], inventoryCollection=[], tripCollection=tripCollection, priceModifierCollection=priceModifierCollection, userCollection=userCollection, sellerCollection=sellerCollection)
                         iteration+=1
                     else:
                         returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=returnTuple[0], itemCollection=returnTuple[1], pricesCollection=returnTuple[2], inventoryCollection=returnTuple[3], tripCollection=returnTuple[4], priceModifierCollection=returnTuple[5], userCollection=returnTuple[6], sellerCollection=returnTuple[7])
@@ -1162,7 +1279,12 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
                     print(f'processed {file}.')
 
         for i, finalCollection in enumerate(returnTuple):
-            insertData(finalCollection, collection_name=listTranslator[str(i)])
+            if i!=2 and i!=3:
+                currentCol = retrieveData(listTranslator[str(i)])
+                if currentCol!=finalCollection:
+                    insertData(finalCollection[len(currentCol):], collection_name=listTranslator[str(i)])
+            else:
+                insertData(finalCollection, collection_name=listTranslator[str(i)])
 
     if additionalPaths:
         for repo in additionalPaths:
@@ -1177,19 +1299,18 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
                 print(f'processed {ofile}.')
     
     backupDatabase()
-    shutil.rmtree('./data')
-    shutil.rmtree('../data/stores')
-    shutil.rmtree('../data/runs')
+    extraneousPaths = ['./data', '../data/stores', '../data/runs']
+    [shutil.rmtree(path) for path in extraneousPaths if os.path.exists(path)]
     
 
     return None
 
-
-
-
 # setUpBrowser()
 # runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
-
-#updateGasoline(["070422.json"])
+# runAndDocument([oo], ['testing123'], k=100, j="bloat")
+#setUpBrowser()
+# retrieveData('runs')
+# runAndDocument([simulateUser], ['getKrogerCashbackCouponsAndItems'], link='cashback')
+# updateGasoline(["070522.json"])
 # deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
-# createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
+createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback'], additionalPaths=[])

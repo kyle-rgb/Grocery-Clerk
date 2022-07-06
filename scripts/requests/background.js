@@ -1,5 +1,6 @@
 var setMaster = new Set() 
 var masterArray = []
+var iWasSet = false
 
 
 async function createType(){
@@ -24,18 +25,19 @@ async function createType(){
 
 }
 
-
+async function setIterations(count){
+    let res = await fetch('http://127.0.0.1:5000/i').then((d)=>{return d.json()}).then((j)=> {return j})
+    if (res.wait){
+      let res2 = await fetch(`http://127.0.0.1:5000/i?i=${count}`, {method: 'POST'}).then((d)=>{return d.json()}).then((j)=> {return j})
+    }
+    return null
+}
 
 function logURL(requestDetails) {
     console.log("Loading: " + requestDetails.url);
     console.log("details: ", requestDetails)   
     return null
   }
-
-function getObject(){
-  return null
-}
-
 
 function listener(details) {
     let filter = chrome.webRequest.filterResponseData(details.requestId);
@@ -61,6 +63,9 @@ function listener(details) {
         if (ii===0){
           let new_obj = JSON.parse(tempString)
           new_obj.url = details.url
+          if (details.url.match(/https\:\/\/www\.kroger\.com\/cl\/api\/coupons\?couponsCountPerLoad/) & iWasSet==false){
+            setIterations(new_obj.data.count).then((bool) => {iWasSet=bool})
+          }
           new_obj.acquisition_timestamp = Date.now()
           masterArray.push(new_obj)
           masterArray = pruneArray(masterArray)

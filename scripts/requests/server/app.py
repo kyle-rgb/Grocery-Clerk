@@ -4,15 +4,12 @@ import time, json, re, os, datetime as dt
 
 
 app = Flask(__name__)
-i = 0 
+i = None
 @app.route('/docs', methods=['GET', 'POST'])
 def docs():
     d = dt.datetime.now()
     dateCode= dt.datetime.strftime(d, "%m%d%y")
-    global i     
-    # TODO: use continue to communicate program execution back to extension
     if request.method=="POST":
-        i += 25
         data = json.loads(request.get_data(as_text=True))
         length = request.content_length
         store = request.args.get("type")
@@ -33,12 +30,25 @@ def docs():
                 print('skipping directory creation')
         with open(f'./collections/{store}/{folder}{dateCode}.json', 'w', encoding='utf-8') as file:
             file.write(json.dumps(data))
-        print(f'successfly wrote {length} to disk. have received {i} objects')
-
-        if type(data)==list:
-            print("length = ", len(data))
+    
+        print(f'successfly wrote {length} bytes to disk. have received and archived {len(data)} objects')
 
         return({"data": {"length": length}, "continue": 1})
+
+@app.route('/i', methods=['GET', 'POST'])
+def setPost():
+    if request.method=="POST" and request.args.get("i"):
+        global i
+        i = int(request.args.get('i'))
+        return json.dumps({'success': True})
+    elif request.method=="GET":
+        if i:
+            return json.dumps({"i": i})
+        else:
+            return json.dumps({'wait': True})
+
+
+
 
 if __name__ == "__main__":
     app.config['TEMPLATES_AUTO_RELOAD'] = True
