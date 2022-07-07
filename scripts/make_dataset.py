@@ -329,32 +329,22 @@ def simulateUser(link):
     print(f"Processed {neededLinks[link]['no']} in {time.perf_counter()} seconds")
     return None
 
-def updateGasoline(files=['070222.json']):
+def updateGasoline(data):
     # cleaner function for Kroger trip data
     # Kroger Fuel Points (previously in price modifiers) now show up as duplicate entry of gasoline with a quantity of zero and a negative price paid to correspond to savings
     # Must be run before deconstructions.
     # Raises ZeroDivisionError on Calucations that use Quantity 
-    for file in files:
-        with open(f'./requests/server/collections/kroger/trips/{file}', mode='r', encoding='utf-8') as f:
-            j = json.loads(f.read())
-            tripsData = []
-            indices = '' 
-            for gi, t in enumerate(j):
-                if 'mypurchases' in t.get('url'):
-                    for trip_index, trip in enumerate(t.get('data')):
-                        for item_index, item in enumerate(trip.get('items')):
-                            if item.get('quantity')==0:
-                                indices = gi, trip_index, item_index
+    for trip_index, trip in enumerate(data):
+        for item_index, item in enumerate(trip.get('items')):
+            if item.get('quantity')==0:
+                indices = trip_index, item_index
 
            
-            j[indices[0]]['data'][indices[1]]['items'][indices[2]-1]['pricePaid'] = round(j[indices[0]]['data'][indices[1]]['items'][indices[2]-1]['pricePaid']+j[indices[0]]['data'][indices[1]]['items'][indices[2]]['pricePaid'], 2)
-            j[indices[0]]['data'][indices[1]]['items'][indices[2]-1]['totalSavings'] = round(j[indices[0]]['data'][indices[1]]['items'][indices[2]-1]['totalSavings']+j[indices[0]]['data'][indices[1]]['items'][indices[2]]['totalSavings'], 2)
-            j[indices[0]]['data'][indices[1]]['items'][indices[2]-1]['priceModifiers'].extend(j[indices[0]]['data'][indices[1]]['items'][indices[2]]['priceModifiers'])
-            j[indices[0]]['data'][indices[1]]['items'].pop(indices[2])
-        with open(f'./requests/server/collections/kroger/trips/{file}', mode='w', encoding='utf-8') as f:
-            f.write(json.dumps(j))
-
-    return None
+    data[indices[0]]['items'][indices[1]-1]['pricePaid'] = round(j[indices[0]]['data'][indices[0]]['items'][indices[0]-1]['pricePaid']+data[indices[0]]['items'][indices[1]]['pricePaid'], 2)
+    data[indices[0]]['items'][indices[1]-1]['totalSavings'] = round(j[indices[0]]['data'][indices[0]]['items'][indices[0]-1]['totalSavings']+data[indices[0]]['items'][indices[1]]['totalSavings'], 2)
+    data[indices[0]]['items'][indices[1]-1]['priceModifiers'].extend(j[indices[0]]['data'][indices[0]]['items'][indices[0]]['priceModifiers'])
+    data[indices[0]]['items'].pop(indices[1])
+    return data
 
 def getFamilyDollarItems(results):
     # example url : https://www.familydollar.com/categories?N=categories.1%3ADepartment%2Bcategories.2%3AHousehold&No=0&Nr=product.active:1
@@ -604,8 +594,9 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
         # inventories: AvailableQty, AvailableStockStore, InventoryStatus,
         # prices: Price, OriginalPrice,
         # quasiPriceModifiers: DealsAvailable, DealStatus, SponsoredProductId, SponsoredAgreementId, SponsoredDisplayRow
-        # <bool>: CartQuantity,                         
-    storeID = file.split('/')[-2]
+        # <bool>: CartQuantity
+    mytz = pytz.timezone('America/New_York')
+                             
     newProducts=[]
     newCoupons=[]
     newPrices = []
@@ -615,7 +606,7 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
     inventoryKeys= {'1': 'TEMPORARILY_OUT_OF_STOCK', '2': "LOW", "3": 'HIGH'}
     productsForCoupons = {}
 
-    if storeID=='dollargeneral':
+    if 'dollargeneral' in file:
         # deconstructs into coupons (promotions), items, prices, and inventories 
         with open(file, 'r', encoding='utf-8') as fd:
             data = sorted(json.loads(fd.read()), key=lambda x: x.get('url'))
@@ -689,8 +680,10 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
                     newC['categories'] = [coup.get('RewaredCategoryName')] 
                     # OfferActivationDate => startDate  %Y-%m-%dT%H:%M:%S
                     # OfferExpirationDate => endDate %Y-%m-%dT%H:%M:%S
-                    newC['startDate'] = dt.datetime.strptime(coup.get('OfferActivationDate'), '%Y-%m-%dT%H:%M:%S').timestamp()
-                    newC['expirationDate'] = dt.datetime.strptime(coup.get('OfferExpirationDate'), '%Y-%m-%dT%H:%M:%S').timestamp()
+                    startDate =  dt.datetime.strptime(coup.get('OfferActivationDate'), '%Y-%m-%dT%H:%M:%S')
+                    newC['startDate'] = mytz.localize(startDate).astimezone(pytz.utc)
+                    expirationDate =  dt.datetime.strptime(coup.get('OfferExpirationDate'), '%Y-%m-%dT%H:%M:%S')
+                    newC['expirationDate'] = mytz.localize(expirationDate).astimezone(pytz.utc)
                     # RewaredOfferValue => value
                     newC['value'] = coup.get('RewaredOfferValue')
                     # MinQuantity => requirementQuantity 
@@ -714,7 +707,7 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
                     newCoupons.append(newC)
                 
     # !!! Family Dollar -> currently deconstructs into promotions collections (promotions are separated from their assoicated items, though items are still catalogued)
-    elif storeID == 'familydollar':
+    elif 'familydollar' in file:
         with open(file, 'r', encoding='utf-8') as fd:
             data = json.loads(fd.read())
             if type(data[0])==dict:
@@ -739,12 +732,16 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
             newC['categories'].extend([x.replace('fd-', '').strip().title() for x in coup.get("tags")])
             # redemptionStartDateTime => startDate %Y-%m-%dT%H:%M:%S
             # redemptionEndDateTime => expirationDate %Y-%m-%dT%H:%M:%S
-            newC['startDate'] = dt.datetime.strptime(coup.get('redemptionStartDateTime').get('iso'), '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
-            newC['expirationDate'] = dt.datetime.strptime(coup.get('expirationDateTime').get('iso'), '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
+            startDate =  dt.datetime.strptime(coup.get('redemptionStartDateTime').get('iso'), '%Y-%m-%dT%H:%M:%S.%fZ')
+            newC['startDate'] = mytz.localize(startDate).astimezone(pytz.utc)
+            expirationDate =  dt.datetime.strptime(coup.get('expirationDateTime').get('iso'), '%Y-%m-%dT%H:%M:%S.%fZ')
+            newC['expirationDate'] = mytz.localize(expirationDate).astimezone(pytz.utc)
             # clipStartDateTime %Y-%m-%dT%H:%M:%S
             # clipEndDateTime
-            newC['clipStartDate'] = dt.datetime.strptime(coup.get('clipStartDateTime').get('iso'), '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
-            newC['clipEndDate'] = dt.datetime.strptime(coup.get('clipEndDateTime').get('iso'), '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
+            clipStartDate = dt.datetime.strptime(coup.get('clipStartDateTime').get('iso'), '%Y-%m-%dT%H:%M:%S.%fZ')
+            newC['clipStartDate'] = mytz.localize(clipStartDate).astimezone(pytz.utc)
+            clipEndDate = dt.datetime.strptime(coup.get('clipEndDateTime').get('iso'), '%Y-%m-%dT%H:%M:%S.%fZ')
+            newC['clipEndDate'] = mytz.localize(clipEndDate).astimezone(pytz.utc)
             # offerSortValue => value
             newC['value'] = coup.get('offerSortValue')
             # minPurchase => requirementQuantity
@@ -779,9 +776,11 @@ def backupDatabase():
     # helper to dump bsons and zip files for archive
     if os.path.exists("../data/archive/"):
         os.remove('../data/archive/')
-    subprocess.Popen(['mongodump', "-d", "new", "-o", "../data/data"])
+    process1 = subprocess.Popen(['mongodump', "-d", "new", "-o", "../data/data"])
+    process1.wait(30)
     # 7zip archive mongodumps w/ password
-    subprocess.Popen(['7z', "a", "../data/data.7z", "../data/data", f"-p{DB_ARCHIVE_KEY}", "-mhe", "-sdel"])
+    process2 = subprocess.Popen(['7z', "a", "../data/data.7z", "../data/data", f"-p{DB_ARCHIVE_KEY}", "-mhe", "-sdel"])
+    process2.wait(30)
     if os.path.exists("../data/data"):
         shutil.rmtree('../data/data')
     return None
@@ -829,7 +828,7 @@ def deconstructExtensions(filename, **madeCollections):
                                 # Item Location {items collection + stores collection}
                                 # Network of fulfillment Centers {stores collection}
                                 # General Store Information  {stores collection}          
-
+    mytz=pytz.timezone('America/New_York')
     startingArray=[]
     upcsRegex = re.compile(r'https://www\.kroger\.com/cl/api/couponDetails/(\d+)/upcs')
     couponsDetailsRegex = re.compile(r'https://www\.kroger\.com/cl/api/coupons\?.+')
@@ -850,8 +849,8 @@ def deconstructExtensions(filename, **madeCollections):
                 startingArray = sorted(startingArray, key=lambda x: x['url'], reverse=True)
             else:
                 startingArray = sorted(startingArray, key=lambda x: x['url'], reverse=False)
-        except TypeError:
-            print(start)
+        except TypeError as err:
+            print(err)
         except KeyError:
             print(list(map(lambda x: x.keys(), startingArray)))
         # static collections
@@ -871,7 +870,7 @@ def deconstructExtensions(filename, **madeCollections):
         connectionErrors = []
         for apiCall in startingArray:
             url = apiCall.pop('url')
-            acquistionTimestamp = apiCall.pop('acquisition_timestamp')
+            acquistionTimestamp = mytz.localize(dt.datetime.fromtimestamp(apiCall.pop('acquisition_timestamp')/1000))
             data = apiCall.get('data')
             # match promotions to product upcs
             if re.match(upcsRegex, url):
@@ -895,13 +894,11 @@ def deconstructExtensions(filename, **madeCollections):
                     newPromotion['krogerCouponNumber'] = allOffers.get('couponNumber')
                     # effectiveDate => startDate + T00:00:00Z
                     startDate = allOffers.get('effectiveDate') + "T00:00:00"
-                    startDate = pytz.timezone('America/New_York').localize(dt.datetime.strptime(startDate, "%Y-%m-%dT%H:%M:%S")).astimezone(pytz.timezone('UTC'))
-                    startDate = dt.datetime.strftime(startDate, "%Y-%m-%dT%H:%M:%S")
+                    startDate = mytz.localize(dt.datetime.strptime(startDate, "%Y-%m-%dT%H:%M:%S")).astimezone(pytz.timezone('UTC'))
                     newPromotion['startDate'] = startDate
                     # expirationDate => expirationDate + T11:59:59Z
                     expirationDate = allOffers.get('expirationDate') + "T11:59:59"
-                    expirationDate = pytz.timezone('America/New_York').localize(dt.datetime.strptime(expirationDate, "%Y-%m-%dT%H:%M:%S")).astimezone(pytz.timezone('UTC'))
-                    expirationDate = dt.datetime.strftime(expirationDate, "%Y-%m-%dT%H:%M:%S")
+                    expirationDate = mytz.localize(dt.datetime.strptime(expirationDate, "%Y-%m-%dT%H:%M:%S")).astimezone(pytz.timezone('UTC'))
                     newPromotion['expirationDate'] = expirationDate
                     # rewardTypeDescription => "Amount off"
                     newPromotion['type'] = allOffers.get('rewardTypeDescription')
@@ -936,7 +933,9 @@ def deconstructExtensions(filename, **madeCollections):
                                     promo[coupKey] = coupVal
                         elif coupKey in coupSchema['keep']:
                             if coupKey=='displayStartDate':
-                                promo['startDate'] = coupVal
+                                promo['startDate'] = pytz.utc.localize(dt.datetime.strptime(coupVal, "%Y-%m-%dT%H:%M:%SZ"))
+                            elif coupKey=='expirationDate':
+                                promo['expirationDate'] = pytz.utc.localize(dt.datetime.strptime(coupVal, "%Y-%m-%dT%H:%M:%SZ"))
                             elif coupKey=='shortDescription':
                                 promo[coupKey] = coupVal.strip()
                             else:
@@ -998,7 +997,7 @@ def deconstructExtensions(filename, **madeCollections):
                                                         existingPm = list(filter(lambda x: x.get('promotionId')==pm.get('promotionId'), priceModifierCollection))[0]
                                                         existingPm['total'] += pm.get('amount')
                                                         existingPm['redemptions'] += 1
-                                                        matchingObjs = list(filter(lambda x: x.get('upc')==item.get('upc'), existingPm.get('redemptionKeys')))
+                                                        matchingObjs = list(filter(lambda x: x.get('upc')==item.get('baseUpc'), existingPm.get('redemptionKeys')))
                                                         if bool(matchingObjs):
                                                             matchingObjs = matchingObjs[0]
                                                             if matchingObjs.get('transactionId')==transactionId:
@@ -1036,7 +1035,7 @@ def deconstructExtensions(filename, **madeCollections):
                                                         forGeneralItems[item.get('baseUpc')].setdefault('barCodes', [])
                                                         forGeneralItems[item.get('baseUpc')]['barCodes'].extend(item.get('barCodes'))
                                 elif key == 'transactionTimeWithTimezone':
-                                    tripDocument['utcTimestamp'] = value
+                                    tripDocument['utcTimestamp'] = pytz.utc.localize(dt.datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ"))
                                 else:
                                     tripDocument[key] = value
                         tripCollection.append(tripDocument)
@@ -1118,8 +1117,14 @@ def deconstructExtensions(filename, **madeCollections):
                                     priceData['value'] = float(prices.get('regular').get('nFor').get('price').replace('USD', '')) / prices.get('regular').get('nFor').get('count')
                                     priceData['quantity'] = prices.get('regular').get('nFor').get('count')
                                     priceData['type'] =  prices.get('displayTemplate')
-                                    priceData['effectiveDate'] = prices.get('effectiveDate').get('value')
-                                    priceData['expirationDate'] = prices.get('expirationDate').get('value')
+                                    if '.' in prices.get('effectiveDate').get('value'):
+                                        priceData['effectiveDate'] = pytz.utc.localize(dt.datetime.strptime(prices.get('effectiveDate').get('value'), "%Y-%m-%dT%H:%M:%S.%fZ"))
+                                    else:
+                                        priceData['effectiveDate'] = pytz.utc.localize(dt.datetime.strptime(prices.get('effectiveDate').get('value'), "%Y-%m-%dT%H:%M:%SZ"))
+                                    if '.' in prices.get('expirationDate').get('value'):
+                                        priceData['expirationDate'] =  pytz.utc.localize(dt.datetime.strptime(prices.get('expirationDate').get('value'), "%Y-%m-%dT%H:%M:%S.%fZ"))
+                                    else:
+                                        priceData['expirationDate'] =  pytz.utc.localize(dt.datetime.strptime(prices.get('expirationDate').get('value'), "%Y-%m-%dT%H:%M:%SZ"))
                                     itemDoc['sellBy'] = prices.get('sellBy')
                                     itemDoc['orderBy'] = prices.get('orderBy')
                                     
@@ -1204,37 +1209,37 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
     # add stores via api and previously scraped prices to new price collection schema
     iteration=0
     listTranslator={"0": "promotions", "1": "items", "2": "prices", "3": "inventories", "4":"trips", "5":"priceModifiers", "6":"users", "7":"sellers"}
-
+    mytz = pytz.timezone('America/New_York')
     # inital setup if data folders do not exist in repo
-    if os.path.exists('./data/API/myStoresAPI.json'):
+    if os.path.exists('./requests/server/collections/extras/myStores.json'):
         # setup archive for preprocessed data
-        with open('data/API/myStoresAPI.json', 'r', encoding='utf-8') as storeFile:
+        with open('./requests/server/collections/extras/myStores.json', 'r', encoding='utf-8') as storeFile:
             stores = json.loads(storeFile.read())
             insertData(stores, 'stores')
         os.makedirs('../data/raw/kroger/API', exist_ok=True)
-        os.rename("./data/API/myStoresAPI.json", "../data/raw/kroger/API/myStores.json")
+        
 
         # will be backed up by dbdump
-        with open('../data/runs/collection.json') as runFile:
-            runs = json.loads(runFile.read())
-            insertData(runs, 'runs')
+        # with open('../data/runs/collection.json') as runFile:
+        #     runs = json.loads(runFile.read())
+        #     insertData(runs, 'runs')
 
-        with open('data/collections/combinedPrices.json', 'r', encoding='utf-8') as priceFile:
+        with open('./requests/server/collections/extras/combinedPrices.json', 'r', encoding='utf-8') as priceFile:
             oldPrices = json.loads(priceFile.read())
             oldPrices = list(filter(lambda y: y.get('isPurchase')==False, oldPrices)) # trip price data will already have been recorded
         
-        os.rename("./data/collections/combinedPrices.json", "../data/raw/kroger/API/combinedPrices.json")
         newFromOldPrices = []
         for oldPrice in oldPrices:
             # turn promo and regular to value
+            oldTimestamp = mytz.localize(dt.datetime.fromtimestamp(oldPrice.get('acquistion_timestamp')/1000)).astimezone(pytz.utc)
             if oldPrice.get('promo') == oldPrice.get('regular'):
                 newFromOldPrices.append({'locationId': oldPrice.get('locationId'), 'isPurchase': oldPrice.get('isPurchase'), 'value': oldPrice.get('regular'), 'quantity': oldPrice.get('quantity'),\
-                    'upc': oldPrice.get('upc'), 'utcTimestamp': oldPrice.get('acquistion_timestamp'), "type": 'Regular'})
+                    'upc': oldPrice.get('upc'), 'utcTimestamp': oldTimestamp, "type": 'Regular'})
             else:
                 newFromOldPrices.append({'locationId': oldPrice.get('locationId'), 'isPurchase': oldPrice.get('isPurchase'), 'value': oldPrice.get('regular'), 'quantity': oldPrice.get('quantity'),\
-                    'upc': oldPrice.get('upc'), 'utcTimestamp': oldPrice.get('acquistion_timestamp'), "type": 'Regular'})
+                    'upc': oldPrice.get('upc'), 'utcTimestamp': oldTimestamp, "type": 'Regular'})
                 newFromOldPrices.append({'locationId': oldPrice.get('locationId'), 'isPurchase': oldPrice.get('isPurchase'), 'value': oldPrice.get('promo'), 'quantity': oldPrice.get('quantity'),\
-                    'upc': oldPrice.get('upc'), 'utcTimestamp': oldPrice.get('acquistion_timestamp'), "type": 'Sale'})
+                    'upc': oldPrice.get('upc'), 'utcTimestamp': oldTimestamp, "type": 'Sale'})
         
         for head, subfolders, files in os.walk(dataRepoPath):
             folder = head.split('\\')[-1]
@@ -1246,7 +1251,7 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
                     else:
                         returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=returnTuple[0], itemCollection=returnTuple[1], pricesCollection=returnTuple[2], inventoryCollection=returnTuple[3], tripCollection=returnTuple[4], priceModifierCollection=returnTuple[5], userCollection=returnTuple[6], sellerCollection=returnTuple[7])
                     os.makedirs(f'../data/raw/kroger/{folder}/', exist_ok=True)
-                    os.rename(head+'\\'+file, f'../data/raw/kroger/{folder}/{file}')
+                    #os.rename(head+'\\'+file, f'../data/raw/kroger/{folder}/{file}')
                     print(f'processed {file}.')
         
         
@@ -1282,7 +1287,6 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
                     else:
                         returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=returnTuple[0], itemCollection=returnTuple[1], pricesCollection=returnTuple[2], inventoryCollection=returnTuple[3], tripCollection=returnTuple[4], priceModifierCollection=returnTuple[5], userCollection=returnTuple[6], sellerCollection=returnTuple[7])
                     os.makedirs(f'../data/raw/kroger/{folder}/', exist_ok=True)
-                    os.rename(head+'\\'+file, f'../data/raw/kroger/{folder}/{file}')  
                     print(f'processed {file}.')
 
         for i, finalCollection in enumerate(returnTuple):
@@ -1305,20 +1309,43 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
                 os.rename(pathName+'\\'+ofile, f'../data/raw/{repo}/{ofile}')  
                 print(f'processed {ofile}.')
     
+    
     backupDatabase()
-    extraneousPaths = ['./data', '../data/stores', '../data/runs']
-    [shutil.rmtree(path) for path in extraneousPaths if os.path.exists(path)]
+    os.rename("./requests/server/collections/extras/myStores.json", "../data/raw/kroger/API/myStores.json")
+    os.rename('./requests/server/collections/extras/combinedPrices.json', "../data/raw/kroger/API/combinedPrices.json")
+    for head, subfolders, files in os.walk(dataRepoPath):         
+        if head.split('\\')[-1] in wantedPaths:
+            folder = head.split('\\')[-1]
+            for file in files:
+                os.rename(head+'\\'+file, f'../data/raw/kroger/{folder}/{file}')  
+    # extraneousPaths = ['../data/data', './requests/server/collections/extras']
+    # [shutil.rmtree(path) for path in extraneousPaths if os.path.exists(path)]
     
 
     return None
 
+def queryDB(db="new"):
+    # inventories : utcTimestamp (ms)
+    # prices : effectiveDate (str) and expirationDate (str)
+
+    uri = os.environ.get("MONGO_CONN_URL")
+    client = MongoClient(uri)
+    db = client[db]
+    res = db['priceModifiers'].aggregate(pipeline=[{"$sort": {"redemptions": -1}}, {"$unwind": "$redemptionKeys"}, {"$group": {"_id": {"x": "$redemptionKeys.upc" }, "count": {"$sum": 1}}}])
+    res = [x for x in res]
+    pprint(res[1])
+    return None
+
+
+
+
+# queryDB()
 # setUpBrowser()
 # runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
 # runAndDocument([oo], ['testing123'], k=100, j="bloat")
 #setUpBrowser()
 # retrieveData('runs')
 # runAndDocument([simulateUser], ['getKrogerCashbackCouponsAndItems'], link='cashback')
-# updateGasoline(["070522.json"])
 # deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
-# createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback'], additionalPaths=[])
+# createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
 createDBSummaries('new')
