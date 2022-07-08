@@ -27,6 +27,7 @@ async function createType(){
 
 async function setIterations(count){
     let res = await fetch('http://127.0.0.1:5000/i').then((d)=>{return d.json()}).then((j)=> {return j})
+    console.log('')
     if (res.wait){
       let res2 = await fetch(`http://127.0.0.1:5000/i?i=${count}`, {method: 'POST'}).then((d)=>{return d.json()}).then((j)=> {return j})
     }
@@ -63,8 +64,13 @@ function listener(details) {
         if (ii===0){
           let new_obj = JSON.parse(tempString)
           new_obj.url = details.url
-          if (details.url.match(/https\:\/\/www\.kroger\.com\/cl\/api\/coupons\?couponsCountPerLoad/) & iWasSet==false){
+          console.log(details, 'iwasset', iWasSet)
+          if (details.url.match(/https\:\/\/www\.kroger\.com\/cl\/api\/coupons\?couponsCountPerLoad/)!==null & iWasSet==false){
             setIterations(new_obj.data.count).then((bool) => {iWasSet=bool})
+          } else if (details.url.match(/https\:\/\/www\.dollargeneral\.com\/bin\/omni\/coupons\/recommended\?/)!==null & iWasSet==false){
+            setIterations(new_obj.PaginationInfo.TotalRecords).then((bool) => {iWasSet=bool})
+          } else if (details.url.match(/https\:\/\/dollartree-cors\.groupbycloud\.com\/api\/v1\/search/)){
+            setIterations(new_obj.totalRecordCount).then((bool) => {iWasSet=bool})
           }
           new_obj.acquisition_timestamp = Date.now()
           masterArray.push(new_obj)
@@ -114,14 +120,17 @@ chrome.contextMenus.onClicked.addListener(function(info, tab) {
     })
   })
 
-
-// chrome.webRequest.onBeforeRequest.addListener(
-//     logURL,
-//     {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*", "*://*.kroger.com/mypurchases/api/v1/receipt*"],  types: ["xmlhttprequest", "object"]}, // ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas*"]
-//     ['blocking']
-//   );
-// 
-// https://www.kroger.com/search?fulfillment=all&keyword=Buy5Save1ShopAll2254&monet=promo&page=1&pzn=relevance&query=Buy5Save1ShopAll2254&searchType=mktg%20attribute
+document.addEventListener("click", function(e){
+  if (!e.target.classList.contains('send-signal')){
+    return;
+  } 
+  createType().then((t) => {
+    let type = t ;
+    response = fetch(`http://127.0.0.1:5000/docs?${type}`, {method: "POST", body: JSON.stringify(masterArray)})
+    return null
+  })  
+  return null
+})
 
 chrome.webRequest.onBeforeRequest.addListener(
   listener,
@@ -130,7 +139,7 @@ chrome.webRequest.onBeforeRequest.addListener(
   "*://ice-familydollar.dpn.inmar.com/v2/offers*", "*://dollartree-cors.groupbycloud.com/api*", // Family Dollar : Coupons, Products
   "*://*.dollargeneral.com/bin/omni/coupons/products*", "*://*.dollargeneral.com/bin/omni/coupons/recommended*", // Dollar General: Products, Coupons 
   "*://*.noq-servers.net/api/v1/application/stores/*/products?*", "*://*.appcard.com/baseapi/1.0/token/*/offers/unclipped_recommendation_flag*", // Food Depot : Products, Coupons
-  "*://services.publix.com/api*", // Publix Coupons
+  "*://services.publix.com/api*", // Publix Coupons and Stores
   "*://delivery.publix.com/*/view/item_attributes*", "*://delivery.publix.com/graphql?operationName=Items", "*://delivery.publix.com/graphql?operationName=CollectionProductsWithFeaturedProducts*", // publix prices and items
   "*://shop.aldi.us/graphql?operationName=CollectionProductsWithFeaturedProducts*", "*://shop.aldi.us/graphql?operationName=Items*", "*://shop.aldi.us/*/view/item_attributes*"], // Aldi : Items
   types: ["xmlhttprequest", "object"]}, // 
@@ -150,47 +159,3 @@ chrome.webRequest.onCompleted.removeListener(
   types: ["xmlhttprequest", "object"]}, // 
   ["blocking"]
 )
-
-// chrome.webRequest.onBeforeRequest.addListener(
-//   getObject,
-//   {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas*"], types: ["xmlhttprequest", "object"]}, // 
-//   ["blocking"]
-
-// )
-
-
-// Listen for onHeaderReceived for the target page.
-// Set "blocking" and "responseHeaders".
-// chrome.webRequest.onHeadersReceived.addListener(
-//   setCookie,
-//   {urls: ["<all_urls>"]},
-//   ["blocking", "responseHeaders"]
-// );
-
-// chrome.webRequest.onHeadersReceived.addListener(
-//   logURL,
-//   {urls: ["<all_urls>"]},
-//   ["blocking", "responseHeaders"]
-// );
-
-// my-purchases dashboard -> GETs: /mypurchases/api/v1/receipt/details <list of receipts from purchases> :: /mypurchases/api/v1/receipt/details
-  // contains all prices, quantities, coupons
-  // all items even w/o picture -> Items have coupons in priceModifiers Array
-  // in scan order except for those with a monetizationID <ie. currently featured>
-  // contains savings, price and brief information
-  // ********* HAS PERSONAL PAYMENT INFORMATION **********************
-
-// hands off unique UPCs to products API that contains all important information <prices, inventory and item data, including nutrition> :: /atlas/v1/product/v2/products
-  // will only return items with valid UPCs
-
-//// Individual Trip Page
-
-  // Queries Product API for available UPCs for that trip /atlas/v1/product/v2/products
-
-  // Get Receipt Image /mypurchases/api/v1/receipt-image/get-image
-
-//// Individual Receipt Page
-
-  // Get Data Representation of Receipt w/ purchase amounts, store, payment_info and item information :: /atlas/v1/purchase-history/details
-
-    // does not contain every item / takes time to generate post purchase (~5 Hours), only has catalogueData and purchaseData
