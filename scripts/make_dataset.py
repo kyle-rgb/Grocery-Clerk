@@ -8,7 +8,7 @@ import subprocess, shutil, requests
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 import pyperclip as clip, inspect
-from api_keys import DB_ARCHIVE_KEY, EXTENSION_ARCHIVE_KEY 
+from api_keys import DB_ARCHIVE_KEY, EXTENSION_ARCHIVE_KEY, ZIPCODE, PHONE_NUMBER, VERIFICATION_CODE
 
 
 # Inside Will Find:
@@ -44,6 +44,14 @@ def switchUrl(x=468, y=63, url="https://www.dollargeneral.com/dgpickup/deals/cou
     time.sleep(5)
     return None    
 
+def eatThisPage():
+    # flush remaining results after main data call to server using browser context menu
+    pag.moveTo(1859, 68)
+    pag.click()
+    pag.moveRel(0, 70, duration=2.4)
+    pag.click()
+    time.sleep(5)
+    return None
 
 def loadExtension(fromTab=True):
     # load extension via tab
@@ -69,65 +77,197 @@ def loadExtension(fromTab=True):
     return None
 
 
-def setUpBrowser():
-    subprocess.Popen(['C:\Program Files\Mozilla Firefox\\firefox.exe'])
-        # create setup for Kroger coupons (digital and cashback)
-    #switchUrl(url="https://www.kroger.com/savings/cl/coupons")
-    switchUrl(url="https://www.kroger.com/savings/cbk/cashback")
-    pag.moveTo(x=1214, y=297, duration=1.9)
-    pag.click()
-    time.sleep(2)
-    loadExtension()
-    pag.moveTo(x=1682, y=160, duration=1.9)
-    pag.click()
-    time.sleep(2)
-    pag.moveTo(x=1731, y=392, duration=1.9)
-    pag.click()
-    pag.typewrite(["backspace"]*5, interval=1)
-    time.sleep(2)
-    pag.typewrite(list("30084"), interval=1)
-    time.sleep(2)
-    pag.press('enter')
-    time.sleep(2)
-    pag.moveTo(x=1762, y=803, duration=1.9)
-    pag.click()
-    time.sleep(2)
-    pag.moveTo(x=1725, y=675, duration=1.9)
-    pag.click()
-    time.sleep(2)
-    # exit out modal
-    # load extension here
-    # (x=1214, y=297) | (x=1007, y=823)
-    # change loc
-    # press button (x=1682, y=160) -> (x=1731, y=392)
-    # send keys zipCode
-    # press enter
-    # press selectStore (x=1828, y=700)
-    # krogerAtlanta: (x=1773, y=671)
-    # simulateUser
-    # get amount by screenshot or initial API call
-    # exit out of modal (x=1217, y=392) // active (223, 225, 225) | non-active (255, 255, 255)  
-    # press selectStore (x=1802, y=792)
-    # krogerAtlanta: (x=1761, y=676)
-    # click
-    # this will trigger an api call with details on full amount deals. 
-    # simulateUser
+def setUpBrowser(n=0):
+    # create setup for Kroger coupons (digital and cashback)
+    p1 = subprocess.Popen(['C:\Program Files\Mozilla Firefox\\firefox.exe'])
+    p1.wait(2)
+    if n==-1:
+        ## 
+        switchUrl(url="https://www.kroger.com/")
+        time.sleep(3)
+        pag.moveTo(1705, 465)
+        pag.click()
+        time.sleep(2)
+        pag.moveTo(1797, 169)
+        time.sleep(2)
+        pag.moveRel(0, 50)
+        pag.click()
+        time.sleep(2)
+        pag.moveTo(736, 625, duration=1)
+        pag.click()
+        time.sleep(2)
+        pag.moveRel(50, 50)
+        pag.click()
+        time.sleep(2)
+        loadExtension()
+        time.sleep(2)
 
+
+    elif n==0: # @ Kroger Coupons
+        # start browser
+        # switch to wanted page
+        #switchUrl(url="https://www.kroger.com/savings/cl/coupons")
+        switchUrl(url="https://www.kroger.com/savings/cbk/cashback")
+        # exit out of intro modal
+        pag.moveTo(x=1214, y=297, duration=1.9)
+        pag.click()
+        time.sleep(2)
+        # load extension: background.js
+        loadExtension()
+        # click change store
+        pag.moveTo(x=1682, y=160, duration=1.9)
+        pag.click()
+        time.sleep(2)
+        # click find store
+        pag.moveTo(x=1731, y=392, duration=1.9)
+        pag.click()
+        # remove default data
+        pag.typewrite(["backspace"]*5, interval=1)
+        time.sleep(2)
+        # replace with zip and press enter
+        pag.typewrite(list(f"{ZIPCODE}"), interval=1)
+        time.sleep(2)
+        pag.press('enter')
+        time.sleep(2)
+        # select modality : In-Store
+        pag.moveTo(x=1762, y=803, duration=1.9)
+        pag.click()
+        time.sleep(2)
+        # select wanted store {could be variable for different stores}
+        pag.moveTo(x=1725, y=675, duration=1.9)
+        pag.click()
+        time.sleep(2)
+        simulateUser(link='cashback')
+    elif n==1: # @ ALDI / Instacart Store
     # create setup for Aldi instacart
-    
-    # create setup for Publix instacart
-
-    # create setup for Publix coupons
-
-    # create setup for food depot internal site
-
-    # create setup for food depot coupons
-
-    # create setup for dollar general
-
+        switchUrl(url="https://shop.aldi.us/store/aldi/storefront")
+        # wait for free delivery modal to load
+        time.sleep(12)
+        pag.moveTo(1307, 194, duration=3)
+        time.sleep(2)
+        pag.click()
+        time.sleep(3.5)
+        loadExtension()
+        time.sleep(2)
+        getScrollingData(chain='aldi')
+    elif n==2: # publix Coupons
+        # nav to https://www.publix.com/savings/all-deals
+        switchUrl(url="https://www.publix.com/savings/all-deals")
+        # load extension
+        time.sleep(3)
+        loadExtension()
+        time.sleep(3)
+        # allow to access location
+        pag.moveTo(570, 191, duration=3)
+        pag.click()
+        time.sleep(7)
+        # eat page
+        eatThisPage()
+    elif n==3: # publix / instacart site
+        switchUrl(url="https://delivery.publix.com/store/publix/collections/")
+        time.sleep(7)
+        pag.moveTo(858, 653, duration=2)
+        pag.click()
+        pag.typewrite(list(f"{ZIPCODE}"), interval=.35)
+        pag.press('enter')
+        time.sleep(1)
+        pag.moveTo(969, 863, duration=2)
+        pag.click()
+        pag.moveTo(773, 515, duration=2)
+        pag.click()
+        time.sleep(1)
+        pag.moveTo(791, 512, duration=2)
+        pag.click()
+        time.sleep(10)
+        loadExtension()
+        time.sleep(2)
+        getScrollingData('publix')
+    elif n==4: # fooddepot items / internal website
+        # can go straight to load extension
+        switchUrl(url="https://shop.fooddepot.com/online/fooddepot40-douglasvillehwy5/home")
+        loadExtension()
+        time.sleep(2)
+        getScrollingData(chain='fooddepot')
+    elif n==5: # food depot coupons  + an Apple/Gmail Shortcut
+        switchUrl(url="https://www.fooddepot.com/coupons/")
+        pag.moveTo(914, 376)
+        pag.click()
+        pag.typewrite(list(PHONE_NUMBER), interval=.25)
+        pag.press('enter')
+        time.sleep(2)
+        pag.moveTo(807, 401)
+        pag.click()
+        pag.typewrite(list(VERIFICATION_CODE), interval=.2)
+        time.sleep(5)
+        loadExtension()
+        time.sleep(2)
+        pag.moveTo(787, 937)
+        pag.click()
+        pag.moveTo(1859, 68)
+        pag.click()
+        pag.moveRel(0, 70, duration=2.4)
+        pag.click()
+    elif n==6: # Dollar General Coupons and Items
+        # create setup for dollar general
+        switchUrl(url="https://www.dollargeneral.com/dgpickup/deals/coupons")
+        # change store
+        pag.moveTo(88, 210, duration=2)
+        pag.click()
+        time.sleep(2)
+        pag.moveTo(88, 369, duration=2)
+        pag.click()
+        time.sleep(2)
+        pag.moveTo(531, 194, duration=2)
+        pag.click()
+        time.sleep(2)
+        pag.moveTo(43, 431, duration=2)
+        pag.click()
+        time.sleep(2)
+        loadExtension()
+        time.sleep(1)
+        pag.moveTo(1177, 359, duration=2)
+        pag.click()
+        time.sleep(2)
+        pag.press(["down", 'enter'], interval=1)
+        # wait for set iterations
+        time.sleep(10)
+        response = requests.get("http://127.0.0.1:5000/i").json()
+        iterations = response.get('i') // 15
+        for i in range(iterations):
+            pag.press('end')
+            time.sleep(2)
+            ix, iy = 932, 395
+            pag.moveTo(ix, iy, duration=1.5)
+            if pag.pixel(ix, iy)!=(0, 0, 0):
+                pag.moveRel(0, -20)
+                ix, iy = pag.position()
+            pag.click()
+            time.sleep(4)
+        pag.press('home')
+        time.sleep(2)
+    elif n==7: # family-dollar smart coupons
     # create setup for family dollar coupons
-
-    # create setup for family dollar items
+        switchUrl(url="https://www.familydollar.com/smart-coupons")
+        pag.moveTo(533, 189)
+        pag.click()
+        time.sleep(5)
+        # eat
+        pag.moveTo(1859, 68)
+        pag.click()
+        pag.moveRel(0, 70, duration=2.4)
+        pag.click()
+    elif n==8: # familydollar items
+        switchUrl(url="https://www.familydollar.com/categories?N=categories.1%3ADepartment&No=0&Nr=product.active:1")
+        time.sleep(3)
+        loadExtension()
+        time.sleep(2)
+        # switch products per page to 96
+        pag.press(['end'])
+        time.sleep(5)
+        pag.moveTo(697, 353, duration=3)
+        pag.click()
+        pag.press(['down', 'down', 'enter'], interval=1)
+        time.sleep(7)
 
     return None
 
@@ -155,7 +295,7 @@ def getArrow(sleep=2):
     # CATEGORY = Helper Web Interaction Function
     # Pagination Helper For Family Dollar Items / Prices Collection
     time.sleep(sleep)
-    pag.moveTo(1559, 302)
+    pag.moveTo(1559, 346)
     time.sleep(sleep)
     pag.click() 
     return None
@@ -338,8 +478,6 @@ def updateGasoline(data):
         for item_index, item in enumerate(trip.get('items')):
             if item.get('quantity')==0:
                 indices = trip_index, item_index
-
-           
     data[indices[0]]['items'][indices[1]-1]['pricePaid'] = round(j[indices[0]]['data'][indices[0]]['items'][indices[0]-1]['pricePaid']+data[indices[0]]['items'][indices[1]]['pricePaid'], 2)
     data[indices[0]]['items'][indices[1]-1]['totalSavings'] = round(j[indices[0]]['data'][indices[0]]['items'][indices[0]-1]['totalSavings']+data[indices[0]]['items'][indices[1]]['totalSavings'], 2)
     data[indices[0]]['items'][indices[1]-1]['priceModifiers'].extend(j[indices[0]]['data'][indices[0]]['items'][indices[0]]['priceModifiers'])
@@ -373,7 +511,13 @@ def getFamilyDollarItems(results):
 
 def getScrollingData(chain: str):
     
-    scrollVars = [{'chain': 'fooddepot', 'base_url': 'https://shop.fooddepot.com/online/fooddepot40-douglasvillehwy5/shop/', 'urls': ["produce", "meatseafood", "bakery", "deli", "dairyeggs", "beverages", "breakfast","cannedgoods", "drygoodspasta", "frozen", "household", "international", "pantry", "personalcare", "pets", "snacks", "alcohol", "babies", "seasonal"]},
+    scrollVars = [
+    {'chain': 'fooddepot', 'base_url': 'https://shop.fooddepot.com/online/fooddepot40-douglasvillehwy5/shop/', 'urls': [
+        "produce", "meatseafood", "bakery", "deli", "dairyeggs", "beverages",
+        "breakfast","cannedgoods", "drygoodspasta", "frozen", "household", "international",
+        "pantry", "personalcare", "pets", "snacks", "alcohol", "babies", "seasonal"
+    ]
+    },
     {'chain': 'aldi', 'base_url': 'https://shop.aldi.us/store/aldi/collections/', 'urls': [
         "d295-alcohol" ,"d282-produce", "d297-dairy-eggs", "d292-snacks",
         "d299-frozen", "d290-pantry", "d298-meat-seafood", "d294-bakery",
@@ -945,7 +1089,8 @@ def deconstructExtensions(filename, **madeCollections):
                         promotionsCollection.append(promo)
             elif re.match(tripRegex, url): # receipt?
                 # trips => {attributes to add to overall item collection, prices, users, priceModifiers}
-                # items: 
+                # items:
+                data = updateGasoline(data=data)
                 removalTrip = ['address', 'returns', 'barcode', 'purchaseHistoryID', 'priceModifiers', 'coupon', 'source', 'version', 'transactionTime']
                 removalAggregations = ['tipAmounts', 'totalSavings', 'tenderChanges', 'total', 'subtotal', 'totalTax', 'grossAmount', 'totalTender', 'totalLineItems', 'totalTenderChange']
                 tripKeep = {'loyaltyId', 'assocaiteId', 'transactionTimeWithTimezone', 'fulfillmentType', 'tax', 'total', 'totalSavings', 'subtotal',\
@@ -1251,7 +1396,6 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
                     else:
                         returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=returnTuple[0], itemCollection=returnTuple[1], pricesCollection=returnTuple[2], inventoryCollection=returnTuple[3], tripCollection=returnTuple[4], priceModifierCollection=returnTuple[5], userCollection=returnTuple[6], sellerCollection=returnTuple[7])
                     os.makedirs(f'../data/raw/kroger/{folder}/', exist_ok=True)
-                    #os.rename(head+'\\'+file, f'../data/raw/kroger/{folder}/{file}')
                     print(f'processed {file}.')
         
         
@@ -1325,9 +1469,6 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
     return None
 
 def queryDB(db="new"):
-    # inventories : utcTimestamp (ms)
-    # prices : effectiveDate (str) and expirationDate (str)
-
     uri = os.environ.get("MONGO_CONN_URL")
     client = MongoClient(uri)
     db = client[db]
@@ -1336,16 +1477,13 @@ def queryDB(db="new"):
     pprint(res[1])
     return None
 
-
-
-
 # queryDB()
 # setUpBrowser()
 # runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
 # runAndDocument([oo], ['testing123'], k=100, j="bloat")
-#setUpBrowser()
+setUpBrowser(8)
 # retrieveData('runs')
 # runAndDocument([simulateUser], ['getKrogerCashbackCouponsAndItems'], link='cashback')
 # deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
-createDBSummaries('new')
+#createDBSummaries('new')
