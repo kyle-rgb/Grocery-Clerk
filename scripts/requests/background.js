@@ -63,8 +63,10 @@ function listener(details) {
       getI(details.requestId).then((ii) => {
         if (ii===0){
           let new_obj = JSON.parse(tempString)
+          if (Array.isArray(new_obj)){
+            new_obj = {data: new_obj}
+          }
           new_obj.url = details.url
-          console.log(details, 'iwasset', iWasSet)
           if (details.url.match(/https\:\/\/www\.kroger\.com\/cl\/api\/coupons\?couponsCountPerLoad/)!==null & iWasSet==false){
             setIterations(new_obj.data.count).then((bool) => {iWasSet=bool})
           } else if (details.url.match(/https\:\/\/www\.dollargeneral\.com\/bin\/omni\/coupons\/recommended\?/)!==null & iWasSet==false){

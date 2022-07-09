@@ -50,6 +50,7 @@ def eatThisPage():
     pag.click()
     pag.moveRel(0, 70, duration=2.4)
     pag.click()
+    requests.post("http://127.0.0.1:5000/i?directive=true")
     time.sleep(5)
     return None
 
@@ -77,12 +78,12 @@ def loadExtension(fromTab=True):
     return None
 
 
-def setUpBrowser(n=0):
+def setUpBrowser(n=0, initialSetup=True, url=None):
     # create setup for Kroger coupons (digital and cashback)
     p1 = subprocess.Popen(['C:\Program Files\Mozilla Firefox\\firefox.exe'])
     p1.wait(2)
     if n==-1:
-        ## 
+        ## for trips
         switchUrl(url="https://www.kroger.com/")
         time.sleep(3)
         pag.moveTo(1705, 465)
@@ -107,37 +108,42 @@ def setUpBrowser(n=0):
         # start browser
         # switch to wanted page
         #switchUrl(url="https://www.kroger.com/savings/cl/coupons")
-        switchUrl(url="https://www.kroger.com/savings/cbk/cashback")
+        switchUrl(url=url)
         # exit out of intro modal
-        pag.moveTo(x=1214, y=297, duration=1.9)
-        pag.click()
-        time.sleep(2)
-        # load extension: background.js
-        loadExtension()
-        # click change store
-        pag.moveTo(x=1682, y=160, duration=1.9)
-        pag.click()
-        time.sleep(2)
-        # click find store
-        pag.moveTo(x=1731, y=392, duration=1.9)
-        pag.click()
-        # remove default data
-        pag.typewrite(["backspace"]*5, interval=1)
-        time.sleep(2)
-        # replace with zip and press enter
-        pag.typewrite(list(f"{ZIPCODE}"), interval=1)
-        time.sleep(2)
-        pag.press('enter')
-        time.sleep(2)
-        # select modality : In-Store
-        pag.moveTo(x=1762, y=803, duration=1.9)
-        pag.click()
-        time.sleep(2)
-        # select wanted store {could be variable for different stores}
-        pag.moveTo(x=1725, y=675, duration=1.9)
-        pag.click()
-        time.sleep(2)
-        simulateUser(link='cashback')
+        if initialSetup:
+            pag.moveTo(x=1214, y=297, duration=1.9)
+            pag.click()
+            time.sleep(2)
+            pag.click()
+            time.sleep(2)
+            # load extension: background.js
+            loadExtension()
+            # click change store
+            pag.moveTo(x=1682, y=160, duration=1.9)
+            pag.click()
+            time.sleep(2)
+            # click find store
+            pag.moveTo(x=1731, y=392, duration=1.9)
+            pag.click()
+            # remove default data
+            pag.typewrite(["backspace"]*5, interval=1)
+            time.sleep(2)
+            # replace with zip and press enter
+            pag.typewrite(list(f"{ZIPCODE}"), interval=1)
+            time.sleep(2)
+            pag.press('enter')
+            time.sleep(2)
+            # select modality : In-Store
+            pag.moveTo(x=1762, y=803, duration=1.9)
+            pag.click()
+            time.sleep(2)
+            # select wanted store {could be variable for different stores}
+            pag.moveTo(x=1725, y=675, duration=1.9)
+            pag.click()
+            time.sleep(2)
+        else:
+            switchUrl(url=url)
+            time.sleep(10)
     elif n==1: # @ ALDI / Instacart Store
     # create setup for Aldi instacart
         switchUrl(url="https://shop.aldi.us/store/aldi/storefront")
@@ -361,13 +367,16 @@ def createDBSummaries(db='new'):
 # Place into Runs Collections
 # Admin DB to Track and Monitor the Execution of Scraping Functions that Work on Different Schedules BAased on Store's Internal Promotion Schedule
 # TODO: Add CPU/resource usage for processes related to the functions (browser/Python Application, Mongo Create Operations) 
-def runAndDocument(funcs:list, callNames:list, **kwargs):
+def runAndDocument(funcs:list, callNames:list, kwargs: list):
     functions = []
     startDateTime = dt.datetime.now(tz=pytz.UTC)
-    for name, func in zip(callNames, funcs):
+    for name, func, args in zip(callNames, funcs, kwargs):
         if callable(func):
             start = time.perf_counter()
-            func(**kwargs)
+            if bool(args):
+                func(**args)
+            else:
+                func()
             end = round(time.perf_counter() - start, 4)
             funcName = [k for k, v in globals().items() if v==func][0]
             functions.append({'function': funcName, 'time': end, 'description': name, 'variables': kwargs})
@@ -395,9 +404,9 @@ def simulateUser(link):
         print(f"waiting for i from server for {j} seconds")
         j+=1
         time.sleep(1)
-        response = json.loads(requests.get("http://127.0.0.1:5000/i"))
+        response = requests.get("http://127.0.0.1:5000/i").json()
 
-    iterations = (response.get('i') // neededLinks[link])+1
+    iterations = (response.get('i') // neededLinks[link]['no'])+2
 
     if link!='dollarGeneral':
         time.sleep(3)
@@ -1480,10 +1489,9 @@ def queryDB(db="new"):
 # queryDB()
 # setUpBrowser()
 # runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
-# runAndDocument([oo], ['testing123'], k=100, j="bloat")
-setUpBrowser(8)
 # retrieveData('runs')
-# runAndDocument([simulateUser], ['getKrogerCashbackCouponsAndItems'], link='cashback')
+runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerCashbackCouponsAndItems', 'flushData',],
+kwargs=[{"url": "https://www.kroger.com/savings/cbk/cashback", "n": 0}, {"link": "cashback"}, {}])
 # deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
 #createDBSummaries('new')

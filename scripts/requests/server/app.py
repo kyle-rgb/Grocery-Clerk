@@ -41,6 +41,9 @@ def setPost():
         global i
         i = int(request.args.get('i'))
         return json.dumps({'success': True})
+    elif request.method=="POST" and request.args.get('directive'):
+        i = 0
+        return {"message": "i was reset"}
     elif request.method=="GET":
         if i:
             return json.dumps({"i": i})
