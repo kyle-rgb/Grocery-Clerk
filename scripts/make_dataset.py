@@ -82,7 +82,7 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
     # create setup for Kroger coupons (digital and cashback)
     p1 = subprocess.Popen(['C:\Program Files\Mozilla Firefox\\firefox.exe'])
     p1.wait(2)
-    if n==-1:
+    if n=='kroger-trips':
         ## for trips
         switchUrl(url="https://www.kroger.com/")
         time.sleep(3)
@@ -104,7 +104,7 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         time.sleep(2)
 
 
-    elif n==0: # @ Kroger Coupons
+    elif n=='kroger-coupons': # @ Kroger Coupons
         # start browser
         # switch to wanted page
         #switchUrl(url="https://www.kroger.com/savings/cl/coupons")
@@ -144,7 +144,7 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         else:
             switchUrl(url=url)
             time.sleep(10)
-    elif n==1: # @ ALDI / Instacart Store
+    elif n=='aldi-items': # @ ALDI / Instacart Store
     # create setup for Aldi instacart
         switchUrl(url="https://shop.aldi.us/store/aldi/storefront")
         # wait for free delivery modal to load
@@ -156,7 +156,7 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         loadExtension()
         time.sleep(2)
         getScrollingData(chain='aldi')
-    elif n==2: # publix Coupons
+    elif n=="publix-coupons": # publix Coupons
         # nav to https://www.publix.com/savings/all-deals
         switchUrl(url="https://www.publix.com/savings/all-deals")
         # load extension
@@ -169,7 +169,7 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         time.sleep(7)
         # eat page
         eatThisPage()
-    elif n==3: # publix / instacart site
+    elif n=='publix-items': # publix / instacart site
         switchUrl(url="https://delivery.publix.com/store/publix/collections/")
         time.sleep(7)
         pag.moveTo(858, 653, duration=2)
@@ -188,13 +188,13 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         loadExtension()
         time.sleep(2)
         getScrollingData('publix')
-    elif n==4: # fooddepot items / internal website
+    elif n=='food-depot-items': # fooddepot items / internal website
         # can go straight to load extension
         switchUrl(url="https://shop.fooddepot.com/online/fooddepot40-douglasvillehwy5/home")
         loadExtension()
         time.sleep(2)
         getScrollingData(chain='fooddepot')
-    elif n==5: # food depot coupons  + an Apple/Gmail Shortcut
+    elif n=='food-depot-coupons': # food depot coupons  + an Apple/Gmail Shortcut
         switchUrl(url="https://www.fooddepot.com/coupons/")
         pag.moveTo(914, 376)
         pag.click()
@@ -213,36 +213,25 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         pag.click()
         pag.moveRel(0, 70, duration=2.4)
         pag.click()
-    elif n==6: # Dollar General Coupons and Items
+    elif n=='dollar-general-coupons': # Dollar General Coupons and Items
         # create setup for dollar general
         switchUrl(url="https://www.dollargeneral.com/dgpickup/deals/coupons")
         # change store
-        pag.moveTo(88, 210, duration=2)
-        pag.click()
-        time.sleep(2)
-        pag.moveTo(88, 369, duration=2)
-        pag.click()
-        time.sleep(2)
-        pag.moveTo(531, 194, duration=2)
-        pag.click()
-        time.sleep(2)
-        pag.moveTo(43, 431, duration=2)
-        pag.click()
-        time.sleep(2)
         loadExtension()
-        time.sleep(1)
-        pag.moveTo(1177, 359, duration=2)
+        pag.moveTo(178, 401, duration=2)
         pag.click()
         time.sleep(2)
-        pag.press(["down", 'enter'], interval=1)
+        pag.moveTo(231, 451, duration=2)
+        pag.click()
+        time.sleep(2)
         # wait for set iterations
-        time.sleep(10)
+        time.sleep(12)
         response = requests.get("http://127.0.0.1:5000/i").json()
         iterations = response.get('i') // 15
         for i in range(iterations):
             pag.press('end')
             time.sleep(2)
-            ix, iy = 932, 395
+            ix, iy = 929, 365
             pag.moveTo(ix, iy, duration=1.5)
             if pag.pixel(ix, iy)!=(0, 0, 0):
                 pag.moveRel(0, -20)
@@ -251,18 +240,20 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
             time.sleep(4)
         pag.press('home')
         time.sleep(2)
-    elif n==7: # family-dollar smart coupons
+    elif n=='family-dollar-coupons': # family-dollar smart coupons
     # create setup for family dollar coupons
+        time.sleep(1)
+        pag.keyDown('ctrlleft')
+        pag.keyDown('+')
+        time.sleep(1)
+        pag.keyUp('ctrlleft')
+        pag.keyUp('+')
+        loadExtension()
+        time.sleep(1)
         switchUrl(url="https://www.familydollar.com/smart-coupons")
-        pag.moveTo(533, 189)
-        pag.click()
         time.sleep(5)
         # eat
-        pag.moveTo(1859, 68)
-        pag.click()
-        pag.moveRel(0, 70, duration=2.4)
-        pag.click()
-    elif n==8: # familydollar items
+    elif n=='family-dollar-items': # familydollar items
         switchUrl(url="https://www.familydollar.com/categories?N=categories.1%3ADepartment&No=0&Nr=product.active:1")
         time.sleep(3)
         loadExtension()
@@ -412,7 +403,6 @@ def simulateUser(link):
         time.sleep(3)
         pag.scroll(neededLinks[link]['initalScroll'])
         time.sleep(2)
-
     # find all buttons
     for i in range(iterations):
         buttons = list(pag.locateAllOnScreen(neededLinks[link]['button'], confidence=neededLinks[link]['confidenceInterval'], grayscale=False))
@@ -452,7 +442,8 @@ def simulateUser(link):
                 # pag.keyUp('shiftleft')
                 # pag.keyUp('tab')
                 time.sleep(6)
-                pag.press('pagedown', 3, interval=0.5)
+                pag.press('end')
+                time.sleep(3)
                 # escape out of portal
                 moreItems = loadMoreAppears()
                 while bool(moreItems):
@@ -493,11 +484,18 @@ def updateGasoline(data):
     data[indices[0]]['items'].pop(indices[1])
     return data
 
-def getFamilyDollarItems(results):
+def getFamilyDollarItems():
     # example url : https://www.familydollar.com/categories?N=categories.1%3ADepartment%2Bcategories.2%3AHousehold&No=0&Nr=product.active:1
     # dependencies: scrollDown and getArrow
     # a function that retrieves all the items and prices from the local family dollars
     # CATEGORY = Larger Web Function
+    results = requests.get('http://127.0.0.1:5000/i').json()
+    while results.get('i')==None:
+        time.sleep(2)
+        print('slept for two, no i')
+        results = requests.get('http://127.0.0.1:5000/i')
+        
+    results = results.get('i')
     results = results // 96
     startingSleep=10
     pag.click()
@@ -1490,8 +1488,15 @@ def queryDB(db="new"):
 # setUpBrowser()
 # runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
 # retrieveData('runs')
-runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerCashbackCouponsAndItems', 'flushData',],
-kwargs=[{"url": "https://www.kroger.com/savings/cbk/cashback", "n": 0}, {"link": "cashback"}, {}])
+# runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerCashbackCouponsAndItems', 'flushData',],
+# kwargs=[{"url": "https://www.kroger.com/savings/cbk/cashback", "n": 0}, {"link": "cashback"}, {}])
+#runAndDocument([simulateUser, eatThisPage], ['getDollarGeneralCouponsAndItems', 'flushData'],
+#kwargs=[{"link": "dollarGeneral"}, {}])
+runAndDocument([getFamilyDollarItems, eatThisPage], ['getFamilyDollarCoupons', 'flush', 'getFamilyDollarItems', 'flush'],
+[{}, {}])
+
+
+
 # deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
 #createDBSummaries('new')
