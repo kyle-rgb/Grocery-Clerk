@@ -155,7 +155,6 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         time.sleep(3.5)
         loadExtension()
         time.sleep(2)
-        getScrollingData(chain='aldi')
     elif n=="publix-coupons": # publix Coupons
         # nav to https://www.publix.com/savings/all-deals
         switchUrl(url="https://www.publix.com/savings/all-deals")
@@ -187,13 +186,11 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         time.sleep(10)
         loadExtension()
         time.sleep(2)
-        getScrollingData('publix')
     elif n=='food-depot-items': # fooddepot items / internal website
         # can go straight to load extension
         switchUrl(url="https://shop.fooddepot.com/online/fooddepot40-douglasvillehwy5/home")
         loadExtension()
         time.sleep(2)
-        getScrollingData(chain='fooddepot')
     elif n=='food-depot-coupons': # food depot coupons  + an Apple/Gmail Shortcut
         switchUrl(url="https://www.fooddepot.com/coupons/")
         pag.moveTo(914, 376)
@@ -434,17 +431,11 @@ def simulateUser(link):
                 pag.keyDown('ctrlleft')
                 pag.click()
                 time.sleep(3)
-                # switch to tab
-                # pag.keyDown('shiftleft')
-                # pag.keyDown('tab')
-
                 pag.keyUp('ctrlleft')
-                # pag.keyUp('shiftleft')
-                # pag.keyUp('tab')
                 time.sleep(6)
                 pag.press('end')
                 time.sleep(3)
-                # escape out of portal
+                # check for load more button (indicating more loadable items) 
                 moreItems = loadMoreAppears()
                 while bool(moreItems):
                     button = moreItems
@@ -474,14 +465,16 @@ def updateGasoline(data):
     # Kroger Fuel Points (previously in price modifiers) now show up as duplicate entry of gasoline with a quantity of zero and a negative price paid to correspond to savings
     # Must be run before deconstructions.
     # Raises ZeroDivisionError on Calucations that use Quantity 
+    indices = ''
     for trip_index, trip in enumerate(data):
         for item_index, item in enumerate(trip.get('items')):
             if item.get('quantity')==0:
                 indices = trip_index, item_index
-    data[indices[0]]['items'][indices[1]-1]['pricePaid'] = round(j[indices[0]]['data'][indices[0]]['items'][indices[0]-1]['pricePaid']+data[indices[0]]['items'][indices[1]]['pricePaid'], 2)
-    data[indices[0]]['items'][indices[1]-1]['totalSavings'] = round(j[indices[0]]['data'][indices[0]]['items'][indices[0]-1]['totalSavings']+data[indices[0]]['items'][indices[1]]['totalSavings'], 2)
-    data[indices[0]]['items'][indices[1]-1]['priceModifiers'].extend(j[indices[0]]['data'][indices[0]]['items'][indices[0]]['priceModifiers'])
-    data[indices[0]]['items'].pop(indices[1])
+    if indices:
+        data[indices[0]]['items'][indices[1]-1]['pricePaid'] = round(data[indices[0]]['items'][indices[0]-1]['pricePaid']+data[indices[0]]['items'][indices[1]]['pricePaid'], 2)
+        data[indices[0]]['items'][indices[1]-1]['totalSavings'] = round(data[indices[0]]['items'][indices[0]-1]['totalSavings']+data[indices[0]]['items'][indices[1]]['totalSavings'], 2)
+        data[indices[0]]['items'][indices[1]-1]['priceModifiers'].extend(data[indices[0]]['items'][indices[1]['priceModifiers'])
+        data[indices[0]]['items'].pop(indices[1])
     return data
 
 def getFamilyDollarItems():
@@ -517,7 +510,6 @@ def getFamilyDollarItems():
     return None
 
 def getScrollingData(chain: str):
-    
     scrollVars = [
     {'chain': 'fooddepot', 'base_url': 'https://shop.fooddepot.com/online/fooddepot40-douglasvillehwy5/shop/', 'urls': [
         "produce", "meatseafood", "bakery", "deli", "dairyeggs", "beverages",
@@ -603,6 +595,7 @@ def extract_nested_values(it):
         yield {'count':1, 'type': type(it)}
 
 def deconstructDollars(file='./requests/server/collections/familydollar/digital052122FD.json'):
+    # retrieve store selection api for stores: DollarGeneral, FamilyDollar, Publix, Aldi, FoodDepot 
     # existing coupon schema:
         # uuid: id, krogerCouponNumber
         # qualifying products: productUPCs
@@ -637,7 +630,7 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
         # Promotions.modalities <List> -> {DELIVERY, PICKUP, IN_STORE, SHIP}
         # Promotions.redemptionsAllowed -> {-1, 1, 2, 3, 4, 5} <- -1 often corresponds to multiple redemptions in a single trip, should change to reflect this
 
-        # family dollar:
+        # family dollar: mdid
             # all available :
                 # XclippedCount => social amount coupon clipped <Int>
                 # Xpopularity  => social amount coupon clipped <Int>
@@ -660,7 +653,7 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
                 # Xvalue => cents amount of offer or percentage off for offer <Integer>
                 # XvalueSort => Best Value Best Proxy for Coupon (ie. better than value) <Integer>
                 # XvalueText => "Save ${valueSort/100}" <String>
-                # Xmdid => uuid for promotion <Integer>
+                # {{{Xmdid => uuid for promotion <Integer>}}}
                 # Xgroup => <String> {'available'}
                 # Xgroups => <List> {'available'}
                 # Xstatus => <String> {'available'}
@@ -808,55 +801,53 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
                         itemDoc['maximumOrderQuantity'] = i.get('shipToHomeQuantity')
                 
                 newProducts.append(itemDoc)
-  
-            for coupon in coupons:
-                utcTimestamp = coupon.pop('acquisition_timestamp')
-                for coup in coupon.get('Coupons'):
-                    newC = {}
-                    # ids => OfferID=id, OfferCode=offerCode, bool(get OfferGS1)
-                    newC['id'] = coup.get('OfferID')
-                    newC['offerCode'] = coup.get('OfferCode')
-                    if bool(coup.get('OfferGS1')):
-                        newC['offerGS1'] = coup.get('OfferGS1')
-                    # Brandname => brandName, CompanyName => companyName, offerType=> type
-                    # OfferSummary + OfferDescription => shortDescription
-                    # OfferDisclaimer => terms
-                    # RewaredCategoryName => categories[]
-                    newC['brandName'] = coup.get('Brandname') 
-                    newC['companyName'] = coup.get('Companyname') 
-                    newC['offerType'] = coup.get('OfferType')
-                    if bool(coup.get('OfferDisclaimer')):
-                        newC['terms'] = coup.get('OffeDisclaimer') 
-                    newC['isManufacturerCoupon'] = coup.get('IsManufacturerCoupon') 
-                    newC['categories'] = [coup.get('RewaredCategoryName')] 
-                    # OfferActivationDate => startDate  %Y-%m-%dT%H:%M:%S
-                    # OfferExpirationDate => endDate %Y-%m-%dT%H:%M:%S
-                    startDate =  dt.datetime.strptime(coup.get('OfferActivationDate'), '%Y-%m-%dT%H:%M:%S')
-                    newC['startDate'] = mytz.localize(startDate).astimezone(pytz.utc)
-                    expirationDate =  dt.datetime.strptime(coup.get('OfferExpirationDate'), '%Y-%m-%dT%H:%M:%S')
-                    newC['expirationDate'] = mytz.localize(expirationDate).astimezone(pytz.utc)
-                    # RewaredOfferValue => value
-                    newC['value'] = coup.get('RewaredOfferValue')
-                    # MinQuantity => requirementQuantity 
-                    newC['requirementQuantity'] = coup.get('MinQuantity')
-                    # RedemptionLimitQuantity => redemptionsAllowed
-                    newC['redemptionsAllowed'] = coup.get('RedemptionLimitQuantity')
-                    # + MinTripCount, MinBasketValue, TimesShopQuantity, RecemptionFrequency
-                    newC['redemptionFreq'] = coup.get('RecemptionFrequency')
-                    # Image1 => imageUrl, +Image2
-                    newC['imageUrl'] = coup.get('Image1') 
-                    newC['imageUrl2'] = coup.get('Image2') 
-                    booleans2 = ['MinTripCount', 'MinBasketValue', 'TimesShopQuantity']
-                    for b in booleans2:
-                        if bool(coup.get(b)):
-                            newC[b] = coup.get(b)
-                    
-                    joinID = coup.get('CouponID')
-                    if joinID in productsForCoupons.keys():
-                        newC['productUpcs'] = list(productsForCoupons.get(joinID))
-                    
-                    newCoupons.append(newC)
+        for coupon in coupons:
+            utcTimestamp = coupon.pop('acquisition_timestamp')
+            for coup in coupon.get('Coupons'):
+                newC = {}
+                # ids => OfferID=id, OfferCode=offerCode, bool(get OfferGS1)
+                newC['id'] = coup.get('OfferID')
+                newC['offerCode'] = coup.get('OfferCode')
+                if bool(coup.get('OfferGS1')):
+                    newC['offerGS1'] = coup.get('OfferGS1')
+                # Brandname => brandName, CompanyName => companyName, offerType=> type
+                # OfferSummary + OfferDescription => shortDescription
+                # OfferDisclaimer => terms
+                # RewaredCategoryName => categories[]
+                newC['brandName'] = coup.get('Brandname') 
+                newC['companyName'] = coup.get('Companyname') 
+                newC['offerType'] = coup.get('OfferType')
+                if bool(coup.get('OfferDisclaimer')):
+                    newC['terms'] = coup.get('OffeDisclaimer') 
+                newC['isManufacturerCoupon'] = coup.get('IsManufacturerCoupon') 
+                newC['categories'] = [coup.get('RewaredCategoryName')] 
+                # OfferActivationDate => startDate  %Y-%m-%dT%H:%M:%S
+                # OfferExpirationDate => endDate %Y-%m-%dT%H:%M:%S
+                startDate =  dt.datetime.strptime(coup.get('OfferActivationDate'), '%Y-%m-%dT%H:%M:%S')
+                newC['startDate'] = mytz.localize(startDate).astimezone(pytz.utc)
+                expirationDate =  dt.datetime.strptime(coup.get('OfferExpirationDate'), '%Y-%m-%dT%H:%M:%S')
+                newC['expirationDate'] = mytz.localize(expirationDate).astimezone(pytz.utc)
+                # RewaredOfferValue => value
+                newC['value'] = coup.get('RewaredOfferValue')
+                # MinQuantity => requirementQuantity 
+                newC['requirementQuantity'] = coup.get('MinQuantity')
+                # RedemptionLimitQuantity => redemptionsAllowed
+                newC['redemptionsAllowed'] = coup.get('RedemptionLimitQuantity')
+                # + MinTripCount, MinBasketValue, TimesShopQuantity, RecemptionFrequency
+                newC['redemptionFreq'] = coup.get('RecemptionFrequency')
+                # Image1 => imageUrl, +Image2
+                newC['imageUrl'] = coup.get('Image1') 
+                newC['imageUrl2'] = coup.get('Image2') 
+                booleans2 = ['MinTripCount', 'MinBasketValue', 'TimesShopQuantity']
+                for b in booleans2:
+                    if bool(coup.get(b)):
+                        newC[b] = coup.get(b)
                 
+                joinID = coup.get('OfferID')
+                if joinID in productsForCoupons.keys():
+                    newC['productUpcs'] = list(productsForCoupons.get(joinID))
+                newCoupons.append(newC)
+        pprint([x for x in newCoupons if x.get('id') in ssety])
     # !!! Family Dollar -> currently deconstructs into promotions collections (promotions are separated from their assoicated items, though items are still catalogued)
     elif 'familydollar' in file:
         with open(file, 'r', encoding='utf-8') as fd:
@@ -868,7 +859,7 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
         for coup in coupons:
             newC = {}
             # mid => id
-            newC['id'] = coup.get('mid')
+            newC['id'] = coup.get('mdid')
             # brand => brandName
             newC['brandName'] = coup.get('brand')
             # offerType => type
@@ -916,7 +907,7 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
 
     # newPrices, newCoupons, newInventory, newProducts
     dollarCollections = {'prices': newPrices, 'promotions': newCoupons, 'inventories': newInventory, 'items': newProducts}
-    [insertData(v, k) for k,v in dollarCollections.items() if v]
+    # [insertData(v, k) for k,v in dollarCollections.items() if v]
     print(f"Finished with {file}")
 
     return None
@@ -1363,20 +1354,14 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
     listTranslator={"0": "promotions", "1": "items", "2": "prices", "3": "inventories", "4":"trips", "5":"priceModifiers", "6":"users", "7":"sellers"}
     mytz = pytz.timezone('America/New_York')
     # inital setup if data folders do not exist in repo
-    if os.path.exists('./requests/server/collections/extras/myStores.json'):
+    if os.path.exists('./requests/server/collections/kroger/API/myStores.json'):
         # setup archive for preprocessed data
-        with open('./requests/server/collections/extras/myStores.json', 'r', encoding='utf-8') as storeFile:
+        with open('./requests/server/collections/kroger/API/myStores.json', 'r', encoding='utf-8') as storeFile:
             stores = json.loads(storeFile.read())
             insertData(stores, 'stores')
         os.makedirs('../data/raw/kroger/API', exist_ok=True)
-        
 
-        # will be backed up by dbdump
-        # with open('../data/runs/collection.json') as runFile:
-        #     runs = json.loads(runFile.read())
-        #     insertData(runs, 'runs')
-
-        with open('./requests/server/collections/extras/combinedPrices.json', 'r', encoding='utf-8') as priceFile:
+        with open('./requests/server/collections/kroger/API/combinedPrices.json', 'r', encoding='utf-8') as priceFile:
             oldPrices = json.loads(priceFile.read())
             oldPrices = list(filter(lambda y: y.get('isPurchase')==False, oldPrices)) # trip price data will already have been recorded
         
@@ -1421,8 +1406,8 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
             # priceModifierCollection (coupons applied a @ purchase. tied with trips. )
         # userCollection (nonTime bound in db, no duplicates preferrable, filter check)
         # sellerCollection (nonTime bound in db, no duplicates preferrable, filter check)
-        promotionsCollection = retrieveData('promotions') # 80 on promotions
-        itemCollection = retrieveData('items') # 384 on items
+        promotionsCollection = retrieveData('promotions')
+        itemCollection = retrieveData('items') 
         tripCollection = retrieveData('trips')
         priceModifierCollection = retrieveData('priceModifiers')
         userCollection = retrieveData('users')
@@ -1462,14 +1447,14 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
     
     
     backupDatabase()
-    os.rename("./requests/server/collections/extras/myStores.json", "../data/raw/kroger/API/myStores.json")
-    os.rename('./requests/server/collections/extras/combinedPrices.json', "../data/raw/kroger/API/combinedPrices.json")
+    os.rename("./requests/server/collections/kroger/API/myStores.json", "../data/raw/kroger/API/myStores.json")
+    os.rename('./requests/server/collections/kroger/API/combinedPrices.json', "../data/raw/kroger/API/combinedPrices.json")
     for head, subfolders, files in os.walk(dataRepoPath):         
         if head.split('\\')[-1] in wantedPaths:
             folder = head.split('\\')[-1]
             for file in files:
                 os.rename(head+'\\'+file, f'../data/raw/kroger/{folder}/{file}')  
-    # extraneousPaths = ['../data/data', './requests/server/collections/extras']
+    # extraneousPaths = ['../data/data', './requests/server/collections/kroger/API']
     # [shutil.rmtree(path) for path in extraneousPaths if os.path.exists(path)]
     
 
@@ -1478,10 +1463,14 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
 def queryDB(db="new"):
     uri = os.environ.get("MONGO_CONN_URL")
     client = MongoClient(uri)
-    db = client[db]
-    res = db['priceModifiers'].aggregate(pipeline=[{"$sort": {"redemptions": -1}}, {"$unwind": "$redemptionKeys"}, {"$group": {"_id": {"x": "$redemptionKeys.upc" }, "count": {"$sum": 1}}}])
+    cursor = client[db]
+    # res = cursor['promotions'].aggregate(pipeline=[{"$sort": {"redemptions": -1}}, {"$unwind": "$redemptionKeys"}, {"$group": {"_id": {"x": "$redemptionKeys.upc" }, "count": {"$sum": 1}}}])
+    #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': True}}}, {'$project':  {"socials": {'clips': '$clippedCount', 'popInt': {'$divide': ['$popularity', 1000]}}, 'newValue': {'$convert': {'input': '$value', 'to':'int'}}}}, {'$sort': {'newValue': 1}}])
+    res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': False}, 'krogerCouponNumber': {'$exists':False}, 'productUpcs': {'$exists': True}}}])
+    
     res = [x for x in res]
-    pprint(res[1])
+    print(len(res))
+
     return None
 
 # queryDB()
@@ -1492,11 +1481,8 @@ def queryDB(db="new"):
 # kwargs=[{"url": "https://www.kroger.com/savings/cbk/cashback", "n": 0}, {"link": "cashback"}, {}])
 #runAndDocument([simulateUser, eatThisPage], ['getDollarGeneralCouponsAndItems', 'flushData'],
 #kwargs=[{"link": "dollarGeneral"}, {}])
-runAndDocument([getFamilyDollarItems, eatThisPage], ['getFamilyDollarCoupons', 'flush', 'getFamilyDollarItems', 'flush'],
-[{}, {}])
-
-
-
+# runAndDocument([setUpBrowser, getScrollingData, eatThisPage], ['setup', 'getFoodDepotItems', 'flush'],
+# [{'n': 'food-depot-items'}, {'chain': 'fooddepot'}, {}])
 # deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
-# createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
-#createDBSummaries('new')
+createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
+createDBSummaries('new')
