@@ -44,14 +44,19 @@ def switchUrl(x=468, y=63, url="https://www.dollargeneral.com/dgpickup/deals/cou
     time.sleep(5)
     return None    
 
-def eatThisPage():
+def eatThisPage(reset=False):
     # flush remaining results after main data call to server using browser context menu
-    pag.moveTo(1859, 68)
+    pag.moveTo(1114, 123)
+    time.sleep(2)
+    pag.click(button='right')
+    time.sleep(1)
+    pag.moveRel(120, 280, duration=3)
     pag.click()
-    pag.moveRel(0, 70, duration=2.4)
-    pag.click()
+    time.sleep(10)
     requests.post("http://127.0.0.1:5000/i?directive=true")
     time.sleep(5)
+    if reset:
+        subprocess.Popen(['taskkill', '/IM', 'firefox.exe', '/F'])
     return None
 
 def loadExtension(fromTab=True):
@@ -80,8 +85,9 @@ def loadExtension(fromTab=True):
 
 def setUpBrowser(n=0, initialSetup=True, url=None):
     # create setup for Kroger coupons (digital and cashback)
-    p1 = subprocess.Popen(['C:\Program Files\Mozilla Firefox\\firefox.exe'])
-    p1.wait(2)
+    if initialSetup:
+        p1 = subprocess.Popen(['C:\Program Files\Mozilla Firefox\\firefox.exe'])
+        p1.wait(2)
     if n=='kroger-trips':
         ## for trips
         switchUrl(url="https://www.kroger.com/")
@@ -141,8 +147,16 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
             pag.moveTo(x=1725, y=675, duration=1.9)
             pag.click()
             time.sleep(2)
+            # reset filter to get amount of available coupons
+            pag.moveTo(1768, 499, duration=2)
+            pag.click()
+            time.sleep(1)
+            pag.press(['down', 'enter'], interval=1)
+            time.sleep(3)
         else:
-            switchUrl(url=url)
+            # extension will have been loaded, correct store&modality chosen, filter reset after eat.  
+            pag.moveTo(x=1214, y=297, duration=1.9)
+            pag.click()
             time.sleep(10)
     elif n=='aldi-items': # @ ALDI / Instacart Store
     # create setup for Aldi instacart
@@ -211,6 +225,13 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         pag.moveRel(0, 70, duration=2.4)
         pag.click()
     elif n=='dollar-general-coupons': # Dollar General Coupons and Items
+        time.sleep(2)
+        pag.keyDown('ctrlleft')
+        pag.keyDown('-')
+        time.sleep(2)
+        pag.keyUp('ctrlleft')
+        pag.keyUp('-')
+        time.sleep(2)
         # create setup for dollar general
         switchUrl(url="https://www.dollargeneral.com/dgpickup/deals/coupons")
         # change store
@@ -239,12 +260,6 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         time.sleep(2)
     elif n=='family-dollar-coupons': # family-dollar smart coupons
     # create setup for family dollar coupons
-        time.sleep(1)
-        pag.keyDown('ctrlleft')
-        pag.keyDown('+')
-        time.sleep(1)
-        pag.keyUp('ctrlleft')
-        pag.keyUp('+')
         loadExtension()
         time.sleep(1)
         switchUrl(url="https://www.familydollar.com/smart-coupons")
@@ -343,7 +358,7 @@ def createDBSummaries(db='new'):
         dbStats.setdefault('collectionStats', [])
         for col in db.list_collections():
             dbStats['collectionStats'].append({k:v for k, v in db.command('collstats', col.get('name')).items() if k!='wiredTiger' and k!='indexDetails'})
-        file.write(json.dumps(dbStats))
+        file.write(json.dumps(dbStats, indent=3))
 
     print('updated stats')
 
@@ -355,14 +370,16 @@ def createDBSummaries(db='new'):
 # Place into Runs Collections
 # Admin DB to Track and Monitor the Execution of Scraping Functions that Work on Different Schedules BAased on Store's Internal Promotion Schedule
 # TODO: Add CPU/resource usage for processes related to the functions (browser/Python Application, Mongo Create Operations) 
-def runAndDocument(funcs:list, callNames:list, kwargs: list):
+def runAndDocument(funcs:list, callNames:list, kwargs: list, callback=None):
     functions = []
     startDateTime = dt.datetime.now(tz=pytz.UTC)
     for name, func, args in zip(callNames, funcs, kwargs):
         if callable(func):
             start = time.perf_counter()
-            if bool(args):
+            if bool(args) and type(args)==dict:
                 func(**args)
+            elif bool(args) and type(args)==list:
+                func(*args)
             else:
                 func()
             end = round(time.perf_counter() - start, 4)
@@ -372,6 +389,9 @@ def runAndDocument(funcs:list, callNames:list, kwargs: list):
     duration = round(duration.total_seconds(), 4)
     data = {'executeVia': 'call', 'functions': functions, "startedAt": startDateTime, 'duration': duration}
     insertData(data, 'runs')
+    if callback:
+        callback()
+
     return None
 
 
@@ -457,6 +477,7 @@ def simulateUser(link):
         print('finished row {}; {} to go; mouse currently @ {} :: {} seconds left'.format(i, iterations-i, pag.position(), (time.perf_counter()/(i+1))*(iterations-i)))
         time.sleep(2)
 
+
     print(f"Processed {neededLinks[link]['no']} in {time.perf_counter()} seconds")
     return None
 
@@ -471,9 +492,9 @@ def updateGasoline(data):
             if item.get('quantity')==0:
                 indices = trip_index, item_index
     if indices:
-        data[indices[0]]['items'][indices[1]-1]['pricePaid'] = round(data[indices[0]]['items'][indices[0]-1]['pricePaid']+data[indices[0]]['items'][indices[1]]['pricePaid'], 2)
-        data[indices[0]]['items'][indices[1]-1]['totalSavings'] = round(data[indices[0]]['items'][indices[0]-1]['totalSavings']+data[indices[0]]['items'][indices[1]]['totalSavings'], 2)
-        data[indices[0]]['items'][indices[1]-1]['priceModifiers'].extend(data[indices[0]]['items'][indices[1]['priceModifiers'])
+        data[indices[0]]['items'][indices[1]-1]['pricePaid'] = round(data[indices[0]]['items'][indices[1]-1]['pricePaid']+data[indices[0]]['items'][indices[1]]['pricePaid'], 2)
+        data[indices[0]]['items'][indices[1]-1]['totalSavings'] = round(data[indices[0]]['items'][indices[1]-1]['totalSavings']+data[indices[0]]['items'][indices[1]]['totalSavings'], 2)
+        data[indices[0]]['items'][indices[1]-1]['priceModifiers'].extend(data[indices[0]]['items'][indices[1]]['priceModifiers'])
         data[indices[0]]['items'].pop(indices[1])
     return data
 
@@ -847,7 +868,6 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
                 if joinID in productsForCoupons.keys():
                     newC['productUpcs'] = list(productsForCoupons.get(joinID))
                 newCoupons.append(newC)
-        pprint([x for x in newCoupons if x.get('id') in ssety])
     # !!! Family Dollar -> currently deconstructs into promotions collections (promotions are separated from their assoicated items, though items are still catalogued)
     elif 'familydollar' in file:
         with open(file, 'r', encoding='utf-8') as fd:
@@ -907,7 +927,7 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
 
     # newPrices, newCoupons, newInventory, newProducts
     dollarCollections = {'prices': newPrices, 'promotions': newCoupons, 'inventories': newInventory, 'items': newProducts}
-    # [insertData(v, k) for k,v in dollarCollections.items() if v]
+    [insertData(v, k) for k,v in dollarCollections.items() if v]
     print(f"Finished with {file}")
 
     return None
@@ -1353,6 +1373,7 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
     iteration=0
     listTranslator={"0": "promotions", "1": "items", "2": "prices", "3": "inventories", "4":"trips", "5":"priceModifiers", "6":"users", "7":"sellers"}
     mytz = pytz.timezone('America/New_York')
+    walkResults = sorted([x for x in os.walk(dataRepoPath)], key=lambda x: x[0], reverse=True)
     # inital setup if data folders do not exist in repo
     if os.path.exists('./requests/server/collections/kroger/API/myStores.json'):
         # setup archive for preprocessed data
@@ -1377,8 +1398,9 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
                     'upc': oldPrice.get('upc'), 'utcTimestamp': oldTimestamp, "type": 'Regular'})
                 newFromOldPrices.append({'locationId': oldPrice.get('locationId'), 'isPurchase': oldPrice.get('isPurchase'), 'value': oldPrice.get('promo'), 'quantity': oldPrice.get('quantity'),\
                     'upc': oldPrice.get('upc'), 'utcTimestamp': oldTimestamp, "type": 'Sale'})
-        
-        for head, subfolders, files in os.walk(dataRepoPath):
+    
+
+        for head, subfolders, files in walkResults:
             folder = head.split('\\')[-1]
             if folder in wantedPaths:
                 for file in files:
@@ -1396,6 +1418,8 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
                 finalCollection.extend(newFromOldPrices)
             insertData(finalCollection, listTranslator[str(i)])
     
+        os.rename("./requests/server/collections/kroger/API/myStores.json", "../data/raw/kroger/API/myStores.json")
+        os.rename('./requests/server/collections/kroger/API/combinedPrices.json', "../data/raw/kroger/API/combinedPrices.json")
     # file does not exist (clean up has happened therefore read from ../)
     else:
         # promotions (nonTime bound in db; no duplicates preferrable, filter check)
@@ -1413,7 +1437,7 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
         userCollection = retrieveData('users')
         sellerCollection = retrieveData('sellers') 
 
-        for head, subfolders, files in os.walk(dataRepoPath):         
+        for head, subfolders, files in walkResults:         
             if head.split('\\')[-1] in wantedPaths:
                 folder = head.split('\\')[-1]
                 for file in files:
@@ -1445,18 +1469,13 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
                 os.rename(pathName+'\\'+ofile, f'../data/raw/{repo}/{ofile}')  
                 print(f'processed {ofile}.')
     
-    
-    backupDatabase()
-    os.rename("./requests/server/collections/kroger/API/myStores.json", "../data/raw/kroger/API/myStores.json")
-    os.rename('./requests/server/collections/kroger/API/combinedPrices.json', "../data/raw/kroger/API/combinedPrices.json")
     for head, subfolders, files in os.walk(dataRepoPath):         
         if head.split('\\')[-1] in wantedPaths:
             folder = head.split('\\')[-1]
             for file in files:
-                os.rename(head+'\\'+file, f'../data/raw/kroger/{folder}/{file}')  
-    # extraneousPaths = ['../data/data', './requests/server/collections/kroger/API']
-    # [shutil.rmtree(path) for path in extraneousPaths if os.path.exists(path)]
-    
+                os.rename(head+'\\'+file, f'../data/raw/kroger/{folder}/{file}')
+    backupDatabase()
+    createDBSummaries('new')
 
     return None
 
@@ -1481,8 +1500,12 @@ def queryDB(db="new"):
 # kwargs=[{"url": "https://www.kroger.com/savings/cbk/cashback", "n": 0}, {"link": "cashback"}, {}])
 #runAndDocument([simulateUser, eatThisPage], ['getDollarGeneralCouponsAndItems', 'flushData'],
 #kwargs=[{"link": "dollarGeneral"}, {}])
-# runAndDocument([setUpBrowser, getScrollingData, eatThisPage], ['setup', 'getFoodDepotItems', 'flush'],
-# [{'n': 'food-depot-items'}, {'chain': 'fooddepot'}, {}])
+# runAndDocument([setUpBrowser, simulateUser, eatThisPage, setUpBrowser, simulateUser, eatThisPage], ['setup', 'getKrogerDigitalCouponsAndItems', 'flushData',
+# sleep=time.sleep
+# runAndDocument([setUpBrowser, simulateUser, eatThisPage, sleep, setUpBrowser, simulateUser, eatThisPage], ['setup', 'getKrogerDigitalCouponsAndItems', 'flushData', 'wait',
+# 'setup', 'getKrogerCashbackCouponsAndItems', 'flushData'],
+# [{'n': 'kroger-coupons', 'initialSetup': True, "url": "https://www.kroger.com/savings/cl/coupons"}, {'link': 'digital'}, {}, [10],
+# {'n': 'kroger-coupons', 'initialSetup': False, "url": "https://www.kroger.com/savings/cbk/cashback"}, {'link': 'cashback'}, {'reset': True}])
 # deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
 createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
-createDBSummaries('new')
+# createDBSummaries('new')

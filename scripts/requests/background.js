@@ -27,7 +27,6 @@ async function createType(){
 
 async function setIterations(count){
     let res = await fetch('http://127.0.0.1:5000/i').then((d)=>{return d.json()}).then((j)=> {return j})
-    console.log('')
     if (res.wait){
       let res2 = await fetch(`http://127.0.0.1:5000/i?i=${count}`, {method: 'POST'}).then((d)=>{return d.json()}).then((j)=> {return j})
     }
@@ -117,7 +116,9 @@ chrome.contextMenus.create({
 chrome.contextMenus.onClicked.addListener(function(info, tab) {
     createType().then((t) => {
       let type = t ;
+      console.log(masterArray)
       response = fetch(`http://127.0.0.1:5000/docs?${type}`, {method: "POST", body: JSON.stringify(masterArray)})
+      masterArray = pruneArray(masterArray)
       return null
     })
   })
@@ -125,13 +126,14 @@ chrome.contextMenus.onClicked.addListener(function(info, tab) {
 document.addEventListener("click", function(e){
   if (!e.target.classList.contains('send-signal')){
     return;
-  } 
-  createType().then((t) => {
-    let type = t ;
-    response = fetch(`http://127.0.0.1:5000/docs?${type}`, {method: "POST", body: JSON.stringify(masterArray)})
-    return null
-  })  
-  return null
+  } else {
+    createType().then((t) => {
+      let type = t ;
+      console.log(masterArray)
+      response = fetch(`http://127.0.0.1:5000/docs?${type}`, {method: "POST", body: JSON.stringify(masterArray)})
+      return null
+    })  
+  }
 })
 
 chrome.webRequest.onBeforeRequest.addListener(
