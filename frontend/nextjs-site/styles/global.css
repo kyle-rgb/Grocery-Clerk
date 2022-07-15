@@ -45,10 +45,11 @@ img {
     background: #000;
     color: #fff !important;
     border: 0;
-    border-radius: 5px;
+    border-radius: 15px;
     padding: 5px 15px;
     margin: 0 20px;
     cursor: pointer;
+    display: inline-block;
 }
 
 .btn-secondary:hover {

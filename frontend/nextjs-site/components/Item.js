@@ -4,8 +4,6 @@ import styles from '@/styles/Item.module.css'
 
 export default function Item ({item}) {
 
-    console.log(item.images)
-
     return (
         <div className={styles.item}>
             <div className={styles.img}>
@@ -24,16 +22,23 @@ export default function Item ({item}) {
                     <b>UPC: {item.upc}</b>
                 </span>
                 <h3>{item.description}</h3>
+                <span>size: {item.customerFacingSize}</span>
+
+                
+                {item.categories && <ul> {item.categories.map((cat) => {
+                    return <li>{cat.name}</li>
+                })}</ul>}
+                
 
                 </div> 
                 
             </div>
 
             <div className={styles.link}></div>
-                <Link href={`/item/${item.upc}`}>
+                <Link href={`/items/${item.upc}`}>
                     <a className='btn'>Details</a>
                 </Link>
-        </div>
+            </div>
     )
   
 }

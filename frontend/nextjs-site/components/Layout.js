@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Showcase from './Showcase';
 import styles from '@/styles/Layout.module.css';
 import Header from './Header'
+import Footer from './Footer'
 
 export default function Layout({ title, keywords, description, children }) {
     const router = useRouter();
@@ -21,6 +22,7 @@ export default function Layout({ title, keywords, description, children }) {
 
             <div className={styles.container}>{children}</div>
 
+            <Footer />
         </div>
     )
         

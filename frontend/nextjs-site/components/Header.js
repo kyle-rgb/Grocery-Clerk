@@ -25,6 +25,9 @@ export default function Header() {
                         <Link href='/items'>
                             <a>Items</a>
                         </Link>
+                        <Link href='/promotions'>
+                            <a>Promotions</a>
+                        </Link>
                     </li>
                     {user ? (
                         <>
