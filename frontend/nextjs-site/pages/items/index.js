@@ -13,7 +13,7 @@ export default function ItemsPage({ items, page, total }){
                 <Item key={item.upc} item={item}></Item>
             ))}
             
-            <Pagination page={page} total={total} />
+            <Pagination page={page} total={total}  collection={'items'}/>
         </Layout>
     )
 }
@@ -24,7 +24,7 @@ export async function getServerSideProps({ query: { page = 1 } }){
     const totalRecords = await fetch(`${API_URL}/items/count`) 
     const total = await totalRecords.json()
 
-    const itemRes = await fetch(`${API_URL}/items?limit=${PER_PAGE}&start=${start}`)
+    const itemRes = await fetch(`${API_URL}/get_items?type=items&limit=${PER_PAGE}&start=${start}`)
     const items = await itemRes.json()
 
     return {props: { items, page:+page, total }}

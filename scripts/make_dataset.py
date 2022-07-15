@@ -809,7 +809,7 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
                 itemStatus = inventoryKeys[str(i.get('InventoryStatus'))]
                 newInventory.append({'stockLevel': itemStatus, 'availableToSell': i.get('AvailableStockStore'), 'locationId': storeCode, 'utcTimestamp': utcTimestamp, 'upc': i.get('upc')})     
                 # deconstuct into Items
-                itemDoc = {'description': i.get('Description'), 'upc': i.get('UPC'), 'images': [{'url': i.get('image'), 'perspective': 'front', 'main': True, 'size': 'xlarge'}],\
+                itemDoc = {'description': i.get('Description'), 'upc': i.get('UPC'), 'images': [{'url': i.get('Image'), 'perspective': 'front', 'main': True, 'size': 'xlarge'}],\
                     'soldInStore': i.get('IsSellable'),"modalities": modalities}
 
                 if i.get('RatingReviewCount')!=0:

@@ -25,18 +25,14 @@ export default function Home({ items }){
 Home.defaultProps = {
   items: [{
     id: 1,
-    date: "2022-07-21",
-    time: "10pm",
-    name: 'Raspberries',
-    link: '/items/raspberries',
-    slug: 'raspberries', 
+    upc: "0129210112",
+    description: 'Raspberries',
+    categories: [{name: 'Fruit'}, {name: 'Produce'}]
   }, {
     id: 2,
-    date: "2022-07-26",
-    time: "1pm",
-    name: 'Blackberries',
-    link: '/items/blackberries',
-    slug: 'blackberries', 
+    upc: "0129210432",
+    description: 'BlackBerries',
+    categories: [{name: 'Fruit'}, {name: 'Produce'}]
   }]
 }
 

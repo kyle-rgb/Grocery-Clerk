@@ -10,43 +10,41 @@ def get_items(request):
     uri = os.environ.get("MONGO_CONN_URL")
     client = MongoClient(uri)
     db = client["new"] # db
-    text = request.GET.get("type", "")
+    col = request.GET.get("type", "")
+    limit = int(request.GET.get("limit", ""))
+    skip = int(request.GET.get("start", ""))
+    filterVars = {}
+    if limit:
+        filterVars['limit']=limit
+    if skip:
+        filterVars['skip']=skip
     try:
-        result = list(db[text].find({}, projection={"_id": 0}, limit=2))
+        result = list(db[col].find({}, projection={"_id": 0}, **filterVars))
     except BaseException as err:
         print(err)
         result = {'error': 'collection does not exist'}
+
     return JsonResponse(result, safe=False)
 
-def items(request):
+def count_items(request, collection=''):
     uri = os.environ.get("MONGO_CONN_URL")
     client = MongoClient(uri)
     db = client['new']
-    collection = 'items'
-    limit = request.GET.get('limit', '')
-    start = request.GET.get('start', '')
-    filterObj = {}
-    if limit and start:
-        res = db[collection].find({}, projection={"_id": 0}, limit=int(limit), skip=int(start))
-    else:
-        res = db[collection].find({}, projection={'_id': 0}, limit=4)
-
-    res = [ x for x in res]
-    return JsonResponse(res, safe=False)
-    
-def count_items(request):
-    uri = os.environ.get("MONGO_CONN_URL")
-    client = MongoClient(uri)
-    db = client['new']
-    collection = 'items'
+    collection = collection
     res = db[collection].aggregate(pipeline=[{'$group': {'_id':None, 'count': { '$sum': 1 } }}, {'$project': {'_id': 0}}])
     res = [x for x in res][0]
 
     return JsonResponse(res)
 
-    
-
-
+def get_full_item(request):
+    uri = os.environ.get('MONGO_CONN_URL')
+    client = MongoClient(uri)
+    db = client['new']
+    collection = request.GET.get("collection", "")
+    slug = request.GET.get("slug", "")
+    res = db[collection].aggregate(pipeline=[{'$match': {'upc': slug}}, {'$lookup': {'from': 'prices', 'localField': 'upc', 'foreignField': 'upc', 'as': 'prices'}}, {'$project': {'_id':0, 'prices': {'_id': 0}}}])
+    result = list(res)[0]
+    return JsonResponse(result, safe=True)
 
 #### Backend Template Pages
 def start_page(request):
