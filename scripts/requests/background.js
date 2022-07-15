@@ -72,6 +72,9 @@ function listener(details) {
             setIterations(new_obj.PaginationInfo.TotalRecords).then((bool) => {iWasSet=bool})
           } else if (details.url.match(/https\:\/\/dollartree-cors\.groupbycloud\.com\/api\/v1\/search/)){
             setIterations(new_obj.totalRecordCount).then((bool) => {iWasSet=bool})
+          } else if (details.url.match(/https\:\/\/www\.kroger\.com\/mypurchases\/api\/v1\/receipt\/summary\/by-user-id/)){
+            setIterations(new_obj.data.length).then((bool)=> {iWasSet=bool})
+            new_obj = []
           }
           new_obj.acquisition_timestamp = Date.now()
           masterArray.push(new_obj)
@@ -119,6 +122,8 @@ chrome.contextMenus.onClicked.addListener(function(info, tab) {
       console.log(masterArray)
       response = fetch(`http://127.0.0.1:5000/docs?${type}`, {method: "POST", body: JSON.stringify(masterArray)})
       masterArray = pruneArray(masterArray)
+      fetch(`http://127.0.0.1:5000/i?directive=true`, {method: "POST", body: ''})
+      iWasSet = false
       return null
     })
   })

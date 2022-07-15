@@ -5,7 +5,7 @@ import Item from '@/components/Item'
 
 
 
-export default function Home({items}){
+export default function Home({ items }){
   return (
     <Layout>
       <h1>
@@ -43,7 +43,7 @@ Home.defaultProps = {
 
 // export async function getStaticProps(){
 //   // const res = await fetch(`PLACE API ROUTE HERE`)
-//   // const items = await res.json
+//   // const items = await res.json()
 //   var items = [{
 //     id: 1,
 //     date: "2022-07-21",

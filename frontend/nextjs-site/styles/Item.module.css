@@ -1,6 +1,10 @@
 .item {
-    position: relative;
-    padding-top: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 20px 0;
+  padding: 13px;
+  box-shadow: 2px 3px 5px rgba(0, 0, 0, 0.1);
 }
 
 .item h3 {
@@ -8,11 +12,22 @@
 }
 
 .item p {
-    margin: 10px 0;
+    margin: 10px ;
 }
 
-.image {
-    margin-bottom: 20px;
+.info {
+    flex: 2;
+    width: 50%;
+    display:left;
+}
+
+.img {
+    width: 33%;
+}
+
+.attributes {
+   width: 50%;
+   margin-left:0;
 }
 
 .controls {

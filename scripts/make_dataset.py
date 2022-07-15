@@ -89,23 +89,27 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         p1 = subprocess.Popen(['C:\Program Files\Mozilla Firefox\\firefox.exe'])
         p1.wait(2)
     if n=='kroger-trips':
-        ## for trips
+        # for trips
         switchUrl(url="https://www.kroger.com/")
         time.sleep(3)
+        # Click SignIN Select
         pag.moveTo(1705, 465)
         pag.click()
         time.sleep(2)
+        # Click SignIn Button
         pag.moveTo(1797, 169)
         time.sleep(2)
         pag.moveRel(0, 50)
         pag.click()
         time.sleep(2)
+        # Unselect SignIn 
         pag.moveTo(736, 625, duration=1)
         pag.click()
         time.sleep(2)
         pag.moveRel(50, 50)
         pag.click()
         time.sleep(2)
+        # Load Extension 
         loadExtension()
         time.sleep(2)
 
@@ -1485,14 +1489,14 @@ def queryDB(db="new"):
     cursor = client[db]
     # res = cursor['promotions'].aggregate(pipeline=[{"$sort": {"redemptions": -1}}, {"$unwind": "$redemptionKeys"}, {"$group": {"_id": {"x": "$redemptionKeys.upc" }, "count": {"$sum": 1}}}])
     #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': True}}}, {'$project':  {"socials": {'clips': '$clippedCount', 'popInt': {'$divide': ['$popularity', 1000]}}, 'newValue': {'$convert': {'input': '$value', 'to':'int'}}}}, {'$sort': {'newValue': 1}}])
-    res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': False}, 'krogerCouponNumber': {'$exists':False}, 'productUpcs': {'$exists': True}}}])
-    
+    #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': False}, 'krogerCouponNumber': {'$exists':False}, 'productUpcs': {'$exists': True}}}])
+    res = cursor['promotions'].find_all({'shortDescription': {'$regex': '/^Buy 5.+/'}})
     res = [x for x in res]
     print(len(res))
 
     return None
 
-# queryDB()
+queryDB()
 # setUpBrowser()
 # runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
 # retrieveData('runs')
@@ -1506,6 +1510,7 @@ def queryDB(db="new"):
 # 'setup', 'getKrogerCashbackCouponsAndItems', 'flushData'],
 # [{'n': 'kroger-coupons', 'initialSetup': True, "url": "https://www.kroger.com/savings/cl/coupons"}, {'link': 'digital'}, {}, [10],
 # {'n': 'kroger-coupons', 'initialSetup': False, "url": "https://www.kroger.com/savings/cbk/cashback"}, {'link': 'cashback'}, {'reset': True}])
+# runAndDocument([setUpBrowser,], )
 # deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
-createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
+# createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
 # createDBSummaries('new')
