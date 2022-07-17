@@ -52,9 +52,7 @@ def eatThisPage(reset=False):
     time.sleep(1)
     pag.moveRel(120, 280, duration=3)
     pag.click()
-    time.sleep(10)
-    requests.post("http://127.0.0.1:5000/i?directive=true")
-    time.sleep(5)
+    time.sleep(15)
     if reset:
         subprocess.Popen(['taskkill', '/IM', 'firefox.exe', '/F'])
     return None
@@ -229,12 +227,12 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         pag.moveRel(0, 70, duration=2.4)
         pag.click()
     elif n=='dollar-general-coupons': # Dollar General Coupons and Items
-        time.sleep(2)
-        pag.keyDown('ctrlleft')
-        pag.keyDown('-')
-        time.sleep(2)
-        pag.keyUp('ctrlleft')
-        pag.keyUp('-')
+        # time.sleep(2)
+        # pag.keyDown('ctrlleft')
+        # pag.keyDown('-')
+        # time.sleep(2)
+        # pag.keyUp('ctrlleft')
+        # pag.keyUp('-')
         time.sleep(2)
         # create setup for dollar general
         switchUrl(url="https://www.dollargeneral.com/dgpickup/deals/coupons")
@@ -254,10 +252,13 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
             pag.press('end')
             time.sleep(2)
             ix, iy = 929, 365
-            pag.moveTo(ix, iy, duration=1.5)
+            pag.moveTo(ix, iy)
             if pag.pixel(ix, iy)!=(0, 0, 0):
                 pag.moveRel(0, -20)
                 ix, iy = pag.position()
+
+            pag.moveTo(999, 365, duration=2)
+            time.sleep(1.5)
             pag.click()
             time.sleep(4)
         pag.press('home')
@@ -292,7 +293,7 @@ def loadMoreAppears(png='./requests/server/images/moreContent.png'):
     locations = list(pag.locateAllOnScreen(png, confidence=.6, grayscale=False))
     locations = list(map(lambda x: pag.center(x), locations))
     i = 0
-    locations = list(filter(lambda x: x.y>418 and x.y<560, locations))
+    locations = list(filter(lambda x: x.y>318 and x.y<400, locations))
     if locations:
         loc = locations[i]
         x, y = loc
@@ -402,8 +403,8 @@ def runAndDocument(funcs:list, callNames:list, kwargs: list, callback=None):
 def simulateUser(link):
     neededLinks = {'cashback': {"no": 12, "button": "./requests/server/images/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
         'digital': {"no":12, "button": "./requests/server/images/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
-            'dollarGeneral': {'no': 12, "button": "./requests/server/images/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1700 ,"moreContent": "./requests/server/images/loadMore.png",\
-                 'initalScroll': -1650}}
+            'dollarGeneral': {'no': 12, "button": "./requests/server/images/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1750 ,"moreContent": "./requests/server/images/loadMore.png",\
+                 'initalScroll': -1750}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
     # start at top of the screen 
@@ -424,6 +425,8 @@ def simulateUser(link):
         time.sleep(3)
         pag.scroll(neededLinks[link]['initalScroll'])
         time.sleep(2)
+    else:
+        iterations = ((response.get('i')-9) // neededLinks[link]['no'])+2
     # find all buttons
     for i in range(iterations):
         buttons = list(pag.locateAllOnScreen(neededLinks[link]['button'], confidence=neededLinks[link]['confidenceInterval'], grayscale=False))
@@ -474,15 +477,18 @@ def simulateUser(link):
                 pag.keyUp('w')
                 time.sleep(2.5)
 
-        if i==0 and link=='dollarGeneral':
+        if i<=1 and link=='dollarGeneral':
             pag.scroll(neededLinks[link]['initalScroll'])
+        elif link=='dollarGeneral':
+            pag.scroll(neededLinks[link]['scrollAmount'])
+            pag.scroll(-20)
         else:
             pag.scroll(neededLinks[link]['scrollAmount'])
         print('finished row {}; {} to go; mouse currently @ {} :: {} seconds left'.format(i, iterations-i, pag.position(), (time.perf_counter()/(i+1))*(iterations-i)))
         time.sleep(2)
 
 
-    print(f"Processed {neededLinks[link]['no']} in {time.perf_counter()} seconds")
+    print(f"Processed {iterations} in {time.perf_counter()} seconds")
     return None
 
 def updateGasoline(data):
@@ -507,15 +513,20 @@ def getFamilyDollarItems():
     # dependencies: scrollDown and getArrow
     # a function that retrieves all the items and prices from the local family dollars
     # CATEGORY = Larger Web Function
+    tries=0
     results = requests.get('http://127.0.0.1:5000/i').json()
     while results.get('i')==None:
         time.sleep(2)
         print('slept for two, no i')
         results = requests.get('http://127.0.0.1:5000/i')
+        tries+=1
+        if tries>20:
+            raise ValueError('i was not defined on server')
         
     results = results.get('i')
     results = results // 96
     startingSleep=10
+    pag.moveTo(100, 645)
     pag.click()
     time.sleep(startingSleep)
     startTime = time.perf_counter()
@@ -1496,7 +1507,6 @@ def queryDB(db="new"):
 
     return None
 
-queryDB()
 # setUpBrowser()
 # runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
 # retrieveData('runs')
@@ -1505,12 +1515,11 @@ queryDB()
 #runAndDocument([simulateUser, eatThisPage], ['getDollarGeneralCouponsAndItems', 'flushData'],
 #kwargs=[{"link": "dollarGeneral"}, {}])
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage, setUpBrowser, simulateUser, eatThisPage], ['setup', 'getKrogerDigitalCouponsAndItems', 'flushData',
-# sleep=time.sleep
-# runAndDocument([setUpBrowser, simulateUser, eatThisPage, sleep, setUpBrowser, simulateUser, eatThisPage], ['setup', 'getKrogerDigitalCouponsAndItems', 'flushData', 'wait',
-# 'setup', 'getKrogerCashbackCouponsAndItems', 'flushData'],
-# [{'n': 'kroger-coupons', 'initialSetup': True, "url": "https://www.kroger.com/savings/cl/coupons"}, {'link': 'digital'}, {}, [10],
-# {'n': 'kroger-coupons', 'initialSetup': False, "url": "https://www.kroger.com/savings/cbk/cashback"}, {'link': 'cashback'}, {'reset': True}])
-# runAndDocument([setUpBrowser,], )
+
+# runAndDocument([setUpBrowser, simulateUser, eatThisPage], ['setup', 'getDollarGeneralItemsAndCoupons', 'flushData'],
+# [{'n': 'dollar-general-coupons', 'initialSetup': True}, {'link': 'dollarGeneral'}, {'reset': False}])
+# runAndDocument([setUpBrowser, getFamilyDollarItems, eatThisPage], ['setup', 'getFamilyDollarItems', 'flushData'] ,[{'n': 'family-dollar-items', 'initialSetup': True}, {}, {'reset': False}])
+#runAndDocument([setUpBrowser, eatThisPage], ['setup', 'getFamilyDollarCoupons'], [{'n': 'family-dollar-coupons', 'initialSetup': True}, {'reset': False}])
 # deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
-# createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
-# createDBSummaries('new')
+createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
+createDBSummaries('new')

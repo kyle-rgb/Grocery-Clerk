@@ -119,9 +119,8 @@ chrome.contextMenus.create({
 chrome.contextMenus.onClicked.addListener(function(info, tab) {
     createType().then((t) => {
       let type = t ;
-      console.log(masterArray)
       response = fetch(`http://127.0.0.1:5000/docs?${type}`, {method: "POST", body: JSON.stringify(masterArray)})
-      masterArray = pruneArray(masterArray)
+      masterArray = []
       fetch(`http://127.0.0.1:5000/i?directive=true`, {method: "POST", body: ''})
       iWasSet = false
       return null
@@ -134,7 +133,6 @@ document.addEventListener("click", function(e){
   } else {
     createType().then((t) => {
       let type = t ;
-      console.log(masterArray)
       response = fetch(`http://127.0.0.1:5000/docs?${type}`, {method: "POST", body: JSON.stringify(masterArray)})
       return null
     })  
