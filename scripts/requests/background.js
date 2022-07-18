@@ -10,13 +10,20 @@ async function createType(){
     let reg = /kroger|aldi|publix|dollargeneral|familydollar|fooddepot/
     let regKroger = /mypurchases|cashback|coupons|Buy5Save1|\?N=/
     let regFamilyDollar = /\?N=|smart-coupons/
+    let regPublix = /savings/
+    let regFoodDepot = /coupons/
     var fileTypes = {'mypurchases': 'trips', 'cashback': 'cashback', "coupons": "digital", "Buy5Save1": "buy5save1", '?N=': 'items', 'smart-coupons': 'coupons'}
+    var fileTypePub = {'savings': 'coupons'}
+
     for (let tab of tabs){
       if (tab.url.match(reg)!=null){
         let match = tab.url.match(reg)[0]
         t = match
         match=='kroger'? t2=fileTypes[tab.url.match(regKroger)[0]]: t2='';
         match=='familydollar'? t2=fileTypes[tab.url.match(regFamilyDollar)[0]] : t2;
+        match=='publix' ? tab.url.match(regPublix)!==[] ? t2=fileTypePub[tab.url.match(regPublix)[0]] : t2='items' : t2;
+        match=='fooddepot' ? tab.url.match(regFoodDepot)!==[]? t2=tab.url.match(regFoodDepot)[0] : t2='items' : t2;
+
       }
     }
     return `type=${t}&folder=${t2}`

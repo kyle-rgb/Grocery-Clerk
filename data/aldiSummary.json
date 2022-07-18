@@ -1,0 +1,2763 @@
+{
+    "count": 1,
+    "type": "Array",
+    "length": 8888,
+    "items": {
+        "0": {
+            "type": "Object",
+            "keys": [
+                "data",
+                "extensions",
+                "url",
+                "acquisition_timestamp",
+                "view"
+            ],
+            "items": {
+                "data": {
+                    "type": "Object",
+                    "keys": [
+                        "collectionProducts",
+                        "items"
+                    ],
+                    "items": {
+                        "collectionProducts": {
+                            "type": "Object",
+                            "keys": [
+                                "collection",
+                                "selectedFilters",
+                                "orderBy",
+                                "itemIds",
+                                "items",
+                                "featuredProducts",
+                                "viewSection",
+                                "__typename"
+                            ],
+                            "items": {
+                                "collection": {
+                                    "type": "Object",
+                                    "keys": [
+                                        "id",
+                                        "name",
+                                        "slug",
+                                        "legacyPath",
+                                        "viewSection",
+                                        "__typename"
+                                    ],
+                                    "items": {
+                                        "id": {
+                                            "type": "string",
+                                            "example": "1000292",
+                                            "range": [
+                                                6,
+                                                7
+                                            ],
+                                            "count": 2
+                                        },
+                                        "name": {
+                                            "type": "string",
+                                            "example": "Snacks",
+                                            "range": [
+                                                6,
+                                                25
+                                            ],
+                                            "count": 2
+                                        },
+                                        "slug": {
+                                            "type": "string",
+                                            "example": "dynamic_collection-sales_by_department_collection-d292",
+                                            "range": [
+                                                30,
+                                                54
+                                            ],
+                                            "count": 2
+                                        },
+                                        "legacyPath": {
+                                            "type": "string",
+                                            "example": "ng/l/sales_by_department/292?department_id=292&department_name=Snacks&display_name=Snacks",
+                                            "range": [
+                                                28,
+                                                89
+                                            ],
+                                            "count": 2
+                                        },
+                                        "viewSection": {
+                                            "type": "Object",
+                                            "keys": [
+                                                "trackingProperties",
+                                                "__typename"
+                                            ],
+                                            "items": {
+                                                "trackingProperties": {
+                                                    "type": "Object",
+                                                    "keys": [
+                                                        "source_type",
+                                                        "source_value",
+                                                        "collection_type",
+                                                        "parent_collection_id",
+                                                        "element_details",
+                                                        "collection_id"
+                                                    ],
+                                                    "items": {
+                                                        "source_type": {
+                                                            "type": "string",
+                                                            "example": "collection",
+                                                            "range": [
+                                                                10,
+                                                                10
+                                                            ],
+                                                            "count": 2
+                                                        },
+                                                        "source_value": {
+                                                            "type": "string",
+                                                            "example": "1000292",
+                                                            "range": [
+                                                                6,
+                                                                7
+                                                            ],
+                                                            "count": 2
+                                                        },
+                                                        "collection_type": {
+                                                            "type": "string",
+                                                            "example": "holiday",
+                                                            "range": [
+                                                                7,
+                                                                10
+                                                            ],
+                                                            "count": 2
+                                                        },
+                                                        "parent_collection_id": {
+                                                            "type": "string",
+                                                            "example": "290",
+                                                            "range": [
+                                                                3,
+                                                                3
+                                                            ],
+                                                            "count": 1
+                                                        },
+                                                        "element_details": {
+                                                            "type": "Object",
+                                                            "keys": [
+                                                                "element_id",
+                                                                "element_type",
+                                                                "element_value"
+                                                            ],
+                                                            "items": {
+                                                                "element_id": {
+                                                                    "type": "string",
+                                                                    "example": "1000292",
+                                                                    "range": [
+                                                                        6,
+                                                                        7
+                                                                    ],
+                                                                    "count": 2
+                                                                },
+                                                                "element_type": {
+                                                                    "type": "string",
+                                                                    "example": "collection",
+                                                                    "range": [
+                                                                        10,
+                                                                        10
+                                                                    ],
+                                                                    "count": 2
+                                                                },
+                                                                "element_value": {
+                                                                    "type": "string",
+                                                                    "example": "Snacks",
+                                                                    "range": [
+                                                                        6,
+                                                                        25
+                                                                    ],
+                                                                    "count": 2
+                                                                }
+                                                            },
+                                                            "count": 2
+                                                        },
+                                                        "collection_id": {
+                                                            "type": "string",
+                                                            "example": "1000292",
+                                                            "range": [
+                                                                6,
+                                                                7
+                                                            ],
+                                                            "count": 2
+                                                        }
+                                                    },
+                                                    "count": 2
+                                                },
+                                                "__typename": {
+                                                    "type": "string",
+                                                    "example": "CollectionsResponseBackedCollectionSection",
+                                                    "range": [
+                                                        42,
+                                                        42
+                                                    ],
+                                                    "count": 2
+                                                }
+                                            },
+                                            "count": 2
+                                        },
+                                        "__typename": {
+                                            "type": "string",
+                                            "example": "CollectionsCollection",
+                                            "range": [
+                                                21,
+                                                21
+                                            ],
+                                            "count": 2
+                                        }
+                                    },
+                                    "count": 2
+                                },
+                                "selectedFilters": {
+                                    "count": 2,
+                                    "items": {
+                                        "0": {
+                                            "count": 0
+                                        }
+                                    },
+                                    "length": 0,
+                                    "type": "Array"
+                                },
+                                "orderBy": {
+                                    "type": "string",
+                                    "example": "bestMatch",
+                                    "range": [
+                                        9,
+                                        9
+                                    ],
+                                    "count": 2
+                                },
+                                "itemIds": {
+                                    "count": 2,
+                                    "items": {
+                                        "0": {
+                                            "type": "string",
+                                            "example": "items_23150-20391806",
+                                            "range": [
+                                                17,
+                                                20
+                                            ],
+                                            "count": 17
+                                        }
+                                    },
+                                    "length": 8.5,
+                                    "type": "Array"
+                                },
+                                "items": {
+                                    "count": 2,
+                                    "items": {
+                                        "0": {
+                                            "type": "Object",
+                                            "keys": [
+                                                "id",
+                                                "name",
+                                                "size",
+                                                "productId",
+                                                "legacyId",
+                                                "legacyV3Id",
+                                                "configurableProductId",
+                                                "retailer",
+                                                "dietary",
+                                                "productRating",
+                                                "quantityAttributesEach",
+                                                "quantityAttributesWeight",
+                                                "quantityAttributes",
+                                                "availability",
+                                                "variantGroup",
+                                                "variantGroupId",
+                                                "variantDimensionValues",
+                                                "viewSection",
+                                                "tags",
+                                                "comboPromotions",
+                                                "__typename"
+                                            ],
+                                            "items": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "example": "items_23150-20391806",
+                                                    "range": [
+                                                        20,
+                                                        20
+                                                    ],
+                                                    "count": 8
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Kellogg's Pop-Tarts Toaster Pastries, Breakfast Foods, Kids Snacks, Frosted Strawberry",
+                                                    "range": [
+                                                        28,
+                                                        87
+                                                    ],
+                                                    "count": 8
+                                                },
+                                                "size": {
+                                                    "type": "string",
+                                                    "example": "20 oz",
+                                                    "range": [
+                                                        4,
+                                                        8
+                                                    ],
+                                                    "count": 8
+                                                },
+                                                "productId": {
+                                                    "type": "string",
+                                                    "example": "20391806",
+                                                    "range": [
+                                                        8,
+                                                        8
+                                                    ],
+                                                    "count": 8
+                                                },
+                                                "legacyId": {
+                                                    "type": "string",
+                                                    "example": "1482171545",
+                                                    "range": [
+                                                        9,
+                                                        11
+                                                    ],
+                                                    "count": 8
+                                                },
+                                                "legacyV3Id": {
+                                                    "type": "string",
+                                                    "example": "item_1482171545",
+                                                    "range": [
+                                                        14,
+                                                        16
+                                                    ],
+                                                    "count": 8
+                                                },
+                                                "configurableProductId": {
+                                                    "count": 0
+                                                },
+                                                "retailer": {
+                                                    "type": "Object",
+                                                    "keys": [
+                                                        "isUltrafast",
+                                                        "__typename"
+                                                    ],
+                                                    "items": {
+                                                        "isUltrafast": {
+                                                            "type": "boolean",
+                                                            "example": false,
+                                                            "count": 8
+                                                        },
+                                                        "__typename": {
+                                                            "type": "string",
+                                                            "example": "RetailersRetailer",
+                                                            "range": [
+                                                                17,
+                                                                17
+                                                            ],
+                                                            "count": 8
+                                                        }
+                                                    },
+                                                    "count": 2
+                                                },
+                                                "dietary": {
+                                                    "type": "Object",
+                                                    "keys": [
+                                                        "viewSection",
+                                                        "__typename"
+                                                    ],
+                                                    "items": {
+                                                        "viewSection": {
+                                                            "type": "Object",
+                                                            "keys": [
+                                                                "attributesString",
+                                                                "attributeSections",
+                                                                "__typename"
+                                                            ],
+                                                            "items": {
+                                                                "attributesString": {
+                                                                    "count": 0
+                                                                },
+                                                                "attributeSections": {
+                                                                    "count": 2,
+                                                                    "items": {
+                                                                        "0": {
+                                                                            "count": 0
+                                                                        }
+                                                                    },
+                                                                    "length": 0,
+                                                                    "type": "Array"
+                                                                },
+                                                                "__typename": {
+                                                                    "type": "string",
+                                                                    "example": "ItemsResponseBackedDietarySection",
+                                                                    "range": [
+                                                                        33,
+                                                                        33
+                                                                    ],
+                                                                    "count": 8
+                                                                }
+                                                            },
+                                                            "count": 2
+                                                        },
+                                                        "__typename": {
+                                                            "type": "string",
+                                                            "example": "ItemsDietary",
+                                                            "range": [
+                                                                12,
+                                                                12
+                                                            ],
+                                                            "count": 8
+                                                        }
+                                                    },
+                                                    "count": 2
+                                                },
+                                                "productRating": {
+                                                    "count": 0
+                                                },
+                                                "quantityAttributesEach": {
+                                                    "type": "Object",
+                                                    "keys": [
+                                                        "increment",
+                                                        "initial",
+                                                        "max",
+                                                        "min",
+                                                        "quantityType",
+                                                        "selectOptions",
+                                                        "defaultSelectOption",
+                                                        "viewSection",
+                                                        "__typename"
+                                                    ],
+                                                    "items": {
+                                                        "increment": {
+                                                            "type": "number",
+                                                            "example": 1,
+                                                            "range": [
+                                                                1,
+                                                                1
+                                                            ],
+                                                            "count": 8
+                                                        },
+                                                        "initial": {
+                                                            "type": "number",
+                                                            "example": 1,
+                                                            "range": [
+                                                                1,
+                                                                1
+                                                            ],
+                                                            "count": 8
+                                                        },
+                                                        "max": {
+                                                            "type": "number",
+                                                            "example": 150,
+                                                            "range": [
+                                                                150,
+                                                                150
+                                                            ],
+                                                            "count": 8
+                                                        },
+                                                        "min": {
+                                                            "type": "number",
+                                                            "example": 1,
+                                                            "range": [
+                                                                1,
+                                                                1
+                                                            ],
+                                                            "count": 8
+                                                        },
+                                                        "quantityType": {
+                                                            "type": "string",
+                                                            "example": "each",
+                                                            "range": [
+                                                                4,
+                                                                4
+                                                            ],
+                                                            "count": 8
+                                                        },
+                                                        "selectOptions": {
+                                                            "count": 2,
+                                                            "items": {
+                                                                "0": {
+                                                                    "type": "number",
+                                                                    "example": 1,
+                                                                    "range": [
+                                                                        1,
+                                                                        9
+                                                                    ],
+                                                                    "count": 72
+                                                                }
+                                                            },
+                                                            "length": 36,
+                                                            "type": "Array"
+                                                        },
+                                                        "defaultSelectOption": {
+                                                            "type": "number",
+                                                            "example": 1,
+                                                            "range": [
+                                                                1,
+                                                                1
+                                                            ],
+                                                            "count": 8
+                                                        },
+                                                        "viewSection": {
+                                                            "type": "Object",
+                                                            "keys": [
+                                                                "maxedOutString",
+                                                                "minReachedString",
+                                                                "unitAriaString",
+                                                                "unitPluralAriaString",
+                                                                "unitPluralString",
+                                                                "unitString",
+                                                                "iconUnitTypeVisibilityVariant",
+                                                                "variableWeightDisclaimerString",
+                                                                "__typename"
+                                                            ],
+                                                            "items": {
+                                                                "maxedOutString": {
+                                                                    "type": "string",
+                                                                    "example": "Max 150 per order",
+                                                                    "range": [
+                                                                        17,
+                                                                        17
+                                                                    ],
+                                                                    "count": 8
+                                                                },
+                                                                "minReachedString": {
+                                                                    "count": 0
+                                                                },
+                                                                "unitAriaString": {
+                                                                    "type": "string",
+                                                                    "example": "item",
+                                                                    "range": [
+                                                                        4,
+                                                                        4
+                                                                    ],
+                                                                    "count": 8
+                                                                },
+                                                                "unitPluralAriaString": {
+                                                                    "type": "string",
+                                                                    "example": "items",
+                                                                    "range": [
+                                                                        5,
+                                                                        5
+                                                                    ],
+                                                                    "count": 8
+                                                                },
+                                                                "unitPluralString": {
+                                                                    "type": "string",
+                                                                    "example": "ct",
+                                                                    "range": [
+                                                                        2,
+                                                                        2
+                                                                    ],
+                                                                    "count": 8
+                                                                },
+                                                                "unitString": {
+                                                                    "type": "string",
+                                                                    "example": "ct",
+                                                                    "range": [
+                                                                        2,
+                                                                        2
+                                                                    ],
+                                                                    "count": 8
+                                                                },
+                                                                "iconUnitTypeVisibilityVariant": {
+                                                                    "type": "string",
+                                                                    "example": "hide",
+                                                                    "range": [
+                                                                        4,
+                                                                        4
+                                                                    ],
+                                                                    "count": 8
+                                                                },
+                                                                "variableWeightDisclaimerString": {
+                                                                    "count": 0
+                                                                },
+                                                                "__typename": {
+                                                                    "type": "string",
+                                                                    "example": "ItemsResponseBackedQuantityAttributesSection",
+                                                                    "range": [
+                                                                        44,
+                                                                        44
+                                                                    ],
+                                                                    "count": 8
+                                                                }
+                                                            },
+                                                            "count": 2
+                                                        },
+                                                        "__typename": {
+                                                            "type": "string",
+                                                            "example": "ItemsQuantityAttributes",
+                                                            "range": [
+                                                                23,
+                                                                23
+                                                            ],
+                                                            "count": 8
+                                                        }
+                                                    },
+                                                    "count": 2
+                                                },
+                                                "quantityAttributesWeight": {
+                                                    "count": 0
+                                                },
+                                                "quantityAttributes": {
+                                                    "type": "Object",
+                                                    "keys": [
+                                                        "increment",
+                                                        "initial",
+                                                        "max",
+                                                        "min",
+                                                        "quantityType",
+                                                        "selectOptions",
+                                                        "defaultSelectOption",
+                                                        "viewSection",
+                                                        "__typename"
+                                                    ],
+                                                    "items": {
+                                                        "increment": {
+                                                            "type": "number",
+                                                            "example": 1,
+                                                            "range": [
+                                                                1,
+                                                                1
+                                                            ],
+                                                            "count": 8
+                                                        },
+                                                        "initial": {
+                                                            "type": "number",
+                                                            "example": 1,
+                                                            "range": [
+                                                                1,
+                                                                1
+                                                            ],
+                                                            "count": 8
+                                                        },
+                                                        "max": {
+                                                            "type": "number",
+                                                            "example": 150,
+                                                            "range": [
+                                                                150,
+                                                                150
+                                                            ],
+                                                            "count": 8
+                                                        },
+                                                        "min": {
+                                                            "type": "number",
+                                                            "example": 1,
+                                                            "range": [
+                                                                1,
+                                                                1
+                                                            ],
+                                                            "count": 8
+                                                        },
+                                                        "quantityType": {
+                                                            "type": "string",
+                                                            "example": "each",
+                                                            "range": [
+                                                                4,
+                                                                4
+                                                            ],
+                                                            "count": 8
+                                                        },
+                                                        "selectOptions": {
+                                                            "count": 2,
+                                                            "items": {
+                                                                "0": {
+                                                                    "type": "number",
+                                                                    "example": 1,
+                                                                    "range": [
+                                                                        1,
+                                                                        9
+                                                                    ],
+                                                                    "count": 72
+                                                                }
+                                                            },
+                                                            "length": 36,
+                                                            "type": "Array"
+                                                        },
+                                                        "defaultSelectOption": {
+                                                            "type": "number",
+                                                            "example": 1,
+                                                            "range": [
+                                                                1,
+                                                                1
+                                                            ],
+                                                            "count": 8
+                                                        },
+                                                        "viewSection": {
+                                                            "type": "Object",
+                                                            "keys": [
+                                                                "maxedOutString",
+                                                                "minReachedString",
+                                                                "unitAriaString",
+                                                                "unitPluralAriaString",
+                                                                "unitPluralString",
+                                                                "unitString",
+                                                                "iconUnitTypeVisibilityVariant",
+                                                                "variableWeightDisclaimerString",
+                                                                "__typename"
+                                                            ],
+                                                            "items": {
+                                                                "maxedOutString": {
+                                                                    "type": "string",
+                                                                    "example": "Max 150 per order",
+                                                                    "range": [
+                                                                        17,
+                                                                        17
+                                                                    ],
+                                                                    "count": 8
+                                                                },
+                                                                "minReachedString": {
+                                                                    "count": 0
+                                                                },
+                                                                "unitAriaString": {
+                                                                    "type": "string",
+                                                                    "example": "item",
+                                                                    "range": [
+                                                                        4,
+                                                                        4
+                                                                    ],
+                                                                    "count": 8
+                                                                },
+                                                                "unitPluralAriaString": {
+                                                                    "type": "string",
+                                                                    "example": "items",
+                                                                    "range": [
+                                                                        5,
+                                                                        5
+                                                                    ],
+                                                                    "count": 8
+                                                                },
+                                                                "unitPluralString": {
+                                                                    "type": "string",
+                                                                    "example": "ct",
+                                                                    "range": [
+                                                                        2,
+                                                                        2
+                                                                    ],
+                                                                    "count": 8
+                                                                },
+                                                                "unitString": {
+                                                                    "type": "string",
+                                                                    "example": "ct",
+                                                                    "range": [
+                                                                        2,
+                                                                        2
+                                                                    ],
+                                                                    "count": 8
+                                                                },
+                                                                "iconUnitTypeVisibilityVariant": {
+                                                                    "type": "string",
+                                                                    "example": "hide",
+                                                                    "range": [
+                                                                        4,
+                                                                        4
+                                                                    ],
+                                                                    "count": 8
+                                                                },
+                                                                "variableWeightDisclaimerString": {
+                                                                    "count": 0
+                                                                },
+                                                                "__typename": {
+                                                                    "type": "string",
+                                                                    "example": "ItemsResponseBackedQuantityAttributesSection",
+                                                                    "range": [
+                                                                        44,
+                                                                        44
+                                                                    ],
+                                                                    "count": 8
+                                                                }
+                                                            },
+                                                            "count": 2
+                                                        },
+                                                        "__typename": {
+                                                            "type": "string",
+                                                            "example": "ItemsQuantityAttributes",
+                                                            "range": [
+                                                                23,
+                                                                23
+                                                            ],
+                                                            "count": 8
+                                                        }
+                                                    },
+                                                    "count": 2
+                                                },
+                                                "availability": {
+                                                    "type": "Object",
+                                                    "keys": [
+                                                        "available",
+                                                        "stockLevel",
+                                                        "viewSection",
+                                                        "__typename"
+                                                    ],
+                                                    "items": {
+                                                        "available": {
+                                                            "type": "boolean",
+                                                            "example": true,
+                                                            "count": 8
+                                                        },
+                                                        "stockLevel": {
+                                                            "type": "string",
+                                                            "example": "inStock",
+                                                            "range": [
+                                                                7,
+                                                                13
+                                                            ],
+                                                            "count": 8
+                                                        },
+                                                        "viewSection": {
+                                                            "type": "Object",
+                                                            "keys": [
+                                                                "stockLevelLabelString",
+                                                                "outOfStockCtaString",
+                                                                "similarItemsActionVariant",
+                                                                "warningIconImage",
+                                                                "__typename"
+                                                            ],
+                                                            "items": {
+                                                                "stockLevelLabelString": {
+                                                                    "count": 0
+                                                                },
+                                                                "outOfStockCtaString": {
+                                                                    "count": 0
+                                                                },
+                                                                "similarItemsActionVariant": {
+                                                                    "type": "string",
+                                                                    "example": "none",
+                                                                    "range": [
+                                                                        4,
+                                                                        4
+                                                                    ],
+                                                                    "count": 8
+                                                                },
+                                                                "warningIconImage": {
+                                                                    "count": 0
+                                                                },
+                                                                "__typename": {
+                                                                    "type": "string",
+                                                                    "example": "AvailabilityResponseBackedAvailabilitySection",
+                                                                    "range": [
+                                                                        45,
+                                                                        45
+                                                                    ],
+                                                                    "count": 8
+                                                                }
+                                                            },
+                                                            "count": 2
+                                                        },
+                                                        "__typename": {
+                                                            "type": "string",
+                                                            "example": "ItemsAvailability",
+                                                            "range": [
+                                                                17,
+                                                                17
+                                                            ],
+                                                            "count": 8
+                                                        }
+                                                    },
+                                                    "count": 2
+                                                },
+                                                "variantGroup": {
+                                                    "count": 0
+                                                },
+                                                "variantGroupId": {
+                                                    "count": 0
+                                                },
+                                                "variantDimensionValues": {
+                                                    "count": 2,
+                                                    "items": {
+                                                        "0": {
+                                                            "count": 0
+                                                        }
+                                                    },
+                                                    "length": 0,
+                                                    "type": "Array"
+                                                },
+                                                "viewSection": {
+                                                    "type": "Object",
+                                                    "keys": [
+                                                        "itemImage",
+                                                        "trackingProperties",
+                                                        "itemCardRatingVariant",
+                                                        "itemCardQuickAddVariant",
+                                                        "itemCardDiscountBadgeVariant",
+                                                        "itemCardLowStockLevelVariant",
+                                                        "quantityAttributesVariant",
+                                                        "itemCardHideQuickAddPriceVariant",
+                                                        "lowStockVariant",
+                                                        "boughtXTimesString",
+                                                        "requestAddString",
+                                                        "servingSizeString",
+                                                        "variantDimensionsString",
+                                                        "__typename"
+                                                    ],
+                                                    "items": {
+                                                        "itemImage": {
+                                                            "type": "Object",
+                                                            "keys": [
+                                                                "altText",
+                                                                "templateUrl",
+                                                                "url",
+                                                                "__typename"
+                                                            ],
+                                                            "items": {
+                                                                "altText": {
+                                                                    "count": 0
+                                                                },
+                                                                "templateUrl": {
+                                                                    "type": "string",
+                                                                    "example": "https://www.instacart.com/image-server/{width=}x{height=}/filters:fill(FFF,true):format(jpg)/d2lnr5mha7bycj.cloudfront.net/product-image/file/large_5c697d8c-b45a-4c34-82fb-14f9971e4811.jpg",
+                                                                    "range": [
+                                                                        188,
+                                                                        188
+                                                                    ],
+                                                                    "count": 8
+                                                                },
+                                                                "url": {
+                                                                    "type": "string",
+                                                                    "example": "https://d2lnr5mha7bycj.cloudfront.net/product-image/file/large_5c697d8c-b45a-4c34-82fb-14f9971e4811.jpg",
+                                                                    "range": [
+                                                                        103,
+                                                                        103
+                                                                    ],
+                                                                    "count": 8
+                                                                },
+                                                                "__typename": {
+                                                                    "type": "string",
+                                                                    "example": "Image",
+                                                                    "range": [
+                                                                        5,
+                                                                        5
+                                                                    ],
+                                                                    "count": 8
+                                                                }
+                                                            },
+                                                            "count": 2
+                                                        },
+                                                        "trackingProperties": {
+                                                            "type": "Object",
+                                                            "keys": [
+                                                                "element_attributes",
+                                                                "low_stock_label",
+                                                                "element_details",
+                                                                "on_sale_ind",
+                                                                "product_id",
+                                                                "item_id",
+                                                                "stock_level",
+                                                                "blackout",
+                                                                "availability_score",
+                                                                "available_ind",
+                                                                "low_stock_variant",
+                                                                "balance_on_hand_qty",
+                                                                "boh_stock_level",
+                                                                "boh_hybrid_score",
+                                                                "boh_last_updated_at"
+                                                            ],
+                                                            "items": {
+                                                                "element_attributes": {
+                                                                    "type": "Object",
+                                                                    "keys": [
+                                                                        "low_stock_label"
+                                                                    ],
+                                                                    "items": {
+                                                                        "low_stock_label": {
+                                                                            "type": "boolean",
+                                                                            "example": false,
+                                                                            "count": 8
+                                                                        }
+                                                                    },
+                                                                    "count": 2
+                                                                },
+                                                                "low_stock_label": {
+                                                                    "type": "boolean",
+                                                                    "example": false,
+                                                                    "count": 8
+                                                                },
+                                                                "element_details": {
+                                                                    "type": "Object",
+                                                                    "keys": [
+                                                                        "element_type",
+                                                                        "product_id",
+                                                                        "retailer_location_id",
+                                                                        "element_id"
+                                                                    ],
+                                                                    "items": {
+                                                                        "element_type": {
+                                                                            "type": "string",
+                                                                            "example": "item",
+                                                                            "range": [
+                                                                                4,
+                                                                                4
+                                                                            ],
+                                                                            "count": 8
+                                                                        },
+                                                                        "product_id": {
+                                                                            "type": "string",
+                                                                            "example": "20391806",
+                                                                            "range": [
+                                                                                8,
+                                                                                8
+                                                                            ],
+                                                                            "count": 8
+                                                                        },
+                                                                        "retailer_location_id": {
+                                                                            "type": "string",
+                                                                            "example": "23150",
+                                                                            "range": [
+                                                                                5,
+                                                                                5
+                                                                            ],
+                                                                            "count": 8
+                                                                        },
+                                                                        "element_id": {
+                                                                            "type": "string",
+                                                                            "example": "items_23150-20391806",
+                                                                            "range": [
+                                                                                20,
+                                                                                20
+                                                                            ],
+                                                                            "count": 8
+                                                                        }
+                                                                    },
+                                                                    "count": 2
+                                                                },
+                                                                "on_sale_ind": {
+                                                                    "type": "Object",
+                                                                    "keys": [
+                                                                        "on_sale",
+                                                                        "retailer",
+                                                                        "buy_one_get_one",
+                                                                        "cpg_coupon"
+                                                                    ],
+                                                                    "items": {
+                                                                        "on_sale": {
+                                                                            "type": "boolean",
+                                                                            "example": false,
+                                                                            "count": 8
+                                                                        },
+                                                                        "retailer": {
+                                                                            "type": "boolean",
+                                                                            "example": false,
+                                                                            "count": 8
+                                                                        },
+                                                                        "buy_one_get_one": {
+                                                                            "type": "boolean",
+                                                                            "example": false,
+                                                                            "count": 8
+                                                                        },
+                                                                        "cpg_coupon": {
+                                                                            "type": "boolean",
+                                                                            "example": true,
+                                                                            "count": 8
+                                                                        }
+                                                                    },
+                                                                    "count": 2
+                                                                },
+                                                                "product_id": {
+                                                                    "type": "string",
+                                                                    "example": "20391806",
+                                                                    "range": [
+                                                                        8,
+                                                                        8
+                                                                    ],
+                                                                    "count": 8
+                                                                },
+                                                                "item_id": {
+                                                                    "type": "string",
+                                                                    "example": "1482171545",
+                                                                    "range": [
+                                                                        9,
+                                                                        11
+                                                                    ],
+                                                                    "count": 8
+                                                                },
+                                                                "stock_level": {
+                                                                    "type": "string",
+                                                                    "example": "in_stock",
+                                                                    "range": [
+                                                                        8,
+                                                                        15
+                                                                    ],
+                                                                    "count": 8
+                                                                },
+                                                                "blackout": {
+                                                                    "type": "boolean",
+                                                                    "example": false,
+                                                                    "count": 8
+                                                                },
+                                                                "availability_score": {
+                                                                    "type": "number",
+                                                                    "example": 0.93,
+                                                                    "range": [
+                                                                        0.607,
+                                                                        0.989
+                                                                    ],
+                                                                    "count": 8
+                                                                },
+                                                                "available_ind": {
+                                                                    "type": "boolean",
+                                                                    "example": true,
+                                                                    "count": 8
+                                                                },
+                                                                "low_stock_variant": {
+                                                                    "type": "string",
+                                                                    "example": "none",
+                                                                    "range": [
+                                                                        4,
+                                                                        4
+                                                                    ],
+                                                                    "count": 8
+                                                                },
+                                                                "balance_on_hand_qty": {
+                                                                    "count": 0
+                                                                },
+                                                                "boh_stock_level": {
+                                                                    "count": 0
+                                                                },
+                                                                "boh_hybrid_score": {
+                                                                    "count": 0
+                                                                },
+                                                                "boh_last_updated_at": {
+                                                                    "count": 0
+                                                                }
+                                                            },
+                                                            "count": 2
+                                                        },
+                                                        "itemCardRatingVariant": {
+                                                            "type": "string",
+                                                            "example": "hidden",
+                                                            "range": [
+                                                                6,
+                                                                6
+                                                            ],
+                                                            "count": 8
+                                                        },
+                                                        "itemCardQuickAddVariant": {
+                                                            "type": "string",
+                                                            "example": "control",
+                                                            "range": [
+                                                                7,
+                                                                7
+                                                            ],
+                                                            "count": 8
+                                                        },
+                                                        "itemCardDiscountBadgeVariant": {
+                                                            "type": "string",
+                                                            "example": "hide",
+                                                            "range": [
+                                                                4,
+                                                                4
+                                                            ],
+                                                            "count": 8
+                                                        },
+                                                        "itemCardLowStockLevelVariant": {
+                                                            "type": "string",
+                                                            "example": "visible",
+                                                            "range": [
+                                                                7,
+                                                                7
+                                                            ],
+                                                            "count": 8
+                                                        },
+                                                        "quantityAttributesVariant": {
+                                                            "type": "string",
+                                                            "example": "eachAndWeight",
+                                                            "range": [
+                                                                13,
+                                                                13
+                                                            ],
+                                                            "count": 8
+                                                        },
+                                                        "itemCardHideQuickAddPriceVariant": {
+                                                            "type": "string",
+                                                            "example": "show",
+                                                            "range": [
+                                                                4,
+                                                                4
+                                                            ],
+                                                            "count": 8
+                                                        },
+                                                        "lowStockVariant": {
+                                                            "type": "string",
+                                                            "example": "none",
+                                                            "range": [
+                                                                4,
+                                                                4
+                                                            ],
+                                                            "count": 8
+                                                        },
+                                                        "boughtXTimesString": {
+                                                            "count": 0
+                                                        },
+                                                        "requestAddString": {
+                                                            "count": 0
+                                                        },
+                                                        "servingSizeString": {
+                                                            "count": 0
+                                                        },
+                                                        "variantDimensionsString": {
+                                                            "count": 0
+                                                        },
+                                                        "__typename": {
+                                                            "type": "string",
+                                                            "example": "ItemsResponseBackedItemSection",
+                                                            "range": [
+                                                                30,
+                                                                30
+                                                            ],
+                                                            "count": 8
+                                                        }
+                                                    },
+                                                    "count": 2
+                                                },
+                                                "tags": {
+                                                    "count": 2,
+                                                    "items": {
+                                                        "0": {
+                                                            "type": "string",
+                                                            "example": "storeBrand",
+                                                            "range": [
+                                                                10,
+                                                                10
+                                                            ],
+                                                            "count": 4
+                                                        }
+                                                    },
+                                                    "length": 2,
+                                                    "type": "Array"
+                                                },
+                                                "comboPromotions": {
+                                                    "count": 2,
+                                                    "items": {
+                                                        "0": {
+                                                            "count": 0
+                                                        }
+                                                    },
+                                                    "length": 0,
+                                                    "type": "Array"
+                                                },
+                                                "__typename": {
+                                                    "type": "string",
+                                                    "example": "ItemsItem",
+                                                    "range": [
+                                                        9,
+                                                        9
+                                                    ],
+                                                    "count": 8
+                                                }
+                                            },
+                                            "count": 2
+                                        }
+                                    },
+                                    "length": 1,
+                                    "type": "Array"
+                                },
+                                "featuredProducts": {
+                                    "count": 2,
+                                    "items": {
+                                        "0": {
+                                            "count": 0
+                                        }
+                                    },
+                                    "length": 0,
+                                    "type": "Array"
+                                },
+                                "viewSection": {
+                                    "type": "Object",
+                                    "keys": [
+                                        "trackingProperties",
+                                        "__typename"
+                                    ],
+                                    "items": {
+                                        "trackingProperties": {
+                                            "type": "Object",
+                                            "keys": [
+                                                "ranking_request_id"
+                                            ],
+                                            "items": {
+                                                "ranking_request_id": {
+                                                    "count": 0
+                                                }
+                                            },
+                                            "count": 2
+                                        },
+                                        "__typename": {
+                                            "type": "string",
+                                            "example": "CollectionProductsResponseBackedCollectionProductsSection",
+                                            "range": [
+                                                57,
+                                                57
+                                            ],
+                                            "count": 2
+                                        }
+                                    },
+                                    "count": 2
+                                },
+                                "__typename": {
+                                    "type": "string",
+                                    "example": "CollectionsCollectionProducts",
+                                    "range": [
+                                        29,
+                                        29
+                                    ],
+                                    "count": 2
+                                }
+                            },
+                            "count": 2
+                        },
+                        "items": {
+                            "count": 2,
+                            "items": {
+                                "0": {
+                                    "type": "Object",
+                                    "keys": [
+                                        "id",
+                                        "name",
+                                        "size",
+                                        "productId",
+                                        "legacyId",
+                                        "legacyV3Id",
+                                        "configurableProductId",
+                                        "retailer",
+                                        "dietary",
+                                        "productRating",
+                                        "quantityAttributesEach",
+                                        "quantityAttributesWeight",
+                                        "quantityAttributes",
+                                        "availability",
+                                        "variantGroup",
+                                        "variantGroupId",
+                                        "variantDimensionValues",
+                                        "viewSection",
+                                        "tags",
+                                        "comboPromotions",
+                                        "__typename"
+                                    ],
+                                    "items": {
+                                        "id": {
+                                            "type": "string",
+                                            "example": "items_23150-27320793",
+                                            "range": [
+                                                20,
+                                                20
+                                            ],
+                                            "count": 16
+                                        },
+                                        "name": {
+                                            "type": "string",
+                                            "example": "Emporium Selection Bacon Bread Cheese",
+                                            "range": [
+                                                22,
+                                                73
+                                            ],
+                                            "count": 16
+                                        },
+                                        "size": {
+                                            "type": "string",
+                                            "example": "6 oz",
+                                            "range": [
+                                                4,
+                                                8
+                                            ],
+                                            "count": 15
+                                        },
+                                        "productId": {
+                                            "type": "string",
+                                            "example": "27320793",
+                                            "range": [
+                                                8,
+                                                8
+                                            ],
+                                            "count": 16
+                                        },
+                                        "legacyId": {
+                                            "type": "string",
+                                            "example": "123912482920",
+                                            "range": [
+                                                10,
+                                                12
+                                            ],
+                                            "count": 16
+                                        },
+                                        "legacyV3Id": {
+                                            "type": "string",
+                                            "example": "item_123912482920",
+                                            "range": [
+                                                15,
+                                                17
+                                            ],
+                                            "count": 16
+                                        },
+                                        "configurableProductId": {
+                                            "count": 0
+                                        },
+                                        "retailer": {
+                                            "type": "Object",
+                                            "keys": [
+                                                "isUltrafast",
+                                                "__typename"
+                                            ],
+                                            "items": {
+                                                "isUltrafast": {
+                                                    "type": "boolean",
+                                                    "example": false,
+                                                    "count": 16
+                                                },
+                                                "__typename": {
+                                                    "type": "string",
+                                                    "example": "RetailersRetailer",
+                                                    "range": [
+                                                        17,
+                                                        17
+                                                    ],
+                                                    "count": 16
+                                                }
+                                            },
+                                            "count": 2
+                                        },
+                                        "dietary": {
+                                            "type": "Object",
+                                            "keys": [
+                                                "viewSection",
+                                                "__typename"
+                                            ],
+                                            "items": {
+                                                "viewSection": {
+                                                    "type": "Object",
+                                                    "keys": [
+                                                        "attributesString",
+                                                        "attributeSections",
+                                                        "__typename"
+                                                    ],
+                                                    "items": {
+                                                        "attributesString": {
+                                                            "type": "string",
+                                                            "example": "Organic",
+                                                            "range": [
+                                                                7,
+                                                                7
+                                                            ],
+                                                            "count": 1
+                                                        },
+                                                        "attributeSections": {
+                                                            "count": 2,
+                                                            "items": {
+                                                                "0": {
+                                                                    "type": "Object",
+                                                                    "keys": [
+                                                                        "id",
+                                                                        "attributeString",
+                                                                        "__typename"
+                                                                    ],
+                                                                    "items": {
+                                                                        "id": {
+                                                                            "type": "string",
+                                                                            "example": "items_response_backed:89ff0a5:dietary:a3f13ad:attribute_section:138108d",
+                                                                            "range": [
+                                                                                71,
+                                                                                71
+                                                                            ],
+                                                                            "count": 1
+                                                                        },
+                                                                        "attributeString": {
+                                                                            "type": "string",
+                                                                            "example": "Organic",
+                                                                            "range": [
+                                                                                7,
+                                                                                7
+                                                                            ],
+                                                                            "count": 1
+                                                                        },
+                                                                        "__typename": {
+                                                                            "type": "string",
+                                                                            "example": "ItemsResponseBackedAttributeSectionSection",
+                                                                            "range": [
+                                                                                42,
+                                                                                42
+                                                                            ],
+                                                                            "count": 1
+                                                                        }
+                                                                    },
+                                                                    "count": 1
+                                                                }
+                                                            },
+                                                            "length": 0.5,
+                                                            "type": "Array"
+                                                        },
+                                                        "__typename": {
+                                                            "type": "string",
+                                                            "example": "ItemsResponseBackedDietarySection",
+                                                            "range": [
+                                                                33,
+                                                                33
+                                                            ],
+                                                            "count": 16
+                                                        }
+                                                    },
+                                                    "count": 2
+                                                },
+                                                "__typename": {
+                                                    "type": "string",
+                                                    "example": "ItemsDietary",
+                                                    "range": [
+                                                        12,
+                                                        12
+                                                    ],
+                                                    "count": 16
+                                                }
+                                            },
+                                            "count": 2
+                                        },
+                                        "productRating": {
+                                            "count": 0
+                                        },
+                                        "quantityAttributesEach": {
+                                            "type": "Object",
+                                            "keys": [
+                                                "increment",
+                                                "initial",
+                                                "max",
+                                                "min",
+                                                "quantityType",
+                                                "selectOptions",
+                                                "defaultSelectOption",
+                                                "viewSection",
+                                                "__typename"
+                                            ],
+                                            "items": {
+                                                "increment": {
+                                                    "type": "number",
+                                                    "example": 1,
+                                                    "range": [
+                                                        1,
+                                                        1
+                                                    ],
+                                                    "count": 16
+                                                },
+                                                "initial": {
+                                                    "type": "number",
+                                                    "example": 1,
+                                                    "range": [
+                                                        1,
+                                                        1
+                                                    ],
+                                                    "count": 16
+                                                },
+                                                "max": {
+                                                    "type": "number",
+                                                    "example": 150,
+                                                    "range": [
+                                                        150,
+                                                        150
+                                                    ],
+                                                    "count": 16
+                                                },
+                                                "min": {
+                                                    "type": "number",
+                                                    "example": 1,
+                                                    "range": [
+                                                        1,
+                                                        1
+                                                    ],
+                                                    "count": 16
+                                                },
+                                                "quantityType": {
+                                                    "type": "string",
+                                                    "example": "each",
+                                                    "range": [
+                                                        4,
+                                                        4
+                                                    ],
+                                                    "count": 16
+                                                },
+                                                "selectOptions": {
+                                                    "count": 2,
+                                                    "items": {
+                                                        "0": {
+                                                            "type": "number",
+                                                            "example": 1,
+                                                            "range": [
+                                                                1,
+                                                                9
+                                                            ],
+                                                            "count": 144
+                                                        }
+                                                    },
+                                                    "length": 72,
+                                                    "type": "Array"
+                                                },
+                                                "defaultSelectOption": {
+                                                    "type": "number",
+                                                    "example": 1,
+                                                    "range": [
+                                                        1,
+                                                        1
+                                                    ],
+                                                    "count": 16
+                                                },
+                                                "viewSection": {
+                                                    "type": "Object",
+                                                    "keys": [
+                                                        "maxedOutString",
+                                                        "minReachedString",
+                                                        "unitAriaString",
+                                                        "unitPluralAriaString",
+                                                        "unitPluralString",
+                                                        "unitString",
+                                                        "iconUnitTypeVisibilityVariant",
+                                                        "variableWeightDisclaimerString",
+                                                        "__typename"
+                                                    ],
+                                                    "items": {
+                                                        "maxedOutString": {
+                                                            "type": "string",
+                                                            "example": "Max 150 per order",
+                                                            "range": [
+                                                                17,
+                                                                17
+                                                            ],
+                                                            "count": 16
+                                                        },
+                                                        "minReachedString": {
+                                                            "count": 0
+                                                        },
+                                                        "unitAriaString": {
+                                                            "type": "string",
+                                                            "example": "item",
+                                                            "range": [
+                                                                4,
+                                                                4
+                                                            ],
+                                                            "count": 16
+                                                        },
+                                                        "unitPluralAriaString": {
+                                                            "type": "string",
+                                                            "example": "items",
+                                                            "range": [
+                                                                5,
+                                                                5
+                                                            ],
+                                                            "count": 16
+                                                        },
+                                                        "unitPluralString": {
+                                                            "type": "string",
+                                                            "example": "ct",
+                                                            "range": [
+                                                                2,
+                                                                2
+                                                            ],
+                                                            "count": 16
+                                                        },
+                                                        "unitString": {
+                                                            "type": "string",
+                                                            "example": "ct",
+                                                            "range": [
+                                                                2,
+                                                                2
+                                                            ],
+                                                            "count": 16
+                                                        },
+                                                        "iconUnitTypeVisibilityVariant": {
+                                                            "type": "string",
+                                                            "example": "hide",
+                                                            "range": [
+                                                                4,
+                                                                4
+                                                            ],
+                                                            "count": 16
+                                                        },
+                                                        "variableWeightDisclaimerString": {
+                                                            "count": 0
+                                                        },
+                                                        "__typename": {
+                                                            "type": "string",
+                                                            "example": "ItemsResponseBackedQuantityAttributesSection",
+                                                            "range": [
+                                                                44,
+                                                                44
+                                                            ],
+                                                            "count": 16
+                                                        }
+                                                    },
+                                                    "count": 2
+                                                },
+                                                "__typename": {
+                                                    "type": "string",
+                                                    "example": "ItemsQuantityAttributes",
+                                                    "range": [
+                                                        23,
+                                                        23
+                                                    ],
+                                                    "count": 16
+                                                }
+                                            },
+                                            "count": 2
+                                        },
+                                        "quantityAttributesWeight": {
+                                            "count": 0
+                                        },
+                                        "quantityAttributes": {
+                                            "type": "Object",
+                                            "keys": [
+                                                "increment",
+                                                "initial",
+                                                "max",
+                                                "min",
+                                                "quantityType",
+                                                "selectOptions",
+                                                "defaultSelectOption",
+                                                "viewSection",
+                                                "__typename"
+                                            ],
+                                            "items": {
+                                                "increment": {
+                                                    "type": "number",
+                                                    "example": 1,
+                                                    "range": [
+                                                        1,
+                                                        1
+                                                    ],
+                                                    "count": 16
+                                                },
+                                                "initial": {
+                                                    "type": "number",
+                                                    "example": 1,
+                                                    "range": [
+                                                        1,
+                                                        1
+                                                    ],
+                                                    "count": 16
+                                                },
+                                                "max": {
+                                                    "type": "number",
+                                                    "example": 150,
+                                                    "range": [
+                                                        150,
+                                                        150
+                                                    ],
+                                                    "count": 16
+                                                },
+                                                "min": {
+                                                    "type": "number",
+                                                    "example": 1,
+                                                    "range": [
+                                                        1,
+                                                        1
+                                                    ],
+                                                    "count": 16
+                                                },
+                                                "quantityType": {
+                                                    "type": "string",
+                                                    "example": "each",
+                                                    "range": [
+                                                        4,
+                                                        4
+                                                    ],
+                                                    "count": 16
+                                                },
+                                                "selectOptions": {
+                                                    "count": 2,
+                                                    "items": {
+                                                        "0": {
+                                                            "type": "number",
+                                                            "example": 1,
+                                                            "range": [
+                                                                1,
+                                                                9
+                                                            ],
+                                                            "count": 144
+                                                        }
+                                                    },
+                                                    "length": 72,
+                                                    "type": "Array"
+                                                },
+                                                "defaultSelectOption": {
+                                                    "type": "number",
+                                                    "example": 1,
+                                                    "range": [
+                                                        1,
+                                                        1
+                                                    ],
+                                                    "count": 16
+                                                },
+                                                "viewSection": {
+                                                    "type": "Object",
+                                                    "keys": [
+                                                        "maxedOutString",
+                                                        "minReachedString",
+                                                        "unitAriaString",
+                                                        "unitPluralAriaString",
+                                                        "unitPluralString",
+                                                        "unitString",
+                                                        "iconUnitTypeVisibilityVariant",
+                                                        "variableWeightDisclaimerString",
+                                                        "__typename"
+                                                    ],
+                                                    "items": {
+                                                        "maxedOutString": {
+                                                            "type": "string",
+                                                            "example": "Max 150 per order",
+                                                            "range": [
+                                                                17,
+                                                                17
+                                                            ],
+                                                            "count": 16
+                                                        },
+                                                        "minReachedString": {
+                                                            "count": 0
+                                                        },
+                                                        "unitAriaString": {
+                                                            "type": "string",
+                                                            "example": "item",
+                                                            "range": [
+                                                                4,
+                                                                4
+                                                            ],
+                                                            "count": 16
+                                                        },
+                                                        "unitPluralAriaString": {
+                                                            "type": "string",
+                                                            "example": "items",
+                                                            "range": [
+                                                                5,
+                                                                5
+                                                            ],
+                                                            "count": 16
+                                                        },
+                                                        "unitPluralString": {
+                                                            "type": "string",
+                                                            "example": "ct",
+                                                            "range": [
+                                                                2,
+                                                                2
+                                                            ],
+                                                            "count": 16
+                                                        },
+                                                        "unitString": {
+                                                            "type": "string",
+                                                            "example": "ct",
+                                                            "range": [
+                                                                2,
+                                                                2
+                                                            ],
+                                                            "count": 16
+                                                        },
+                                                        "iconUnitTypeVisibilityVariant": {
+                                                            "type": "string",
+                                                            "example": "hide",
+                                                            "range": [
+                                                                4,
+                                                                4
+                                                            ],
+                                                            "count": 16
+                                                        },
+                                                        "variableWeightDisclaimerString": {
+                                                            "count": 0
+                                                        },
+                                                        "__typename": {
+                                                            "type": "string",
+                                                            "example": "ItemsResponseBackedQuantityAttributesSection",
+                                                            "range": [
+                                                                44,
+                                                                44
+                                                            ],
+                                                            "count": 16
+                                                        }
+                                                    },
+                                                    "count": 2
+                                                },
+                                                "__typename": {
+                                                    "type": "string",
+                                                    "example": "ItemsQuantityAttributes",
+                                                    "range": [
+                                                        23,
+                                                        23
+                                                    ],
+                                                    "count": 16
+                                                }
+                                            },
+                                            "count": 2
+                                        },
+                                        "availability": {
+                                            "type": "Object",
+                                            "keys": [
+                                                "available",
+                                                "stockLevel",
+                                                "viewSection",
+                                                "__typename"
+                                            ],
+                                            "items": {
+                                                "available": {
+                                                    "type": "boolean",
+                                                    "example": true,
+                                                    "count": 16
+                                                },
+                                                "stockLevel": {
+                                                    "type": "string",
+                                                    "example": "inStock",
+                                                    "range": [
+                                                        7,
+                                                        8
+                                                    ],
+                                                    "count": 16
+                                                },
+                                                "viewSection": {
+                                                    "type": "Object",
+                                                    "keys": [
+                                                        "stockLevelLabelString",
+                                                        "outOfStockCtaString",
+                                                        "similarItemsActionVariant",
+                                                        "warningIconImage",
+                                                        "__typename"
+                                                    ],
+                                                    "items": {
+                                                        "stockLevelLabelString": {
+                                                            "count": 0
+                                                        },
+                                                        "outOfStockCtaString": {
+                                                            "count": 0
+                                                        },
+                                                        "similarItemsActionVariant": {
+                                                            "type": "string",
+                                                            "example": "none",
+                                                            "range": [
+                                                                4,
+                                                                4
+                                                            ],
+                                                            "count": 16
+                                                        },
+                                                        "warningIconImage": {
+                                                            "count": 0
+                                                        },
+                                                        "__typename": {
+                                                            "type": "string",
+                                                            "example": "AvailabilityResponseBackedAvailabilitySection",
+                                                            "range": [
+                                                                45,
+                                                                45
+                                                            ],
+                                                            "count": 16
+                                                        }
+                                                    },
+                                                    "count": 2
+                                                },
+                                                "__typename": {
+                                                    "type": "string",
+                                                    "example": "ItemsAvailability",
+                                                    "range": [
+                                                        17,
+                                                        17
+                                                    ],
+                                                    "count": 16
+                                                }
+                                            },
+                                            "count": 2
+                                        },
+                                        "variantGroup": {
+                                            "count": 0
+                                        },
+                                        "variantGroupId": {
+                                            "count": 0
+                                        },
+                                        "variantDimensionValues": {
+                                            "count": 2,
+                                            "items": {
+                                                "0": {
+                                                    "count": 0
+                                                }
+                                            },
+                                            "length": 0,
+                                            "type": "Array"
+                                        },
+                                        "viewSection": {
+                                            "type": "Object",
+                                            "keys": [
+                                                "itemImage",
+                                                "trackingProperties",
+                                                "itemCardRatingVariant",
+                                                "itemCardQuickAddVariant",
+                                                "itemCardDiscountBadgeVariant",
+                                                "itemCardLowStockLevelVariant",
+                                                "quantityAttributesVariant",
+                                                "itemCardHideQuickAddPriceVariant",
+                                                "lowStockVariant",
+                                                "boughtXTimesString",
+                                                "requestAddString",
+                                                "servingSizeString",
+                                                "variantDimensionsString",
+                                                "__typename"
+                                            ],
+                                            "items": {
+                                                "itemImage": {
+                                                    "type": "Object",
+                                                    "keys": [
+                                                        "altText",
+                                                        "templateUrl",
+                                                        "url",
+                                                        "__typename"
+                                                    ],
+                                                    "items": {
+                                                        "altText": {
+                                                            "count": 0
+                                                        },
+                                                        "templateUrl": {
+                                                            "type": "string",
+                                                            "example": "https://www.instacart.com/image-server/{width=}x{height=}/filters:fill(FFF,true):format(jpg)/d1s8987jlndkbs.cloudfront.net/assets/missing-item-4bbe82b8555e4d1c12626fd482cb2409713e8e30835645ff3650ef66a725d03c.png",
+                                                            "range": [
+                                                                188,
+                                                                211
+                                                            ],
+                                                            "count": 16
+                                                        },
+                                                        "url": {
+                                                            "type": "string",
+                                                            "example": "https://d1s8987jlndkbs.cloudfront.net/assets/missing-item-4bbe82b8555e4d1c12626fd482cb2409713e8e30835645ff3650ef66a725d03c.png",
+                                                            "range": [
+                                                                103,
+                                                                126
+                                                            ],
+                                                            "count": 16
+                                                        },
+                                                        "__typename": {
+                                                            "type": "string",
+                                                            "example": "Image",
+                                                            "range": [
+                                                                5,
+                                                                5
+                                                            ],
+                                                            "count": 16
+                                                        }
+                                                    },
+                                                    "count": 2
+                                                },
+                                                "trackingProperties": {
+                                                    "type": "Object",
+                                                    "keys": [
+                                                        "element_attributes",
+                                                        "low_stock_label",
+                                                        "element_details",
+                                                        "on_sale_ind",
+                                                        "product_id",
+                                                        "item_id",
+                                                        "stock_level",
+                                                        "blackout",
+                                                        "availability_score",
+                                                        "available_ind",
+                                                        "low_stock_variant",
+                                                        "balance_on_hand_qty",
+                                                        "boh_stock_level",
+                                                        "boh_hybrid_score",
+                                                        "boh_last_updated_at"
+                                                    ],
+                                                    "items": {
+                                                        "element_attributes": {
+                                                            "type": "Object",
+                                                            "keys": [
+                                                                "low_stock_label"
+                                                            ],
+                                                            "items": {
+                                                                "low_stock_label": {
+                                                                    "type": "boolean",
+                                                                    "example": false,
+                                                                    "count": 16
+                                                                }
+                                                            },
+                                                            "count": 2
+                                                        },
+                                                        "low_stock_label": {
+                                                            "type": "boolean",
+                                                            "example": false,
+                                                            "count": 16
+                                                        },
+                                                        "element_details": {
+                                                            "type": "Object",
+                                                            "keys": [
+                                                                "element_type",
+                                                                "product_id",
+                                                                "retailer_location_id",
+                                                                "element_id"
+                                                            ],
+                                                            "items": {
+                                                                "element_type": {
+                                                                    "type": "string",
+                                                                    "example": "item",
+                                                                    "range": [
+                                                                        4,
+                                                                        4
+                                                                    ],
+                                                                    "count": 16
+                                                                },
+                                                                "product_id": {
+                                                                    "type": "string",
+                                                                    "example": "27320793",
+                                                                    "range": [
+                                                                        8,
+                                                                        8
+                                                                    ],
+                                                                    "count": 16
+                                                                },
+                                                                "retailer_location_id": {
+                                                                    "type": "string",
+                                                                    "example": "23150",
+                                                                    "range": [
+                                                                        5,
+                                                                        5
+                                                                    ],
+                                                                    "count": 16
+                                                                },
+                                                                "element_id": {
+                                                                    "type": "string",
+                                                                    "example": "items_23150-27320793",
+                                                                    "range": [
+                                                                        20,
+                                                                        20
+                                                                    ],
+                                                                    "count": 16
+                                                                }
+                                                            },
+                                                            "count": 2
+                                                        },
+                                                        "on_sale_ind": {
+                                                            "type": "Object",
+                                                            "keys": [
+                                                                "on_sale",
+                                                                "retailer",
+                                                                "buy_one_get_one",
+                                                                "cpg_coupon"
+                                                            ],
+                                                            "items": {
+                                                                "on_sale": {
+                                                                    "type": "boolean",
+                                                                    "example": false,
+                                                                    "count": 16
+                                                                },
+                                                                "retailer": {
+                                                                    "type": "boolean",
+                                                                    "example": false,
+                                                                    "count": 16
+                                                                },
+                                                                "buy_one_get_one": {
+                                                                    "type": "boolean",
+                                                                    "example": false,
+                                                                    "count": 16
+                                                                },
+                                                                "cpg_coupon": {
+                                                                    "type": "boolean",
+                                                                    "example": false,
+                                                                    "count": 16
+                                                                }
+                                                            },
+                                                            "count": 2
+                                                        },
+                                                        "product_id": {
+                                                            "type": "string",
+                                                            "example": "27320793",
+                                                            "range": [
+                                                                8,
+                                                                8
+                                                            ],
+                                                            "count": 16
+                                                        },
+                                                        "item_id": {
+                                                            "type": "string",
+                                                            "example": "123912482920",
+                                                            "range": [
+                                                                10,
+                                                                12
+                                                            ],
+                                                            "count": 16
+                                                        },
+                                                        "stock_level": {
+                                                            "type": "string",
+                                                            "example": "in_stock",
+                                                            "range": [
+                                                                8,
+                                                                9
+                                                            ],
+                                                            "count": 16
+                                                        },
+                                                        "blackout": {
+                                                            "type": "boolean",
+                                                            "example": false,
+                                                            "count": 16
+                                                        },
+                                                        "availability_score": {
+                                                            "type": "number",
+                                                            "example": 0.696,
+                                                            "range": [
+                                                                0.386,
+                                                                0.87
+                                                            ],
+                                                            "count": 16
+                                                        },
+                                                        "available_ind": {
+                                                            "type": "boolean",
+                                                            "example": true,
+                                                            "count": 16
+                                                        },
+                                                        "low_stock_variant": {
+                                                            "type": "string",
+                                                            "example": "none",
+                                                            "range": [
+                                                                4,
+                                                                20
+                                                            ],
+                                                            "count": 16
+                                                        },
+                                                        "balance_on_hand_qty": {
+                                                            "count": 0
+                                                        },
+                                                        "boh_stock_level": {
+                                                            "count": 0
+                                                        },
+                                                        "boh_hybrid_score": {
+                                                            "count": 0
+                                                        },
+                                                        "boh_last_updated_at": {
+                                                            "count": 0
+                                                        }
+                                                    },
+                                                    "count": 2
+                                                },
+                                                "itemCardRatingVariant": {
+                                                    "type": "string",
+                                                    "example": "hidden",
+                                                    "range": [
+                                                        6,
+                                                        6
+                                                    ],
+                                                    "count": 16
+                                                },
+                                                "itemCardQuickAddVariant": {
+                                                    "type": "string",
+                                                    "example": "control",
+                                                    "range": [
+                                                        7,
+                                                        7
+                                                    ],
+                                                    "count": 16
+                                                },
+                                                "itemCardDiscountBadgeVariant": {
+                                                    "type": "string",
+                                                    "example": "hide",
+                                                    "range": [
+                                                        4,
+                                                        4
+                                                    ],
+                                                    "count": 16
+                                                },
+                                                "itemCardLowStockLevelVariant": {
+                                                    "type": "string",
+                                                    "example": "hidden",
+                                                    "range": [
+                                                        6,
+                                                        6
+                                                    ],
+                                                    "count": 16
+                                                },
+                                                "quantityAttributesVariant": {
+                                                    "type": "string",
+                                                    "example": "eachAndWeight",
+                                                    "range": [
+                                                        13,
+                                                        13
+                                                    ],
+                                                    "count": 16
+                                                },
+                                                "itemCardHideQuickAddPriceVariant": {
+                                                    "type": "string",
+                                                    "example": "show",
+                                                    "range": [
+                                                        4,
+                                                        4
+                                                    ],
+                                                    "count": 16
+                                                },
+                                                "lowStockVariant": {
+                                                    "type": "string",
+                                                    "example": "none",
+                                                    "range": [
+                                                        4,
+                                                        17
+                                                    ],
+                                                    "count": 16
+                                                },
+                                                "boughtXTimesString": {
+                                                    "count": 0
+                                                },
+                                                "requestAddString": {
+                                                    "count": 0
+                                                },
+                                                "servingSizeString": {
+                                                    "count": 0
+                                                },
+                                                "variantDimensionsString": {
+                                                    "count": 0
+                                                },
+                                                "__typename": {
+                                                    "type": "string",
+                                                    "example": "ItemsResponseBackedItemSection",
+                                                    "range": [
+                                                        30,
+                                                        30
+                                                    ],
+                                                    "count": 16
+                                                }
+                                            },
+                                            "count": 2
+                                        },
+                                        "tags": {
+                                            "count": 2,
+                                            "items": {
+                                                "0": {
+                                                    "type": "string",
+                                                    "example": "storeBrand",
+                                                    "range": [
+                                                        10,
+                                                        10
+                                                    ],
+                                                    "count": 7
+                                                }
+                                            },
+                                            "length": 3.5,
+                                            "type": "Array"
+                                        },
+                                        "comboPromotions": {
+                                            "count": 2,
+                                            "items": {
+                                                "0": {
+                                                    "count": 0
+                                                }
+                                            },
+                                            "length": 0,
+                                            "type": "Array"
+                                        },
+                                        "__typename": {
+                                            "type": "string",
+                                            "example": "ItemsItem",
+                                            "range": [
+                                                9,
+                                                9
+                                            ],
+                                            "count": 16
+                                        }
+                                    },
+                                    "count": 2
+                                }
+                            },
+                            "length": 1,
+                            "type": "Array"
+                        }
+                    },
+                    "count": 4
+                },
+                "extensions": {
+                    "type": "Object",
+                    "keys": [
+                        "cacheControl"
+                    ],
+                    "items": {
+                        "cacheControl": {
+                            "type": "Object",
+                            "keys": [
+                                "version",
+                                "hints"
+                            ],
+                            "items": {
+                                "version": {
+                                    "type": "number",
+                                    "example": 1,
+                                    "range": [
+                                        1,
+                                        1
+                                    ],
+                                    "count": 4
+                                },
+                                "hints": {
+                                    "count": 4,
+                                    "items": {
+                                        "0": {
+                                            "type": "Object",
+                                            "keys": [
+                                                "maxAge",
+                                                "scope",
+                                                "path"
+                                            ],
+                                            "items": {
+                                                "maxAge": {
+                                                    "type": "number",
+                                                    "example": 3600,
+                                                    "range": [
+                                                        3600,
+                                                        3600
+                                                    ],
+                                                    "count": 6
+                                                },
+                                                "scope": {
+                                                    "type": "string",
+                                                    "example": "PRIVATE",
+                                                    "range": [
+                                                        7,
+                                                        7
+                                                    ],
+                                                    "count": 6
+                                                },
+                                                "path": {
+                                                    "count": 4,
+                                                    "items": {
+                                                        "0": {
+                                                            "type": "string",
+                                                            "example": "collectionProducts",
+                                                            "range": [
+                                                                5,
+                                                                18
+                                                            ],
+                                                            "count": 8
+                                                        }
+                                                    },
+                                                    "length": 2,
+                                                    "type": "Array"
+                                                }
+                                            },
+                                            "count": 4
+                                        }
+                                    },
+                                    "length": 1,
+                                    "type": "Array"
+                                }
+                            },
+                            "count": 4
+                        }
+                    },
+                    "count": 4
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://shop.aldi.us/graphql?operationName=CollectionProductsWithFeaturedProducts&variables=%7B%22retailerInventorySessionToken%22%3A%22v1.558a565.1297730954-30083-03381x18419-2-12-23150-0%22%2C%22slug%22%3A%22dynamic_collection-sales_by_department_collection-d292%22%2C%22filters%22%3A%5B%5D%2C%22pageViewId%22%3A%22e3416c74-3172-42ed-a6d0-611eab663c27%22%2C%22itemsDisplayType%22%3A%22collections_nav_child_carousel%22%2C%22first%22%3A4%7D&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22d97532a67569000b11e525d895ef923cda1b6399c301dd3da97500019e78d2ee%22%7D%7D",
+                    "range": [
+                        151,
+                        597
+                    ],
+                    "count": 10
+                },
+                "acquisition_timestamp": {
+                    "type": "number",
+                    "example": 1655852952999,
+                    "range": [
+                        1655262602487,
+                        1656447461253
+                    ],
+                    "count": 10
+                },
+                "view": {
+                    "count": 6,
+                    "items": {
+                        "0": {
+                            "type": "Object",
+                            "keys": [
+                                "itemId",
+                                "itemUpdatedAt",
+                                "viewAttributes",
+                                "trackingParams",
+                                "pricing"
+                            ],
+                            "items": {
+                                "itemId": {
+                                    "type": "string",
+                                    "example": "item_1846311039",
+                                    "range": [
+                                        14,
+                                        16
+                                    ],
+                                    "count": 38
+                                },
+                                "itemUpdatedAt": {
+                                    "type": "number",
+                                    "example": 1654662660,
+                                    "range": [
+                                        1645595040,
+                                        1655954917
+                                    ],
+                                    "count": 38
+                                },
+                                "viewAttributes": {
+                                    "count": 6,
+                                    "items": {
+                                        "0": {
+                                            "count": 0
+                                        }
+                                    },
+                                    "length": 0,
+                                    "type": "Array"
+                                },
+                                "trackingParams": {
+                                    "type": "Object",
+                                    "keys": [
+                                        "item_card_impression_id",
+                                        "product_id",
+                                        "item_id",
+                                        "name",
+                                        "on_sale_ind",
+                                        "display_position",
+                                        "search_id",
+                                        "region_id",
+                                        "policy_id",
+                                        "clipped_state"
+                                    ],
+                                    "items": {
+                                        "item_card_impression_id": {
+                                            "type": "string",
+                                            "example": "6a6defc3-44e4-4d62-98a2-d77b00eebe41",
+                                            "range": [
+                                                36,
+                                                36
+                                            ],
+                                            "count": 38
+                                        },
+                                        "product_id": {
+                                            "type": "number",
+                                            "example": 20262645,
+                                            "range": [
+                                                38207,
+                                                25346096
+                                            ],
+                                            "count": 38
+                                        },
+                                        "item_id": {
+                                            "type": "number",
+                                            "example": 1846311039,
+                                            "range": [
+                                                435042306,
+                                                63955676793
+                                            ],
+                                            "count": 38
+                                        },
+                                        "name": {
+                                            "type": "string",
+                                            "example": "Bread Specially Selected 6 ct. Brioche Buns",
+                                            "range": [
+                                                26,
+                                                109
+                                            ],
+                                            "count": 38
+                                        },
+                                        "on_sale_ind": {
+                                            "type": "Object",
+                                            "keys": [
+                                                "on_sale",
+                                                "retailer",
+                                                "buy_one_get_one",
+                                                "cpg_coupon",
+                                                "clipped_cpg_coupon"
+                                            ],
+                                            "items": {
+                                                "on_sale": {
+                                                    "type": "boolean",
+                                                    "example": false,
+                                                    "count": 38
+                                                },
+                                                "retailer": {
+                                                    "type": "boolean",
+                                                    "example": false,
+                                                    "count": 38
+                                                },
+                                                "buy_one_get_one": {
+                                                    "type": "boolean",
+                                                    "example": false,
+                                                    "count": 38
+                                                },
+                                                "cpg_coupon": {
+                                                    "type": "boolean",
+                                                    "example": false,
+                                                    "count": 38
+                                                },
+                                                "clipped_cpg_coupon": {
+                                                    "type": "boolean",
+                                                    "example": false,
+                                                    "count": 38
+                                                }
+                                            },
+                                            "count": 6
+                                        },
+                                        "display_position": {
+                                            "type": "number",
+                                            "example": -1,
+                                            "range": [
+                                                -1,
+                                                -1
+                                            ],
+                                            "count": 38
+                                        },
+                                        "search_id": {
+                                            "type": "string",
+                                            "example": "",
+                                            "range": [
+                                                0,
+                                                0
+                                            ],
+                                            "count": 38
+                                        },
+                                        "region_id": {
+                                            "type": "string",
+                                            "example": "",
+                                            "range": [
+                                                0,
+                                                0
+                                            ],
+                                            "count": 38
+                                        },
+                                        "policy_id": {
+                                            "type": "number",
+                                            "example": 825362495,
+                                            "range": [
+                                                825362495,
+                                                825362495
+                                            ],
+                                            "count": 2
+                                        },
+                                        "clipped_state": {
+                                            "type": "boolean",
+                                            "example": false,
+                                            "count": 2
+                                        }
+                                    },
+                                    "count": 6
+                                },
+                                "pricing": {
+                                    "type": "Object",
+                                    "keys": [
+                                        "price",
+                                        "fullPrice",
+                                        "priceAffix",
+                                        "priceAffixAria",
+                                        "pricePerUnit",
+                                        "pricingUnit",
+                                        "pricingUnitSecondary",
+                                        "productType",
+                                        "disclaimer",
+                                        "fullPriceLabel",
+                                        "promotionEndsAt",
+                                        "badge",
+                                        "deal"
+                                    ],
+                                    "items": {
+                                        "price": {
+                                            "type": "string",
+                                            "example": "$4.35",
+                                            "range": [
+                                                5,
+                                                5
+                                            ],
+                                            "count": 38
+                                        },
+                                        "fullPrice": {
+                                            "count": 0
+                                        },
+                                        "priceAffix": {
+                                            "count": 0
+                                        },
+                                        "priceAffixAria": {
+                                            "count": 0
+                                        },
+                                        "pricePerUnit": {
+                                            "type": "string",
+                                            "example": "$0.41/oz",
+                                            "range": [
+                                                8,
+                                                11
+                                            ],
+                                            "count": 33
+                                        },
+                                        "pricingUnit": {
+                                            "type": "string",
+                                            "example": "10.58 oz",
+                                            "range": [
+                                                4,
+                                                12
+                                            ],
+                                            "count": 35
+                                        },
+                                        "pricingUnitSecondary": {
+                                            "count": 0
+                                        },
+                                        "productType": {
+                                            "type": "string",
+                                            "example": "normal",
+                                            "range": [
+                                                6,
+                                                6
+                                            ],
+                                            "count": 38
+                                        },
+                                        "disclaimer": {
+                                            "count": 0
+                                        },
+                                        "fullPriceLabel": {
+                                            "count": 0
+                                        },
+                                        "promotionEndsAt": {
+                                            "type": "string",
+                                            "example": "2022-07-01T06:59:59.999Z",
+                                            "range": [
+                                                24,
+                                                24
+                                            ],
+                                            "count": 2
+                                        },
+                                        "badge": {
+                                            "type": "Object",
+                                            "keys": [
+                                                "type",
+                                                "label",
+                                                "sublabel",
+                                                "label_with_price",
+                                                "express_placement"
+                                            ],
+                                            "items": {
+                                                "type": {
+                                                    "type": "string",
+                                                    "example": "clip_coupon",
+                                                    "range": [
+                                                        11,
+                                                        11
+                                                    ],
+                                                    "count": 2
+                                                },
+                                                "label": {
+                                                    "type": "string",
+                                                    "example": "Buy 2 Save $0.50",
+                                                    "range": [
+                                                        16,
+                                                        16
+                                                    ],
+                                                    "count": 2
+                                                },
+                                                "sublabel": {
+                                                    "type": "string",
+                                                    "example": "with coupon offer",
+                                                    "range": [
+                                                        17,
+                                                        17
+                                                    ],
+                                                    "count": 2
+                                                },
+                                                "label_with_price": {
+                                                    "count": 0
+                                                },
+                                                "express_placement": {
+                                                    "count": 0
+                                                }
+                                            },
+                                            "count": 1
+                                        },
+                                        "deal": {
+                                            "count": 0
+                                        }
+                                    },
+                                    "count": 6
+                                }
+                            },
+                            "count": 6
+                        }
+                    },
+                    "length": 1,
+                    "type": "Array"
+                }
+            },
+            "count": 10
+        }
+    }
+}

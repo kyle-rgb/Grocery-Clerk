@@ -1,0 +1,498 @@
+{
+    "count": 1,
+    "type": "Array",
+    "length": 2892,
+    "items": {
+        "0": {
+            "type": "Object",
+            "keys": [
+                "Errors",
+                "HasErrors",
+                "HasNoErrors",
+                "Meta",
+                "Result",
+                "url",
+                "acquisition_timestamp"
+            ],
+            "items": {
+                "Errors": {
+                    "count": 10,
+                    "items": {
+                        "0": {
+                            "count": 0
+                        }
+                    },
+                    "length": 0,
+                    "type": "Array"
+                },
+                "HasErrors": {
+                    "type": "boolean",
+                    "example": false,
+                    "count": 10
+                },
+                "HasNoErrors": {
+                    "type": "boolean",
+                    "example": true,
+                    "count": 10
+                },
+                "Meta": {
+                    "type": "Object",
+                    "keys": [
+                        "Pagination"
+                    ],
+                    "items": {
+                        "Pagination": {
+                            "type": "Object",
+                            "keys": [
+                                "Skip",
+                                "Take",
+                                "TotalNumberOfRecords"
+                            ],
+                            "items": {
+                                "Skip": {
+                                    "type": "number",
+                                    "example": 1000,
+                                    "range": [
+                                        80,
+                                        2400
+                                    ],
+                                    "count": 10
+                                },
+                                "Take": {
+                                    "type": "number",
+                                    "example": 40,
+                                    "range": [
+                                        40,
+                                        40
+                                    ],
+                                    "count": 10
+                                },
+                                "TotalNumberOfRecords": {
+                                    "type": "number",
+                                    "example": 1007,
+                                    "range": [
+                                        1007,
+                                        2501
+                                    ],
+                                    "count": 10
+                                }
+                            },
+                            "count": 10
+                        }
+                    },
+                    "count": 10
+                },
+                "Result": {
+                    "type": "Object",
+                    "keys": [
+                        "IsFuzzyMatch",
+                        "Products"
+                    ],
+                    "items": {
+                        "IsFuzzyMatch": {
+                            "type": "boolean",
+                            "example": false,
+                            "count": 10
+                        },
+                        "Products": {
+                            "count": 10,
+                            "items": {
+                                "0": {
+                                    "type": "Object",
+                                    "keys": [
+                                        "Categories",
+                                        "Deposit",
+                                        "HasCoupons",
+                                        "Id",
+                                        "ImageUrl",
+                                        "IsAlcohol",
+                                        "IsChargedByWeight",
+                                        "IsFeatured",
+                                        "IsSoldByWeight",
+                                        "IsTobacco",
+                                        "MaxOrderQuantity",
+                                        "MeasureCode",
+                                        "MinOrderQuantity",
+                                        "Name",
+                                        "Price",
+                                        "PriceRegular",
+                                        "PriceSaving",
+                                        "PriceType",
+                                        "ProductCatalogueId",
+                                        "ProductOptionIds",
+                                        "PromotionId",
+                                        "QuantityDefault",
+                                        "QuantityInterval",
+                                        "Savings",
+                                        "Tags",
+                                        "TaxRate",
+                                        "UnitOfMeasureText",
+                                        "UnitPrice",
+                                        "WeightPerUnit"
+                                    ],
+                                    "items": {
+                                        "Categories": {
+                                            "count": 10,
+                                            "items": {
+                                                "0": {
+                                                    "type": "Object",
+                                                    "keys": [
+                                                        "Banner",
+                                                        "DecorationImageUrl",
+                                                        "Id",
+                                                        "ImageUrl",
+                                                        "IsAlcohol",
+                                                        "IsTobacco",
+                                                        "Name",
+                                                        "ParentCategoryId",
+                                                        "PriorityRank",
+                                                        "Version"
+                                                    ],
+                                                    "items": {
+                                                        "Banner": {
+                                                            "count": 0
+                                                        },
+                                                        "DecorationImageUrl": {
+                                                            "type": "string",
+                                                            "example": "https://d13jicmd7uan86.cloudfront.net/69e792ce-11d1-4b2a-9220-ad1d006c0b47.png",
+                                                            "range": [
+                                                                78,
+                                                                78
+                                                            ],
+                                                            "count": 194
+                                                        },
+                                                        "Id": {
+                                                            "type": "string",
+                                                            "example": "41b83d73-983b-4e52-9081-ac09015e364d",
+                                                            "range": [
+                                                                36,
+                                                                36
+                                                            ],
+                                                            "count": 194
+                                                        },
+                                                        "ImageUrl": {
+                                                            "type": "string",
+                                                            "example": "https://d13jicmd7uan86.cloudfront.net/a43a12d7-e1bc-44ec-af33-a9ea00b260a9.jpg",
+                                                            "range": [
+                                                                78,
+                                                                78
+                                                            ],
+                                                            "count": 97
+                                                        },
+                                                        "IsAlcohol": {
+                                                            "type": "boolean",
+                                                            "example": false,
+                                                            "count": 194
+                                                        },
+                                                        "IsTobacco": {
+                                                            "type": "boolean",
+                                                            "example": false,
+                                                            "count": 194
+                                                        },
+                                                        "Name": {
+                                                            "type": "string",
+                                                            "example": "Refrigerated Pudding & Desserts",
+                                                            "range": [
+                                                                3,
+                                                                32
+                                                            ],
+                                                            "count": 194
+                                                        },
+                                                        "ParentCategoryId": {
+                                                            "type": "string",
+                                                            "example": "8ad09cb5-d40b-4c15-a3a4-ac09015e360e",
+                                                            "range": [
+                                                                36,
+                                                                36
+                                                            ],
+                                                            "count": 97
+                                                        },
+                                                        "PriorityRank": {
+                                                            "type": "number",
+                                                            "example": 0,
+                                                            "range": [
+                                                                0,
+                                                                5
+                                                            ],
+                                                            "count": 194
+                                                        },
+                                                        "Version": {
+                                                            "type": "number",
+                                                            "example": 4,
+                                                            "range": [
+                                                                3,
+                                                                6
+                                                            ],
+                                                            "count": 194
+                                                        }
+                                                    },
+                                                    "count": 10
+                                                }
+                                            },
+                                            "length": 1,
+                                            "type": "Array"
+                                        },
+                                        "Deposit": {
+                                            "type": "number",
+                                            "example": 0,
+                                            "range": [
+                                                0,
+                                                0
+                                            ],
+                                            "count": 97
+                                        },
+                                        "HasCoupons": {
+                                            "type": "boolean",
+                                            "example": false,
+                                            "count": 97
+                                        },
+                                        "Id": {
+                                            "type": "string",
+                                            "example": "7f011d7b-605a-442a-a82c-ac09015ef4af",
+                                            "range": [
+                                                36,
+                                                36
+                                            ],
+                                            "count": 97
+                                        },
+                                        "ImageUrl": {
+                                            "type": "string",
+                                            "example": "https://d13jicmd7uan86.cloudfront.net/990ce5fa82a84ab28d92b6d4b940727d",
+                                            "range": [
+                                                70,
+                                                74
+                                            ],
+                                            "count": 97
+                                        },
+                                        "IsAlcohol": {
+                                            "type": "boolean",
+                                            "example": false,
+                                            "count": 97
+                                        },
+                                        "IsChargedByWeight": {
+                                            "type": "boolean",
+                                            "example": false,
+                                            "count": 97
+                                        },
+                                        "IsFeatured": {
+                                            "type": "boolean",
+                                            "example": false,
+                                            "count": 97
+                                        },
+                                        "IsSoldByWeight": {
+                                            "type": "boolean",
+                                            "example": false,
+                                            "count": 97
+                                        },
+                                        "IsTobacco": {
+                                            "type": "boolean",
+                                            "example": false,
+                                            "count": 97
+                                        },
+                                        "MaxOrderQuantity": {
+                                            "count": 0
+                                        },
+                                        "MeasureCode": {
+                                            "type": "string",
+                                            "example": "each",
+                                            "range": [
+                                                4,
+                                                4
+                                            ],
+                                            "count": 97
+                                        },
+                                        "MinOrderQuantity": {
+                                            "type": "number",
+                                            "example": 1,
+                                            "range": [
+                                                1,
+                                                1
+                                            ],
+                                            "count": 97
+                                        },
+                                        "Name": {
+                                            "type": "string",
+                                            "example": "Sweet Delicias Flan Custard",
+                                            "range": [
+                                                15,
+                                                122
+                                            ],
+                                            "count": 97
+                                        },
+                                        "Price": {
+                                            "type": "number",
+                                            "example": 3.97,
+                                            "range": [
+                                                0.63,
+                                                11.38
+                                            ],
+                                            "count": 97
+                                        },
+                                        "PriceRegular": {
+                                            "type": "number",
+                                            "example": 3.97,
+                                            "range": [
+                                                0.63,
+                                                11.38
+                                            ],
+                                            "count": 97
+                                        },
+                                        "PriceSaving": {
+                                            "type": "number",
+                                            "example": 0,
+                                            "range": [
+                                                0,
+                                                0.6
+                                            ],
+                                            "count": 97
+                                        },
+                                        "PriceType": {
+                                            "type": "string",
+                                            "example": "Regular",
+                                            "range": [
+                                                7,
+                                                12
+                                            ],
+                                            "count": 97
+                                        },
+                                        "ProductCatalogueId": {
+                                            "type": "string",
+                                            "example": "c5e94085-44e7-4236-a527-ac09015d4639",
+                                            "range": [
+                                                36,
+                                                36
+                                            ],
+                                            "count": 97
+                                        },
+                                        "ProductOptionIds": {
+                                            "count": 10,
+                                            "items": {
+                                                "0": {
+                                                    "count": 0
+                                                }
+                                            },
+                                            "length": 0,
+                                            "type": "Array"
+                                        },
+                                        "PromotionId": {
+                                            "count": 0
+                                        },
+                                        "QuantityDefault": {
+                                            "type": "number",
+                                            "example": 1,
+                                            "range": [
+                                                1,
+                                                1
+                                            ],
+                                            "count": 97
+                                        },
+                                        "QuantityInterval": {
+                                            "type": "number",
+                                            "example": 1,
+                                            "range": [
+                                                1,
+                                                1
+                                            ],
+                                            "count": 97
+                                        },
+                                        "Savings": {
+                                            "type": "number",
+                                            "example": 0,
+                                            "range": [
+                                                0,
+                                                0.18
+                                            ],
+                                            "count": 97
+                                        },
+                                        "Tags": {
+                                            "count": 10,
+                                            "items": {
+                                                "0": {
+                                                    "type": "Object",
+                                                    "keys": [
+                                                        "Name",
+                                                        "Value"
+                                                    ],
+                                                    "items": {
+                                                        "Name": {
+                                                            "type": "string",
+                                                            "example": "Brand",
+                                                            "range": [
+                                                                5,
+                                                                11
+                                                            ],
+                                                            "count": 128
+                                                        },
+                                                        "Value": {
+                                                            "type": "string",
+                                                            "example": "Almond Breeze",
+                                                            "range": [
+                                                                1,
+                                                                18
+                                                            ],
+                                                            "count": 128
+                                                        }
+                                                    },
+                                                    "count": 9
+                                                }
+                                            },
+                                            "length": 0.9,
+                                            "type": "Array"
+                                        },
+                                        "TaxRate": {
+                                            "type": "number",
+                                            "example": 0.0303,
+                                            "range": [
+                                                0.0303,
+                                                0.0703
+                                            ],
+                                            "count": 97
+                                        },
+                                        "UnitOfMeasureText": {
+                                            "type": "string",
+                                            "example": "",
+                                            "range": [
+                                                0,
+                                                0
+                                            ],
+                                            "count": 97
+                                        },
+                                        "UnitPrice": {
+                                            "count": 0
+                                        },
+                                        "WeightPerUnit": {
+                                            "count": 0
+                                        }
+                                    },
+                                    "count": 10
+                                }
+                            },
+                            "length": 1,
+                            "type": "Array"
+                        }
+                    },
+                    "count": 10
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://production-us-1.noq-servers.net/api/v1/application/stores/407/products?skip=1000&take=40&sortBy=isFeatured,hasImage,-savings,name,id",
+                    "range": [
+                        138,
+                        140
+                    ],
+                    "count": 10
+                },
+                "acquisition_timestamp": {
+                    "type": "number",
+                    "example": 1656274349844,
+                    "range": [
+                        1656273880915,
+                        1658078831295
+                    ],
+                    "count": 10
+                }
+            },
+            "count": 10
+        }
+    }
+}

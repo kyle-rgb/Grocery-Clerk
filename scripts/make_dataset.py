@@ -1521,5 +1521,7 @@ def queryDB(db="new"):
 # runAndDocument([setUpBrowser, getFamilyDollarItems, eatThisPage], ['setup', 'getFamilyDollarItems', 'flushData'] ,[{'n': 'family-dollar-items', 'initialSetup': True}, {}, {'reset': False}])
 #runAndDocument([setUpBrowser, eatThisPage], ['setup', 'getFamilyDollarCoupons'], [{'n': 'family-dollar-coupons', 'initialSetup': True}, {'reset': False}])
 # deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
-createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
-createDBSummaries('new')
+runAndDocument([setUpBrowser, getScrollingData, eatThisPage], ['setup', 'getFoodDepotItems', 'flushData'], [{'n': 'food-depot-items', 'initialSetup': True}, {'chain': 'fooddepot'}, {'reset': False}])
+
+# createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
+# createDBSummaries('new')

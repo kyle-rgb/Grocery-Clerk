@@ -1,0 +1,261 @@
+{
+    "count": 1,
+    "type": "Array",
+    "length": 7,
+    "items": {
+        "0": {
+            "type": "Object",
+            "keys": [
+                "offers",
+                "url",
+                "acquisition_timestamp"
+            ],
+            "items": {
+                "offers": {
+                    "count": 7,
+                    "items": {
+                        "0": {
+                            "type": "Object",
+                            "keys": [
+                                "details",
+                                "image",
+                                "description",
+                                "title",
+                                "offerId",
+                                "targetOfferId",
+                                "brand",
+                                "expireDateString",
+                                "saveValue",
+                                "offer_recommendation_flag",
+                                "expireDate",
+                                "effectiveDate",
+                                "sameTransactionRedeem",
+                                "category",
+                                "offerType",
+                                "activated"
+                            ],
+                            "items": {
+                                "details": {
+                                    "type": "string",
+                                    "example": "valid only for product, size stated. limit one coupon per consumer. consumer must pay sales tax. ",
+                                    "range": [
+                                        25,
+                                        474
+                                    ],
+                                    "count": 70
+                                },
+                                "image": {
+                                    "type": "Object",
+                                    "keys": [
+                                        "links",
+                                        "id",
+                                        "ratio"
+                                    ],
+                                    "items": {
+                                        "links": {
+                                            "type": "Object",
+                                            "keys": [
+                                                "lg",
+                                                "md",
+                                                "sm"
+                                            ],
+                                            "items": {
+                                                "lg": {
+                                                    "type": "string",
+                                                    "example": "https://appcard-web-images.s3.amazonaws.com/67540_600x600",
+                                                    "range": [
+                                                        57,
+                                                        57
+                                                    ],
+                                                    "count": 70
+                                                },
+                                                "md": {
+                                                    "type": "string",
+                                                    "example": "https://appcard-web-images.s3.amazonaws.com/67540_200x200",
+                                                    "range": [
+                                                        57,
+                                                        57
+                                                    ],
+                                                    "count": 70
+                                                },
+                                                "sm": {
+                                                    "type": "string",
+                                                    "example": "https://appcard-web-images.s3.amazonaws.com/67540_80x80",
+                                                    "range": [
+                                                        55,
+                                                        55
+                                                    ],
+                                                    "count": 70
+                                                }
+                                            },
+                                            "count": 7
+                                        },
+                                        "id": {
+                                            "type": "string",
+                                            "example": "67540",
+                                            "range": [
+                                                5,
+                                                5
+                                            ],
+                                            "count": 70
+                                        },
+                                        "ratio": {
+                                            "type": "string",
+                                            "example": "square",
+                                            "range": [
+                                                6,
+                                                6
+                                            ],
+                                            "count": 70
+                                        }
+                                    },
+                                    "count": 7
+                                },
+                                "description": {
+                                    "type": "string",
+                                    "example": "any one (1) ARM & HAMMER™ Liquid Laundry Detergent 55.1oz or larger (excludes 118.1oz and ARM & HAMMER™ Baby Products)",
+                                    "range": [
+                                        32,
+                                        500
+                                    ],
+                                    "count": 70
+                                },
+                                "title": {
+                                    "type": "string",
+                                    "example": "$2.00 OFF",
+                                    "range": [
+                                        9,
+                                        18
+                                    ],
+                                    "count": 70
+                                },
+                                "offerId": {
+                                    "type": "string",
+                                    "example": "51435",
+                                    "range": [
+                                        5,
+                                        5
+                                    ],
+                                    "count": 70
+                                },
+                                "targetOfferId": {
+                                    "type": "string",
+                                    "example": "3544226",
+                                    "range": [
+                                        7,
+                                        7
+                                    ],
+                                    "count": 70
+                                },
+                                "brand": {
+                                    "type": "string",
+                                    "example": "ARM & HAMMER™",
+                                    "range": [
+                                        3,
+                                        36
+                                    ],
+                                    "count": 70
+                                },
+                                "expireDateString": {
+                                    "type": "string",
+                                    "example": "Exp 07/16/22",
+                                    "range": [
+                                        12,
+                                        12
+                                    ],
+                                    "count": 70
+                                },
+                                "saveValue": {
+                                    "type": "string",
+                                    "example": "200",
+                                    "range": [
+                                        2,
+                                        4
+                                    ],
+                                    "count": 70
+                                },
+                                "offer_recommendation_flag": {
+                                    "type": "number",
+                                    "example": 0,
+                                    "range": [
+                                        0,
+                                        0
+                                    ],
+                                    "count": 70
+                                },
+                                "expireDate": {
+                                    "type": "string",
+                                    "example": "2022-07-16T23:59:59",
+                                    "range": [
+                                        19,
+                                        19
+                                    ],
+                                    "count": 70
+                                },
+                                "effectiveDate": {
+                                    "type": "string",
+                                    "example": "2022-06-19T00:01:00",
+                                    "range": [
+                                        19,
+                                        19
+                                    ],
+                                    "count": 70
+                                },
+                                "sameTransactionRedeem": {
+                                    "type": "boolean",
+                                    "example": false,
+                                    "count": 70
+                                },
+                                "category": {
+                                    "type": "string",
+                                    "example": "Household",
+                                    "range": [
+                                        5,
+                                        14
+                                    ],
+                                    "count": 70
+                                },
+                                "offerType": {
+                                    "type": "string",
+                                    "example": "buy_x_get_y_at_z_dollars_off_trig_list",
+                                    "range": [
+                                        38,
+                                        38
+                                    ],
+                                    "count": 70
+                                },
+                                "activated": {
+                                    "type": "boolean",
+                                    "example": false,
+                                    "count": 70
+                                }
+                            },
+                            "count": 7
+                        }
+                    },
+                    "length": 1,
+                    "type": "Array"
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://appcard.com/baseapi/1.0/token/Vk59T7F8VWCU0ASRNh6yK/offers/unclipped_recommendation_flag?page_size=500&page_number=0&branch_id=17941",
+                    "range": [
+                        140,
+                        140
+                    ],
+                    "count": 7
+                },
+                "acquisition_timestamp": {
+                    "type": "number",
+                    "example": 1655655392678,
+                    "range": [
+                        1655655392678,
+                        1658090394107
+                    ],
+                    "count": 7
+                }
+            },
+            "count": 7
+        }
+    }
+}
