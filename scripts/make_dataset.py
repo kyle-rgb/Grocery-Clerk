@@ -283,9 +283,83 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         pag.press(['down', 'down', 'enter'], interval=1)
         time.sleep(7)
 
+    else:
+        print('skipping setup')
+
     return None
 
 
+def getStoreData(chain):
+    # TODO: a function that automates processes to gather store data from the following sites API:
+    # aldi, publix
+    if chain=='publix':
+        # on publix site :
+        # action click: current store icon on head
+        # will call https://services.publix.com/api/v1/storelocation?types=R,G,H,N,S&option=&count=15&includeOpenAndCloseDates=true&isWebsite=true&storeNumber=691&distance=15&includeStore=true
+        # result has information on 15 closest stores. General information common to stores, hours, etc. 
+        # nb: choosing store loses this information
+        switchUrl(url='https://www.publix.com/')
+        loadExtension()
+        time.sleep(2)
+        pag.moveTo(1530, 160, duration=3)
+        pag.click()
+        pag.moveTo(1806, 428, duration=2)
+        pag.click()
+        eatThisPage()
+    elif chain=='aldi':
+        # on aldi site:
+        # go to aldi.us/en/weekly-specials/our-weekly-ads/
+        # https://graphql-cdn-slplatform.liquidus.net/ with payload operationName: "storeDataQuery"
+            # returns all store related information
+
+        # click on change store to kickoff
+        # https://graphql-cdn-slplatform.liquidus.net/ with payload operationName: "getStoreList"
+            # will get top 6 stores near entered zipCode
+        switchUrl(url='https://www.aldi.us/en/weekly-specials/our-weekly-ad')
+        loadExtension()
+        time.sleep(2)
+        pag.typewrite(list(ZIPCODE)+['enter'], interval=.5)
+        time.sleep(2)
+        eatThisPage()
+    elif chain=='dollarGeneral':
+        # navigate to /dgickup/deals/coupons
+        # will set off call to : https://www.dollargeneral.com/bin/omni/pickup/storeDetails
+        # will return object with features that require additional parsing : ex hh: thursday store hours
+        # click on my store button:
+        # will set off : https://www.dollargeneral.com/bin/omni/pickup/storeSearch
+        # that gives more store level data
+            #  I need data from the 2 closest in my area right now '13141'and '13079'in calls to storeDetails
+        switchUrl(url='https://www.dollargeneral.com/dgpickup/deals/coupons')
+        loadExtension()
+        time.sleep(1)
+        pag.moveTo(104, 408, duration=2)
+        pag.click()
+        time.sleep(2)
+        pag.moveTo(1659, 463, duration=2)
+        pag.click()
+        eatThisPage()
+    elif chain=='familyDollar':
+        # returns a list of store locations with calls to https://storelocations.familydollar.com/rest/locatorsearch
+        switchUrl(url='https://www.familydollar.com/store-locator')
+        time.sleep(5)
+        loadExtension()
+        time.sleep(2)
+        pag.moveTo(371, 605, duration=2)
+        pag.click()
+        time.sleep(4)
+        pag.typewrite(list(ZIPCODE)+list('enter'), interval=.5)
+        time.sleep(5)
+    elif chain=='foodDepot':
+        loadExtension()
+        time.sleep(5)
+        switchUrl(url='https://shop.fooddepot.com/online/fooddepot40-douglasvillehwy5/home')
+        time.sleep(2)
+        eatThisPage()
+    else:
+        raise ValueError('chain must be provided')
+    
+
+    return None
 
 def loadMoreAppears(png='./requests/server/images/moreContent.png'):
     # Evaluate if Dollar General's Promotional Page of Associated Items Has More Items
@@ -1521,7 +1595,7 @@ def queryDB(db="new"):
 # runAndDocument([setUpBrowser, getFamilyDollarItems, eatThisPage], ['setup', 'getFamilyDollarItems', 'flushData'] ,[{'n': 'family-dollar-items', 'initialSetup': True}, {}, {'reset': False}])
 #runAndDocument([setUpBrowser, eatThisPage], ['setup', 'getFamilyDollarCoupons'], [{'n': 'family-dollar-coupons', 'initialSetup': True}, {'reset': False}])
 # deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
-runAndDocument([setUpBrowser, getScrollingData, eatThisPage], ['setup', 'getFoodDepotItems', 'flushData'], [{'n': 'food-depot-items', 'initialSetup': True}, {'chain': 'fooddepot'}, {'reset': False}])
-
+# runAndDocument([setUpBrowser, getScrollingData, eatThisPage], ['setup', 'getFoodDepotItems', 'flushData'], [{'n': 'food-depot-items', 'initialSetup': True}, {'chain': 'fooddepot'}, {'reset': False}])
+runAndDocument([setUpBrowser, getStoreData, eatThisPage], ['setup', 'getStores', 'flushData'], [{'n': None, 'initialSetup': True}, {'chain': 'aldi'}, {'reset':False}])
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
 # createDBSummaries('new')
