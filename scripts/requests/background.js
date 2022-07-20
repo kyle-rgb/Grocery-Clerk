@@ -1,7 +1,7 @@
 var setMaster = new Set() 
 var masterArray = []
 var iWasSet = false
-var settingStores = true
+var settingStores = false
 
 
 async function createType(){
