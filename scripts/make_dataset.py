@@ -1581,11 +1581,182 @@ def queryDB(db="new"):
 
     return None
 
+
+def normalizeStoreData():
+    storeFiles = ['/aldi/stores/071822.json', '/dollargeneral/stores/stores.json', '/familydollar/stores/stores.json', '/fooddepot/stores/071822.json', '/publix/stores/071822.json'] 
+    head= './requests/server/collections'
+
+    # --- Kroger's ---
+    # address { 
+    #   {addressLine1, city, county, state, zipCode} <String>
+    #  }
+    # chain : <String> UPPER,
+    # departments: [{'departmentId': <String>, 'name': <String> +
+    #   ?hours: {weekday: {close, open, open24}, open24, name, ?phone} <String> + <Bool::open24>
+    # }]
+    # geolocation: {latLng: <String>, latitude: <Float>, longitude: <Float>}
+    # hours: {gmtOffset: <String>, open24: <Bool>, timezone:<String>, <:weekdays:>: {open24, open, close}}
+    # locationId: <String> <- Connector to Items, Inventory, et all.
+    # name: <String> - chain + real estate name
+    # phone: <String> 
+
+
+    # --- Aldi ---
+    # data[0] = store <- the single store
+    # data[1] = gmap api with my lat/long / gmapsigner => just url
+    # data[2] = specialevents => []
+    # data[3] = listing => __typename and so on {}
+    # data[4] = promotions => {} of promos w/ keys {promos, dpv2api, __typename} Query parms and user data
+    # data[5] = promotion => {} the actual promotions
+    # data[6] = 4 closest stores <- storeList
+
+    # {address: {city:actual city, dmaName:City,ST, line1:street address, line2: None, postalCode: 30084, state} <string>
+    # } ==> { city, addressLine1 : line1, bool(line2), zipCode: postalCode, state:  dmaName.split(',')[-1] }
+    # currentPromotions: <Int> / previewPromotions / previewPromotions: <Int> / napi / listingCount
+    # chain: name, 
+    # locationId: id, # id: <String> <- storeId
+    # hours: parse format <String> of "(%a): (%-H:%M %p)-(%-H:%M %p);" => {\1 : {open: \2, close: \3}, gmtOffset, timezone, open24}
+    # geolocation: {latLng: f"{location.lat} {location.lng}", ~location.distance}
+    # phone: bool(phone+areaCode, phone.phoneNumber)
+
+    # logo: logos.logURL
+    # additional_ids = {
+    #   pretailer.id, pretailer.name,
+    #   referenceNumber, retailer.id, retailer.name==pretailer.name : null : retailer.name; 
+    # }
+
+    with open(head+storeFiles[0], 'r', encoding='utf-8') as file:
+        data = json.loads(file.read())
+        data = map(lambda x: x.get('data'), data)
+        stores = filter(lambda x:'store' in x.keys() or 'storeList' in x.keys(), data)
+        data = []
+        for s in stores:
+            if 'store' in s.keys():
+                data.append(s['store'])
+            else:
+                data.extend(s['storeList'])
+        # all stores
+        # address {addressLine1, city, county, state, zipCode}, departments [{id, name, hours{close, open, open24}, open24}]
+        # geolocation {latLng, latitude, longitude},
+        # hours {timezone, gmtOffset, open24, <weekdays:{close, open, open24}>}, locationId, name, phone
+
+        for d in data:
+            print(d.keys())
+            newDoc = {}
+            oldAddress = d.pop('address')
+            oldAddress['addressLine1'] = oldAddress.pop("line1")
+            oldAddress['zipCode'] = oldAddress.pop('postalCode')
+            newDoc['address'] = {k:v for k,v in oldAddress.items() if k in {'addressLine1', 'zipCode', 'city', 'county', 'state'}}
+            newDoc['geoLocation'] = {}
+            newDoc['geoLocation']['latitude'] = d['location']['coordinates'][0]
+            newDoc['geoLocation']['longitude'] = d['location']['coordinates'][1]
+            # parse hours in to hours 
+
+            # id to locationId
+
+            # name to name
+
+            # phone to phone
+            
+
+    # ---DollarGeneral---
+        # ad=address, cc<Int>, ct=city, di='U', dm=<datetime>, ef<Int>, hf<hours friday>, hh<hours thursday>, hm<hours monday>,
+        # hs<hours sat>, ht, hu, hw, la=latitude, lo=longitude, pn='4708932140', se=1, sg=0, si=2, sn=id<13141>, ss=123054, 
+        # st=state, um=3793, uu='hex-code', zp=zipCode full 
+    
+    with open(head+storeFiles[1], 'r', encoding='utf-8') as file:
+        data=json.loads(file.read())
+        data = list(map(lambda x: x.get('data').get('storeDetails'), data))
+        print(len(data))
+
+    
+    # ---Publix---
+  
+    # Stores : [15] {ADDR, CITY, CLAT, CLON, DISTANCE, EPPH, IMAGE{}, ISENABLED, KEY, NAME, OPTION, PHMPHONE, PHONE, SHORTNAME, STATE, STOREDATETIME, STOREMAPSID,
+                # STORETIMEZONE, STRHOURS format "%a %-h:%M %p,", TYPE, WABREAK, ZIP}
+            # NULL {CLOSINGDATE, CSPH, DEPTS, EMPTY, FAX, LQHOURS, LQRPHONE, MAPH, OPENINGDATE, PHMHOURS, PXFHOURS, PXFPHONE, SERVICES, STATUS, STOREMAPTOGGLE, 
+            #  StoreAdjustedHoursMobileApp, StoreAdjustedHoursWebsite, UNIQUE, WASTORENUMBER}
+        
+        # address {addressLine1, city, county, state, zipCode } <String> => {ADDR, CITY, _, STATE, ZIP}
+        # chain => 'Publix'
+
+        # departments: [{'departmentId': <String>, 'name': <String> +
+        #   ?hours: {weekday: {close, open, open24}, open24, name, ?phone} <String> + <Bool::open24>
+        # }]
+
+        # geolocation: {latLng: <String>, latitude: <Float>, longitude: <Float>} => {f'{CLAT} {CLON}', latitude:LAT, longitude:CLON, ~DISTANCE}
+        # hours: {gmtOffset: <String>, open24: <Bool>, timezone:<String>, <:weekdays:>: {open24, open, close}} => {timezone:STORETIMEZONE, STRHOURS "%a %-h:%M %p,",}
+        # locationId: <String> <- Connector to Items, Inventory, et all. => {KEY}
+        # name: <String> - chain + real estate name => {SHORTNAME, NAME}
+        # phone: <String>  => {PHMPHONE, PHONE, EPPH, }
+        # !image: {hero:IMAGE.Hero, thumbnail:IMAGE.Thumbnail}
+        # !others = {OPTION=<varchar>, TYPE='R', OPENINGDATE=<datetime>, STATUS=''|'Coming Soon', WABREAK='4|None'}
+
+    with open(head+storeFiles[4], 'r', encoding='utf-8') as file:
+        data = json.loads(file.read())
+        data = data[0].get('Stores')
+        print(len(data))
+    
+
+
+
+    # ---FamilyDollar--- {features, web, times, address}
+        # _distance, _distanceuom, address1<street>, address2<place>, adult_beverages, adwordlabels, atm, bho, billpay, bopis, city, clientkey, coming_soon
+        # country, dc_localpage_address, distributioncenter, ebt, end_date, fax, friclose, friopen, frozen_meat, geofence_radius, gt_radius, h1_text, h2_text, helium,
+        # hiring_banner_url, holidayhours, hybrid_stores, ice, icon, job_search_url, latitude, localpage_banner, longitude, main_paragraph, monclose, monopen, name<-with #ID, 
+        # now_open, phone, postalcode, propane, province, red_box, refrigerated_frozen, reopen_date, sameday_delivery, satclose, satopen, second_paragraph, start_date, state, store<-ID,
+        # store_open_date, sunclose, sunopen, temp_closed, thuclose, thuopen, timezone, tobacco, tueclose, tueopen, uid, water_machine, wedclose, wedopen, wic
+    with open(head+storeFiles[2], 'r', encoding='utf-8') as file:
+        data = json.loads(file.read())
+        data = data.get('data').get('response').get('collection')
+        print(len(data))
+
+
+
+    # ---Food Depot---
+        # data[0] = franchises 
+            # KEEP Id, DeliveryServiceName, FavIconImageUrl, IconImageUrl, LogoImageUrl, LoyaltyType, MaximumOrderSpend, Name, PaymentProvider, PickingVariationPercentage, PickupServiceName
+                # StoreTypeLabels, Stores = {
+                #   Address {Country, Postcode:zipCode, State, StreetAddress:addressLine1, Suburb:city},
+                #   HasDelivery, HasPickup, Id, LogoImageUrl, Name, StoreType, TimeZoneName, 
+                # }
+        # data[1] = stores
+            # ['Id', 'Address', 'Categories', 'ContactPhone', 'CostPlusLabel', 'Currency', 'CurrentStoreTime', 'CustomersCanCancelOrders', 'CustomPages', 'DefaultDeliveryTip', 'DefaultPickupTip', 'DefaultProductSortForCategories', 'DefaultProductSortForSpecials', 'DeliveryInstructionsPrompt', 'DeliveryZones', 'FavIconImageUrl', 'HasDelivery', 'HasPickup', 'HasPromotions', 'HasShipping', 'HeaderLinks', 'HideTobaccoImages', 'HomePageTiles', 'HomePageWelcomeContent', 'IconImageUrl', 'ImagePromotions', 'IsCostPlus', 'IsCouponsEnabled', 'IsDeliveryTipAllowed', 'IsFirstDeliveryFeeFree', 'IsFirstPickupFeeFree', 'IsLoyaltyEnabled', 'IsOnline', 'IsPickerMessagingEnabled', 'IsPickupTipAllowed', 'Locales', 'LogoImageUrl', 'MinimumDeliveryPreparationTime', 'MinimumDeliverySpend', 'MinimumPickupPreparationTime', 'MinimumPickupSpend', 'Name', 'OfflinePaymentTypes', 'OrderMessageAlcoholDelivery', 'OrderMessageAlcoholPickup', 'OrderMessageTobaccoDelivery', 'OrderMessageTobaccoPickup', 'PickupInstructionsPrompt', 'PickupLocations', 'ProductCountOnSpecial', 'ProductOptions', 'ProductRankDisplayName', 'ProductRankSortDescending', 'ShippingOptions', 'ShowLogoOnHomePage', 'SnapLabel', 'StoreType', 'SupportedCreditCards', 'SupportEmail', 'SupportPhone', 'SupportsEbtPayments', 'TagDefinitions', 'TimeZoneName', 'TobaccoMinAge', 'TobaccoRestriction', 'TobaccoWarningImageUrl', 'TradingHours', 'UnitConversion', 'UrlSlug', 'ValidatePhoneNumber']
+            # KEEP Id, Address, Categories => {Name, Id, if ParentCategoryId=>append to parent by id} for departments,
+            # ContactPhone, CostPlusLabel, CurrentStoreTime, HasDelivery, HasPickup, HasPromotions, HasShipping,
+            # IconImageUrl, LogoImageUrl, MinimumDeliverySpend, MinimumPickupSpend, Name="Food Depot 40 - Douglassville Hwy 5", minimumPickupWait = pickuplocations[0][TimeSlots][0]['Start']-pickuplocations[0][TimeSlots][0]['Cutoff'],
+            # PickupFee = pickuplocations[0][TimeSlots][0]['defaultFee']
+            # ProductCountOnSpecial, ?ShippingOptions, SupportedCreditCards,
+            # SupportPhone, TimeZoneName  
+    with open(head+storeFiles[3], 'r', encoding='utf-8') as file:
+        data = json.loads(file.read())
+        data = list(map(lambda x: x.get('Result'), data[:2]))
+        print(len(data))
+
+
+    return None
+
+
+def getStores():
+    # uri = os.environ.get("MONGO_CONN_URL")
+    # client = MongoClient(uri)
+    # cursor = client['new']
+    # res = cursor['stores'].find({})
+    # res = [r for r in res]
+    # pprint(res)
+    
+        
+
+    return None
+
+
+
+normalizeStoreData()
 # setUpBrowser()
 # runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
 # retrieveData('runs')
-runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerCashbackCouponsAndItems', 'flushData'],
-kwargs=[{"url": "https://www.kroger.com/savings/cl/coupons", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "digital"}, {'reset': False}])
+# runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerCashbackCouponsAndItems', 'flushData'],
+# kwargs=[{"url": "https://www.kroger.com/savings/cl/coupons", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "digital"}, {'reset': False}])
 #runAndDocument([simulateUser, eatThisPage], ['getDollarGeneralCouponsAndItems', 'flushData'],
 #kwargs=[{"link": "dollarGeneral"}, {}])
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage, setUpBrowser, simulateUser, eatThisPage], ['setup', 'getKrogerDigitalCouponsAndItems', 'flushData',
