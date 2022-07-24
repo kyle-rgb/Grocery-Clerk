@@ -9,7 +9,7 @@ from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 import pyperclip as clip, inspect
 from api_keys import DB_ARCHIVE_KEY, EXTENSION_ARCHIVE_KEY, ZIPCODE, PHONE_NUMBER, VERIFICATION_CODE
-
+from tzwhere import tzwhere
 
 # Inside Will Find:
     # Trip Level Data: Total Cost of Purchases, Locations of Store, Order Number, Payment Method, Items/Coupons Together, Tax
@@ -28,6 +28,19 @@ from api_keys import DB_ARCHIVE_KEY, EXTENSION_ARCHIVE_KEY, ZIPCODE, PHONE_NUMBE
 # Use API to get prices of past purchases and estimate future trips
 # Use API to create same carts for Pickup
 startTime = time.perf_counter()
+
+def normalizeDay(string):
+    string = string
+    today= dt.datetime.now()
+    abbv = today.strftime('%a')
+    if len(string)>3:
+        string = string[:3]
+    while abbv!=string:
+        today -= dt.timedelta(days=1)
+        abbv = today.strftime('%a')
+    return today.strftime('%A').lower()
+
+
 
 def switchUrl(x=468, y=63, url="https://www.dollargeneral.com/dgpickup/deals/coupons?"):
     # CATEGORY = HELPER Web Interaction Function
@@ -238,12 +251,17 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         switchUrl(url="https://www.dollargeneral.com/dgpickup/deals/coupons")
         # change store
         loadExtension()
-        pag.moveTo(178, 401, duration=2)
+        pag.moveTo(73, 222, duration=2)
         pag.click()
         time.sleep(2)
-        pag.moveTo(231, 451, duration=2)
+        pag.moveTo(127, 323, duration=2)
         pag.click()
         time.sleep(2)
+        pag.moveTo(131, 402, duration=2)
+        pag.click()
+        time.sleep(2)
+        pag.moveTo(209, 601, duration=2)
+        pag.click()
         # wait for set iterations
         time.sleep(12)
         response = requests.get("http://127.0.0.1:5000/i").json()
@@ -501,16 +519,25 @@ def simulateUser(link):
         time.sleep(2)
     else:
         iterations = ((response.get('i')-9) // neededLinks[link]['no'])+2
+
+    prevButtonsX = set()
     # find all buttons
     for i in range(iterations):
         buttons = list(pag.locateAllOnScreen(neededLinks[link]['button'], confidence=neededLinks[link]['confidenceInterval'], grayscale=False))
         buttons = [pag.center(y) for i, y in enumerate(buttons) if (abs(buttons[i].left-buttons[i-1].left) > 100) or (abs(buttons[i].top-buttons[i-1].top)>100)] # > 2
         if link=='dollarGeneral':
             buttons = list(filter(lambda x: x.x<1600, buttons))
+        if i==0:
+            prevButtonsX = set(map(lambda x: x.x, buttons))
+
         print(f"Located {len(buttons)} Items")
-        if len(buttons)>12:
+        if len(buttons)>12 or iterations-i<=2:
             yaxis = list(map(lambda b: b.y, buttons))
-            buttons = [x for x in buttons if yaxis.count(x.y) >= neededLinks[link]['maxCarousel']  and (x.y+1 not in yaxis)]
+            if iterations-i<=2: 
+                buttons = [x for x in buttons if x.x in prevButtonsX]
+            else:
+                buttons = [x for x in buttons if (yaxis.count(x.y) >= neededLinks[link]['maxCarousel'] ) and (x.y+1 not in yaxis)]
+
         print(len(buttons), "buttons")
         for b in buttons:
             pag.moveTo(b)
@@ -542,20 +569,23 @@ def simulateUser(link):
                     button = moreItems
                     pag.moveTo(button.x, button.y, duration=0.5)
                     pag.click()
-                    time.sleep(3)
-                    pag.press('pagedown', 3, interval=0.5)
+                    time.sleep(7)
+                    pag.press('pagedown', 3, interval=1)
                     moreItems = loadMoreAppears()
                 pag.keyDown('ctrlleft')
                 pag.keyDown('w')
                 pag.keyUp('ctrlleft')
                 pag.keyUp('w')
                 time.sleep(2.5)
+                    
 
         if i<=1 and link=='dollarGeneral':
             pag.scroll(neededLinks[link]['initalScroll'])
         elif link=='dollarGeneral':
             pag.scroll(neededLinks[link]['scrollAmount'])
             pag.scroll(-20)
+            prevButtonsX = set(button.x for button in buttons)
+            print(prevButtonsX)
         else:
             pag.scroll(neededLinks[link]['scrollAmount'])
         print('finished row {}; {} to go; mouse currently @ {} :: {} seconds left'.format(i, iterations-i, pag.position(), (time.perf_counter()/(i+1))*(iterations-i)))
@@ -1585,6 +1615,7 @@ def queryDB(db="new"):
 def normalizeStoreData():
     storeFiles = ['/aldi/stores/071822.json', '/dollargeneral/stores/stores.json', '/familydollar/stores/stores.json', '/fooddepot/stores/071822.json', '/publix/stores/071822.json'] 
     head= './requests/server/collections'
+    newStores = []
 
     # --- Kroger's ---
     # address { 
@@ -1639,37 +1670,95 @@ def normalizeStoreData():
         # address {addressLine1, city, county, state, zipCode}, departments [{id, name, hours{close, open, open24}, open24}]
         # geolocation {latLng, latitude, longitude},
         # hours {timezone, gmtOffset, open24, <weekdays:{close, open, open24}>}, locationId, name, phone
-
+        ###tzWhere = tzwhere.tzwhere()
         for d in data:
-            print(d.keys())
             newDoc = {}
             oldAddress = d.pop('address')
             oldAddress['addressLine1'] = oldAddress.pop("line1")
             oldAddress['zipCode'] = oldAddress.pop('postalCode')
             newDoc['address'] = {k:v for k,v in oldAddress.items() if k in {'addressLine1', 'zipCode', 'city', 'county', 'state'}}
+            newDoc['chain'] = d.pop('name')
             newDoc['geoLocation'] = {}
-            newDoc['geoLocation']['latitude'] = d['location']['coordinates'][0]
-            newDoc['geoLocation']['longitude'] = d['location']['coordinates'][1]
+            newDoc['geoLocation']['latitude'] = d['location']['coordinates'][1]
+            newDoc['geoLocation']['longitude'] = d['location']['coordinates'][0]
             # parse hours in to hours 
+            oldHours = d.pop('hours').split(';')
+            dateRe = r'(\w+)\:\s([0-9\:]+\sAM)-([0-9\:]+\sPM)'
+            newDoc['hours'] = {}
+            for hour in oldHours:
+                day, openH, closeH = re.findall(dateRe, hour)[0]
+                day = normalizeDay(day)
+                newDoc['hours'][day] = {'open': dt.datetime.strptime(openH , '%I:%M %p').strftime('%H:%M'),'close': dt.datetime.strptime(closeH, '%I:%M %p').strftime('%H:%M')}
+                newDoc['hours'][day]['open24'] = newDoc['hours'][day]['open']==newDoc['hours'][day]['close']
+            ###newDoc['hours']['timezone'] = tzWhere.tzNameAt(newDoc['geoLocation']['latitude'], newDoc['geoLocation']['longitude'])
+            newDoc['locationId'] = d.get('id')
+            newDoc['name'] = newDoc.get('chain').title()
 
-            # id to locationId
-
-            # name to name
-
-            # phone to phone
+            if d.get('phone').get('phoneNumber'):
+                newDoc['phone'] = d.get('phone').get('areaCode') + d.get('phone').get('phoneNumber')
             
-
+            newDoc['additionalIds'] = [
+                {'path': 'pretailer.id', 'id': d.get('pretailer').get('id')},
+                {'path': 'retailer.id', 'id': d.get('retailer').get('id')},
+                {'path': 'referenceNumber', 'id': d.get('referenceNumber')},
+            ]
+            newStores.append(newDoc)
+    
     # ---DollarGeneral---
         # ad=address, cc<Int>, ct=city, di='U', dm=<datetime>, ef<Int>, hf<hours friday>, hh<hours thursday>, hm<hours monday>,
         # hs<hours sat>, ht, hu, hw, la=latitude, lo=longitude, pn='4708932140', se=1, sg=0, si=2, sn=id<13141>, ss=123054, 
         # st=state, um=3793, uu='hex-code', zp=zipCode full 
     
+
     with open(head+storeFiles[1], 'r', encoding='utf-8') as file:
         data=json.loads(file.read())
-        data = list(map(lambda x: x.get('data').get('storeDetails'), data))
-        print(len(data))
+        storeLimited = list(map(lambda x: x.get('data').get('storeDetails'), data))
+        storeFull = list(map(lambda x: x.get('data').get('stores'), data))
+        storeFull = list(filter(None, storeFull))[0]
+        storeLimited = filter(None, storeLimited)
+        
+        for d in storeLimited:
+            newDoc={}
+            newDoc['address'] = {'addressLine1': d.get('ad'), 'city': d.get('ct'), 'state': d.get('st'), 'zipCode': d.get('zp')}
+            newDoc['id'] = d.get('sn')
+            newDoc['geolocation'] = {'latitude': d.get('la'), 'longitude': d.get('lo')}
+            newDoc['chain'] = 'Dollar General'
+            newDoc['name'] = 'Dollar General'
 
-    
+            newDoc['hours'] = {
+                'monday' : {'open':d.get('hm').split(':')[0], 'close':d.get('hm').split(':')[-1], 'open24': False},
+                'tuesday' : {'open':d.get('ht').split(':')[0], 'close':d.get('ht').split(':')[-1], 'open24': False},
+                'wednesday': {'open':d.get('hw').split(':')[0], 'close':d.get('hw').split(':')[-1], 'open24': False},
+                'thursday':{'open':d.get('hh').split(':')[0], 'close':d.get('hh').split(':')[-1], 'open24': False},
+                'friday':{'open':d.get('hf').split(':')[0], 'close':d.get('hf').split(':')[-1], 'open24': False},
+                'saturday':{'open':d.get('hs').split(':')[0], 'close':d.get('hs').split(':')[-1], 'open24': False},
+                'sunday':{'open':d.get('hu').split(':')[0], 'close':d.get('hu').split(':')[-1], 'open24': False}
+            }
+            newStores.append(newDoc)
+
+        for d in storeFull:
+            # address {addressLine1, city, county, state, zipCode}, departments [{id, name, hours{close, open, open24}, open24}]
+            # geolocation {latLng, latitude, longitude},
+            # hours {timezone, gmtOffset, open24, <weekdays:{close, open, open24}>}, locationId, name, phone
+            if d.get('storenumber') in set(map(lambda x: x.get('id'), newStores)):
+                newDoc = list(filter(lambda x: x.get('id')==d.get('storeNumber'), newStores))[0]
+                newDoc['phone'] = d.get('phoneNumber')
+                newDoc['clickandcollect'] = d.get('clickandcollect')
+                newDoc['scanandgoactive'] = d.get('scanandgoactive')
+                newDoc['departments'] = d.get('storeServices')
+            else:
+                newDoc = {}
+                newDoc['address'] = {'addressLine1': d.get('address'), 'city': d.get('city'), 'state': d.get('state'), 'zipCode': d.get('zip')}
+                newDoc['id'] = d.get('storenumber')
+                newDoc['geolocation'] = {'latitude': d.get('latitude'), 'longitude': d.get('longitude')}
+                newDoc['chain'] = 'Dollar General'
+                newDoc['name'] = 'Dollar General'
+                newDoc['phone'] = d.get('phoneNumber')
+                newDoc['clickandcollect'] = d.get('clickandcollect')
+                newDoc['scanandgoactive'] = d.get('scanandgoactive')
+                newDoc['departments'] = d.get('storeServices')
+                newStores.append(newDoc)
+
     # ---Publix---
   
     # Stores : [15] {ADDR, CITY, CLAT, CLON, DISTANCE, EPPH, IMAGE{}, ISENABLED, KEY, NAME, OPTION, PHMPHONE, PHONE, SHORTNAME, STATE, STOREDATETIME, STOREMAPSID,
@@ -1695,11 +1784,33 @@ def normalizeStoreData():
     with open(head+storeFiles[4], 'r', encoding='utf-8') as file:
         data = json.loads(file.read())
         data = data[0].get('Stores')
-        print(len(data))
-    
-
-
-
+        
+        for d in data:
+            d = {k:v for k, v in d.items() if v!='-' and v!=''}
+            newDoc = {}
+            newDoc['address'] = {'addressLine1': d.get('ADDR'), 'city': d.get('CITY'), 'zipCode': d.get('ZIP'), 'state': d.get('STATE')}      
+            newDoc['geolocation'] = {'latitude': d.get('CLAT'), 'longitude': d.get('CLON')}
+            if 'STRHOURS' in d:
+                oldHours = d.get('STRHOURS').split(',')
+                oldHours = list(filter(None, oldHours))
+                dateRe = r'(\w+)\s([0-9\:]+\sAM)\s-\s([0-9\:]+\sPM)'
+                newDoc['hours'] = {}
+                for hour in oldHours:
+                    day, openH, closeH = re.findall(dateRe, hour)[0]
+                    day = normalizeDay(day)
+                    newDoc['hours'][day] = {'open': dt.datetime.strptime(openH , '%I:%M %p').strftime('%H:%M'),'close': dt.datetime.strptime(closeH, '%I:%M %p').strftime('%H:%M')}
+                    newDoc['hours'][day]['open24'] = newDoc['hours'][day]['open']==newDoc['hours'][day]['close']
+                newDoc['hours']['timezone'] = d.get('STORETIMEZONE')
+            newDoc['locationId'] =d.get('KEY')
+            newDoc['images'] = d.get('IMAGE')
+            newDoc['name'] = f"Publix - {d.get('SHORTNAME')}"
+            newDoc['chain'] = 'Publix'
+            newDoc['phone'] = d.get('PHONE')
+            newDoc['additionalIds'] = [
+                {'path': 'OPTION', 'id': d.get('OPTION')},
+            ]
+            newStores.append(newDoc)
+            
     # ---FamilyDollar--- {features, web, times, address}
         # _distance, _distanceuom, address1<street>, address2<place>, adult_beverages, adwordlabels, atm, bho, billpay, bopis, city, clientkey, coming_soon
         # country, dc_localpage_address, distributioncenter, ebt, end_date, fax, friclose, friopen, frozen_meat, geofence_radius, gt_radius, h1_text, h2_text, helium,
@@ -1709,7 +1820,34 @@ def normalizeStoreData():
     with open(head+storeFiles[2], 'r', encoding='utf-8') as file:
         data = json.loads(file.read())
         data = data.get('data').get('response').get('collection')
-        print(len(data))
+
+        servicesSet = {'atm', 'bho', 'billpay', 'bopis', 'ebt', 'helium', 'ice', 'propane', 'red_box', 'refrigerated_frozen', 'sameday_delivery', 'tobacco',
+            'water_machine', 'wic', 'fronzen_meat'}
+        toBool = {'Y': True, 'N': False, '1': True}
+        for d in data:
+            newDoc = {}
+            newDoc['address'] = {'addressLine1': d.get('address1'), 'city': d.get('city'), 'zipCode': d.get('postalcode')}
+
+            newDoc['departments'] = {k:toBool[v] for k in d.items() if k in servicesSet}
+            newDoc['geolocation'] = {'latitude': d.get('latitude'), 'longitude': d.get('longitude'), 'distance': f"{d.get('_distance')} {d.get('_distanceuom')}"}
+            newDoc['hours'] = {'timezone': d.get('timezone'),
+                'sunday': {'open': dt.datetime.strptime(d.get('sunopen'), "%I:%M %p").strftime('%H:%M'), 'close': dt.datetime.strptime(d.get('sunclose'), "%I:%M %p").strftime('%H:%M')},
+                'monday': {'open': dt.datetime.strptime(d.get('monopen'), "%I:%M %p").strftime('%H:%M'), 'close': dt.datetime.strptime(d.get('monclose'), "%I:%M %p").strftime('%H:%M')},
+                'tuesday': {'open': dt.datetime.strptime(d.get('tueopen'), "%I:%M %p").strftime('%H:%M'), 'close': dt.datetime.strptime(d.get('tueclose'), "%I:%M %p").strftime('%H:%M')},
+                'wednesday': {'open': dt.datetime.strptime(d.get('wedopen'), "%I:%M %p").strftime('%H:%M'), 'close': dt.datetime.strptime(d.get('wedclose'), "%I:%M %p").strftime('%H:%M')},
+                'thursday': {'open': dt.datetime.strptime(d.get('thuopen'), "%I:%M %p").strftime('%H:%M'), 'close': dt.datetime.strptime(d.get('thuclose'), "%I:%M %p").strftime('%H:%M')},
+                'friday': {'open': dt.datetime.strptime(d.get('friopen'), "%I:%M %p").strftime('%H:%M'), 'close': dt.datetime.strptime(d.get('friclose'), "%I:%M %p").strftime('%H:%M')},
+                'saturday': {'open': dt.datetime.strptime(d.get('satopen'), "%I:%M %p").strftime('%H:%M'), 'close': dt.datetime.strptime(d.get('satclose'), "%I:%M %p").strftime('%H:%M')},
+            
+            }
+            newDoc['locationId'] = d.get('store')
+            newDoc['chain'] = 'Family Dollar'
+            newDoc['phone'] = d.get('phone')
+            newDoc['additionalIds'] = [{
+                'path': 'clientkey',
+                'id': d.get('clientkey'), 
+            }]
+            newStores.append(newDoc)
 
 
 
@@ -1721,50 +1859,82 @@ def normalizeStoreData():
                 #   HasDelivery, HasPickup, Id, LogoImageUrl, Name, StoreType, TimeZoneName, 
                 # }
         # data[1] = stores
-            # ['Id', 'Address', 'Categories', 'ContactPhone', 'CostPlusLabel', 'Currency', 'CurrentStoreTime', 'CustomersCanCancelOrders', 'CustomPages', 'DefaultDeliveryTip', 'DefaultPickupTip', 'DefaultProductSortForCategories', 'DefaultProductSortForSpecials', 'DeliveryInstructionsPrompt', 'DeliveryZones', 'FavIconImageUrl', 'HasDelivery', 'HasPickup', 'HasPromotions', 'HasShipping', 'HeaderLinks', 'HideTobaccoImages', 'HomePageTiles', 'HomePageWelcomeContent', 'IconImageUrl', 'ImagePromotions', 'IsCostPlus', 'IsCouponsEnabled', 'IsDeliveryTipAllowed', 'IsFirstDeliveryFeeFree', 'IsFirstPickupFeeFree', 'IsLoyaltyEnabled', 'IsOnline', 'IsPickerMessagingEnabled', 'IsPickupTipAllowed', 'Locales', 'LogoImageUrl', 'MinimumDeliveryPreparationTime', 'MinimumDeliverySpend', 'MinimumPickupPreparationTime', 'MinimumPickupSpend', 'Name', 'OfflinePaymentTypes', 'OrderMessageAlcoholDelivery', 'OrderMessageAlcoholPickup', 'OrderMessageTobaccoDelivery', 'OrderMessageTobaccoPickup', 'PickupInstructionsPrompt', 'PickupLocations', 'ProductCountOnSpecial', 'ProductOptions', 'ProductRankDisplayName', 'ProductRankSortDescending', 'ShippingOptions', 'ShowLogoOnHomePage', 'SnapLabel', 'StoreType', 'SupportedCreditCards', 'SupportEmail', 'SupportPhone', 'SupportsEbtPayments', 'TagDefinitions', 'TimeZoneName', 'TobaccoMinAge', 'TobaccoRestriction', 'TobaccoWarningImageUrl', 'TradingHours', 'UnitConversion', 'UrlSlug', 'ValidatePhoneNumber']
+            # ['Id', 'Address', 'Categories', 'ContactPhone', 'CostPlusLabel', 'Currency', 'CurrentStoreTime', 'CustomersCanCancelOrders', 'CustomPages', 'DefaultDeliveryTip', 'DefaultPickupTip', 'DefaultProductSortForCategories', 'DefaultProductSortForSpecials', 'DeliveryInstructionsPrompt', 'DeliveryZones', 'FavIconImageUrl', 'HasDelivery', 'HasPickup', 'HasPromotions', 'HasShipping', 'HeaderLinks', 'HideTobaccoImages', 'HomePageTiles',
+            # 'HomePageWelcomeContent', 'IconImageUrl', 'ImagePromotions', 'IsCostPlus', 'IsCouponsEnabled', 'IsDeliveryTipAllowed', 'IsFirstDeliveryFeeFree', 'IsFirstPickupFeeFree', 'IsLoyaltyEnabled',
+            # 'IsOnline', 'IsPickerMessagingEnabled', 'IsPickupTipAllowed', 'Locales', 'LogoImageUrl', 'MinimumDeliveryPreparationTime', 'MinimumDeliverySpend', 'MinimumPickupPreparationTime', 'MinimumPickupSpend', 'Name', 'OfflinePaymentTypes', 'OrderMessageAlcoholDelivery', 'OrderMessageAlcoholPickup', 'OrderMessageTobaccoDelivery', 'OrderMessageTobaccoPickup', 'PickupInstructionsPrompt', 'PickupLocations', 'ProductCountOnSpecial', 'ProductOptions', 'ProductRankDisplayName', 'ProductRankSortDescending', 'ShippingOptions', 'ShowLogoOnHomePage', 'SnapLabel', 'StoreType', 'SupportedCreditCards', 'SupportEmail', 'SupportPhone', 'SupportsEbtPayments',
+            # 'TagDefinitions', 'TimeZoneName', 'TobaccoMinAge', 'TobaccoRestriction', 'TobaccoWarningImageUrl', 'TradingHours', 'UnitConversion', 'UrlSlug', 'ValidatePhoneNumber']
+            # 
             # KEEP Id, Address, Categories => {Name, Id, if ParentCategoryId=>append to parent by id} for departments,
             # ContactPhone, CostPlusLabel, CurrentStoreTime, HasDelivery, HasPickup, HasPromotions, HasShipping,
-            # IconImageUrl, LogoImageUrl, MinimumDeliverySpend, MinimumPickupSpend, Name="Food Depot 40 - Douglassville Hwy 5", minimumPickupWait = pickuplocations[0][TimeSlots][0]['Start']-pickuplocations[0][TimeSlots][0]['Cutoff'],
+            # IconImageUrl, LogoImageUrl, MinimumDeliverySpend, MinimumPickupSpend, Name="Food Depot 40 - Douglassville Hwy 5",
+            # minimumPickupWait = pickuplocations[0][TimeSlots][0]['Start']-pickuplocations[0][TimeSlots][0]['Cutoff'],
             # PickupFee = pickuplocations[0][TimeSlots][0]['defaultFee']
             # ProductCountOnSpecial, ?ShippingOptions, SupportedCreditCards,
             # SupportPhone, TimeZoneName  
     with open(head+storeFiles[3], 'r', encoding='utf-8') as file:
         data = json.loads(file.read())
         data = list(map(lambda x: x.get('Result'), data[:2]))
-        print(len(data))
-
+        pprint(data[0])
+        print()
+        pprint(data[1])
+        # address {addressLine1, city, county, state, zipCode}, departments [{id, name, hours{close, open, open24}, open24}]
+        # geolocation {latLng, latitude, longitude},
+        # hours {timezone, gmtOffset, open24, <weekdays:{close, open, open24}>}, locationId, name, phone
+        franchiseCols = {'Id', 'DeliveryServiceName', 'FavIconImageUrl', 'IconImageUrl', 'LogoImageUrl', 'LoyaltyType', 'MaximumOrderSpend', 'Name',
+        'PaymentProvider', 'PickingVariationPercentage', 'PickupServiceName', 'StoreTypeLabels', 'Stores'}
+        storeCols = {'Id', 'Address', 'Categories', 'ContactPhone', 'CostPlusLabel', 'HasDelivery', 'HasPickup', 'HasPromotions', 'HasShipping', 'IconImageUrl', 'LogoImageUrl', 'MinimumDeliverySpend',
+        'Name', 'minimumPickupWait', 'ProductCountOnSpecial', 'ShippingOptions', 'SupportedCreditCards', 'SupportPhone', 'TimeZoneName'}
+        for d in data[0:1]:
+            d = {k:v for k, v in d.items() if k in franchiseCols}
+            
+            newDoc={}
+            newDoc['address'] = {}
+            newDoc['departments'] = []
+            newDoc['geolocation'] = {}
+            newDoc['hours'] = {}
+            newDoc['locationId'] = ''
+            newDoc['name'] = ''
+            newDoc['chain'] = ''
+            newDoc['phone'] = ''
+        
 
     return None
 
 
 def getStores():
-    # uri = os.environ.get("MONGO_CONN_URL")
-    # client = MongoClient(uri)
-    # cursor = client['new']
-    # res = cursor['stores'].find({})
-    # res = [r for r in res]
-    # pprint(res)
+    uri = os.environ.get("MONGO_CONN_URL")
+    client = MongoClient(uri)
+    cursor = client['new']
+    res = cursor['stores'].find({})
+    res = [r for r in res]
+    pprint(res[0])
     
         
 
     return None
 
 
-
+getStores()
 normalizeStoreData()
 # setUpBrowser()
 # runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
 # retrieveData('runs')
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerCashbackCouponsAndItems', 'flushData'],
 # kwargs=[{"url": "https://www.kroger.com/savings/cl/coupons", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "digital"}, {'reset': False}])
-#runAndDocument([simulateUser, eatThisPage], ['getDollarGeneralCouponsAndItems', 'flushData'],
-#kwargs=[{"link": "dollarGeneral"}, {}])
-# runAndDocument([setUpBrowser, simulateUser, eatThisPage, setUpBrowser, simulateUser, eatThisPage], ['setup', 'getKrogerDigitalCouponsAndItems', 'flushData',
+
+# runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerDigitalCouponsAndItems', 'flushData'],
+# kwargs=[{"url": "https://www.kroger.com/savings/cl/coupons", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "digital"}, {'reset': False}])
+
+# runAndDocument([setUpBrowser, simulateUser, eatThisPage], ['setUpBrowser', 'getDollarGeneralCouponsAndItems', 'flushData'],
+# kwargs=[{"n": 'dollar-general-coupons', 'initialSetup': True},{"link": "dollarGeneral"}, {'reset': False}])
 
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ['setup', 'getDollarGeneralItemsAndCoupons', 'flushData'],
 # [{'n': 'dollar-general-coupons', 'initialSetup': True}, {'link': 'dollarGeneral'}, {'reset': False}])
+
 # runAndDocument([setUpBrowser, getFamilyDollarItems, eatThisPage], ['setup', 'getFamilyDollarItems', 'flushData'] ,[{'n': 'family-dollar-items', 'initialSetup': True}, {}, {'reset': False}])
-#runAndDocument([setUpBrowser, eatThisPage], ['setup', 'getFamilyDollarCoupons'], [{'n': 'family-dollar-coupons', 'initialSetup': True}, {'reset': False}])
+
+# runAndDocument([setUpBrowser, eatThisPage], ['setup', 'getFamilyDollarCoupons'], [{'n': 'family-dollar-coupons', 'initialSetup': True}, {'reset': False}])
+
 # deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
 # runAndDocument([setUpBrowser, getScrollingData, eatThisPage], ['setup', 'getFoodDepotItems', 'flushData'], [{'n': 'food-depot-items', 'initialSetup': True}, {'chain': 'fooddepot'}, {'reset': False}])
 # runAndDocument([setUpBrowser, getStoreData, eatThisPage], ['setup', 'getStores', 'flushData'], [{'n': None, 'initialSetup': True}, {'chain': 'aldi'}, {'reset':False}])
