@@ -1874,29 +1874,57 @@ def normalizeStoreData():
     with open(head+storeFiles[3], 'r', encoding='utf-8') as file:
         data = json.loads(file.read())
         data = list(map(lambda x: x.get('Result'), data[:2]))
-        pprint(data[0])
-        print()
-        pprint(data[1])
         # address {addressLine1, city, county, state, zipCode}, departments [{id, name, hours{close, open, open24}, open24}]
         # geolocation {latLng, latitude, longitude},
         # hours {timezone, gmtOffset, open24, <weekdays:{close, open, open24}>}, locationId, name, phone
         franchiseCols = {'Id', 'DeliveryServiceName', 'FavIconImageUrl', 'IconImageUrl', 'LogoImageUrl', 'LoyaltyType', 'MaximumOrderSpend', 'Name',
-        'PaymentProvider', 'PickingVariationPercentage', 'PickupServiceName', 'StoreTypeLabels', 'Stores'}
+        'PaymentProvider', 'PickingVariationPercentage', 'PickupServiceName', 'Stores'}
         storeCols = {'Id', 'Address', 'Categories', 'ContactPhone', 'CostPlusLabel', 'HasDelivery', 'HasPickup', 'HasPromotions', 'HasShipping', 'IconImageUrl', 'LogoImageUrl', 'MinimumDeliverySpend',
         'Name', 'minimumPickupWait', 'ProductCountOnSpecial', 'ShippingOptions', 'SupportedCreditCards', 'SupportPhone', 'TimeZoneName'}
         for d in data[0:1]:
             d = {k:v for k, v in d.items() if k in franchiseCols}
-            
-            newDoc={}
-            newDoc['address'] = {}
-            newDoc['departments'] = []
-            newDoc['geolocation'] = {}
-            newDoc['hours'] = {}
-            newDoc['locationId'] = ''
-            newDoc['name'] = ''
-            newDoc['chain'] = ''
-            newDoc['phone'] = ''
+            for store in d.get('Stores'):
+                newDoc={}
+                oldAddress = store.get('Address')
+                newDoc['address'] = {'addressLine1': oldAddress.get('StreetAddress'), 'city': oldAddress.get('Suburb'), 'state': oldAddress.get('State'), 'zipCode': oldAddress.get('Postcode')}
+                newDoc['locationId'] = store.get('Id')
+                newDoc['chain'] = 'Food Depot'
+                newDoc['name'] = store.get('PickupLocations')[0].get('Name')
+
+                newDoc['images'] = {'Icon' : d.get('IconImageUrl'), 'Logo': d.get('LogoImageUrl')}
+                newDoc['restraints'] = {'max_spend': d.get('MaximumOrderSpend'), 'additionalFees': d.get('PickingVariationPercentag')}
+
+
+                # newDoc['departments'] = []
+                # newDoc['geolocation'] = {}
+                # newDoc['hours'] = {}
+                # newDoc['phone'] = ''
+                moreStoreInfo = list(filter(lambda x: x.get('Id')==newDoc.get('locationId'), data[1:]))
+                print(newDoc.get('locationId'))
+                if moreStoreInfo:
+                    for msi in moreStoreInfo:
+                        newDoc['phone'] = msi.get('ContactPhone')
+                        if msi.get('HasShipping'):
+                            newDoc.setdefault('modalities', [])
+                            newDoc['modalities'].append('SHIP')
+                        if msi.get('HasDelivery'):
+                            newDoc.setdefault('modalities', [])
+                            newDoc['modalities'].append('DELIVERY')
+                        if msi.get('HasPickup'):
+                            newDoc.setdefault('modalities', [])
+                            newDoc['modalities'].append('PICKUP')
+                        if msi.get('Categories'):
+                            departments = []
+                            for cat in msi.get('Categories'):
+                                if cat.get('ParentCategoryId'):
+                                    departments.append({'departmentId': cat.get('Id'), 'name': cat.get('Name'), 'parentId': cat.get('ParentCategoryId')})
+                                else:
+                                    departments.append({'departmentId': cat.get('Id'), 'name': cat.get('Name')})
+                            newDoc['departments'] = departments
+                newStores.append(newDoc)
+
         
+    insertData(newStores, 'stores', 'new')
 
     return None
 
@@ -1908,14 +1936,9 @@ def getStores():
     res = cursor['stores'].find({})
     res = [r for r in res]
     pprint(res[0])
-    
-        
-
     return None
 
 
-getStores()
-normalizeStoreData()
 # setUpBrowser()
 # runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
 # retrieveData('runs')
@@ -1939,4 +1962,5 @@ normalizeStoreData()
 # runAndDocument([setUpBrowser, getScrollingData, eatThisPage], ['setup', 'getFoodDepotItems', 'flushData'], [{'n': 'food-depot-items', 'initialSetup': True}, {'chain': 'fooddepot'}, {'reset': False}])
 # runAndDocument([setUpBrowser, getStoreData, eatThisPage], ['setup', 'getStores', 'flushData'], [{'n': None, 'initialSetup': True}, {'chain': 'aldi'}, {'reset':False}])
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
-# createDBSummaries('new')
+# normalizeStoreData()
+createDBSummaries('new')
