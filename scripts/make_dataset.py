@@ -493,10 +493,10 @@ def runAndDocument(funcs:list, callNames:list, kwargs: list, callback=None):
 
 
 def simulateUser(link):
-    neededLinks = {'cashback': {"no": 12, "button": "./requests/server/images/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2008, 'initalScroll': -700},\
-        'digital': {"no":12, "button": "./requests/server/images/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -2000, 'initalScroll': -800},\
+    neededLinks = {'cashback': {"no": 12, "button": "./requests/server/images/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -1640, 'initialScroll': -800},\
+        'digital': {"no":12, "button": "./requests/server/images/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -1640, 'initialScroll': -740},\
             'dollarGeneral': {'no': 12, "button": "./requests/server/images/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1750 ,"moreContent": "./requests/server/images/loadMore.png",\
-                 'initalScroll': -1750}}
+                 'initialScroll': -1750}}
     # browser up start will be setting user location, navigating to the page, and placing mouse on first object
     # from here: the code will commence
     # start at top of the screen 
@@ -515,7 +515,7 @@ def simulateUser(link):
 
     if link!='dollarGeneral':
         time.sleep(3)
-        pag.scroll(neededLinks[link]['initalScroll'])
+        pag.scroll(neededLinks[link]['initialScroll'])
         time.sleep(2)
     else:
         iterations = ((response.get('i')-9) // neededLinks[link]['no'])+2
@@ -580,14 +580,20 @@ def simulateUser(link):
                     
 
         if i<=1 and link=='dollarGeneral':
-            pag.scroll(neededLinks[link]['initalScroll'])
+            pag.scroll(neededLinks[link]['initialScroll'])
         elif link=='dollarGeneral':
             pag.scroll(neededLinks[link]['scrollAmount'])
             pag.scroll(-20)
             prevButtonsX = set(button.x for button in buttons)
             print(prevButtonsX)
         else:
-            pag.scroll(neededLinks[link]['scrollAmount'])
+            if i>0 and i%19==0:
+                pag.scroll(neededLinks[link]['scrollAmount'])
+                time.sleep(2.4)
+                pag.scroll(15)
+            else:
+                pag.scroll(neededLinks[link]['scrollAmount'])
+                
         print('finished row {}; {} to go; mouse currently @ {} :: {} seconds left'.format(i, iterations-i, pag.position(), (time.perf_counter()/(i+1))*(iterations-i)))
         time.sleep(2)
 
@@ -1481,140 +1487,13 @@ def deconstructExtensions(filename, **madeCollections):
     return promotionsCollection, itemCollection, pricesCollection, inventoryCollection, tripCollection, priceModifierCollection, userCollection, sellerCollection
         
 
-def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: dict):
-    # CATEGORY - Combine legacy files w/ current files to create full collections
-    # calls decompose functions that handle database entry
-
-    # TODO: Currently only handles decomposition for legacy files and process would try to entered in all the data at once.
-    # Want to have a legacy version for files (run once, then garabage collect files), then handle newly created cleaned data w/ care to only enter in new information to the database.
-    # Where Best in the cleaning/processsing/insertion chain to apply that is most efficent will be key.    
-    # add stores via api and previously scraped prices to new price collection schema
-    iteration=0
-    listTranslator={"0": "promotions", "1": "items", "2": "prices", "3": "inventories", "4":"trips", "5":"priceModifiers", "6":"users", "7":"sellers"}
-    mytz = pytz.timezone('America/New_York')
-    walkResults = sorted([x for x in os.walk(dataRepoPath)], key=lambda x: x[0], reverse=True)
-    # inital setup if data folders do not exist in repo
-    if os.path.exists('./requests/server/collections/kroger/API/myStores.json'):
-        # setup archive for preprocessed data
-        with open('./requests/server/collections/kroger/API/myStores.json', 'r', encoding='utf-8') as storeFile:
-            stores = json.loads(storeFile.read())
-            insertData(stores, 'stores')
-        os.makedirs('../data/raw/kroger/API', exist_ok=True)
-
-        with open('./requests/server/collections/kroger/API/combinedPrices.json', 'r', encoding='utf-8') as priceFile:
-            oldPrices = json.loads(priceFile.read())
-            oldPrices = list(filter(lambda y: y.get('isPurchase')==False, oldPrices)) # trip price data will already have been recorded
-        
-        newFromOldPrices = []
-        for oldPrice in oldPrices:
-            # turn promo and regular to value
-            oldTimestamp = mytz.localize(dt.datetime.fromtimestamp(oldPrice.get('acquistion_timestamp')/1000)).astimezone(pytz.utc)
-            if oldPrice.get('promo') == oldPrice.get('regular'):
-                newFromOldPrices.append({'locationId': oldPrice.get('locationId'), 'isPurchase': oldPrice.get('isPurchase'), 'value': oldPrice.get('regular'), 'quantity': oldPrice.get('quantity'),\
-                    'upc': oldPrice.get('upc'), 'utcTimestamp': oldTimestamp, "type": 'Regular'})
-            else:
-                newFromOldPrices.append({'locationId': oldPrice.get('locationId'), 'isPurchase': oldPrice.get('isPurchase'), 'value': oldPrice.get('regular'), 'quantity': oldPrice.get('quantity'),\
-                    'upc': oldPrice.get('upc'), 'utcTimestamp': oldTimestamp, "type": 'Regular'})
-                newFromOldPrices.append({'locationId': oldPrice.get('locationId'), 'isPurchase': oldPrice.get('isPurchase'), 'value': oldPrice.get('promo'), 'quantity': oldPrice.get('quantity'),\
-                    'upc': oldPrice.get('upc'), 'utcTimestamp': oldTimestamp, "type": 'Sale'})
-    
-
-        for head, subfolders, files in walkResults:
-            folder = head.split('\\')[-1]
-            if folder in wantedPaths:
-                for file in files:
-                    if iteration == 0 :                
-                        returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=[], itemCollection=[], pricesCollection=[], inventoryCollection=[], tripCollection=[], priceModifierCollection=[], userCollection=[], sellerCollection=[])
-                        iteration+=1
-                    else:
-                        returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=returnTuple[0], itemCollection=returnTuple[1], pricesCollection=returnTuple[2], inventoryCollection=returnTuple[3], tripCollection=returnTuple[4], priceModifierCollection=returnTuple[5], userCollection=returnTuple[6], sellerCollection=returnTuple[7])
-                    os.makedirs(f'../data/raw/kroger/{folder}/', exist_ok=True)
-                    print(f'processed {file}.')
-        
-        
-        for i, finalCollection in enumerate(returnTuple):
-            if i==2:
-                finalCollection.extend(newFromOldPrices)
-            insertData(finalCollection, listTranslator[str(i)])
-    
-        os.rename("./requests/server/collections/kroger/API/myStores.json", "../data/raw/kroger/API/myStores.json")
-        os.rename('./requests/server/collections/kroger/API/combinedPrices.json', "../data/raw/kroger/API/combinedPrices.json")
-    # file does not exist (clean up has happened therefore read from ../)
-    else:
-        # promotions (nonTime bound in db; no duplicates preferrable, filter check)
-        # items (nonTime bound in db; no duplicates preferrable, filter check)
-        # prices (time bound, no duplicates possible)
-        # inventories (time bound, no duplicates possible)
-        # trips (past transactions; not time bound; no duplicates preferrable, filter check)
-            # priceModifierCollection (coupons applied a @ purchase. tied with trips. )
-        # userCollection (nonTime bound in db, no duplicates preferrable, filter check)
-        # sellerCollection (nonTime bound in db, no duplicates preferrable, filter check)
-        promotionsCollection = retrieveData('promotions')
-        itemCollection = retrieveData('items') 
-        tripCollection = retrieveData('trips')
-        priceModifierCollection = retrieveData('priceModifiers')
-        userCollection = retrieveData('users')
-        sellerCollection = retrieveData('sellers') 
-
-        for head, subfolders, files in walkResults:         
-            if head.split('\\')[-1] in wantedPaths:
-                folder = head.split('\\')[-1]
-                for file in files:
-                    if iteration == 0:
-                        returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=promotionsCollection, itemCollection=itemCollection, pricesCollection=[], inventoryCollection=[], tripCollection=tripCollection, priceModifierCollection=priceModifierCollection, userCollection=userCollection, sellerCollection=sellerCollection)
-                        iteration+=1
-                    else:
-                        returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=returnTuple[0], itemCollection=returnTuple[1], pricesCollection=returnTuple[2], inventoryCollection=returnTuple[3], tripCollection=returnTuple[4], priceModifierCollection=returnTuple[5], userCollection=returnTuple[6], sellerCollection=returnTuple[7])
-                    os.makedirs(f'../data/raw/kroger/{folder}/', exist_ok=True)
-                    print(f'processed {file}.')
-
-        for i, finalCollection in enumerate(returnTuple):
-            if i!=2 and i!=3:
-                currentCol = retrieveData(listTranslator[str(i)])
-                if currentCol!=finalCollection:
-                    insertData(finalCollection[len(currentCol):], collection_name=listTranslator[str(i)])
-            else:
-                insertData(finalCollection, collection_name=listTranslator[str(i)])
-
-    if additionalPaths:
-        for repo in additionalPaths:
-            pathName = dataRepoPath.replace('kroger', repo)
-            couponFiles = list(os.walk(pathName))
-            couponFiles = couponFiles[0][2]
-            for ofile in couponFiles:
-                # handles insertion
-                deconstructDollars(pathName+'/'+ofile)
-                os.makedirs(f'../data/raw/{repo}', exist_ok=True)
-                os.rename(pathName+'\\'+ofile, f'../data/raw/{repo}/{ofile}')  
-                print(f'processed {ofile}.')
-    
-    for head, subfolders, files in os.walk(dataRepoPath):         
-        if head.split('\\')[-1] in wantedPaths:
-            folder = head.split('\\')[-1]
-            for file in files:
-                os.rename(head+'\\'+file, f'../data/raw/kroger/{folder}/{file}')
-    backupDatabase()
-    createDBSummaries('new')
-
-    return None
-
-def queryDB(db="new"):
-    uri = os.environ.get("MONGO_CONN_URL")
-    client = MongoClient(uri)
-    cursor = client[db]
-    # res = cursor['promotions'].aggregate(pipeline=[{"$sort": {"redemptions": -1}}, {"$unwind": "$redemptionKeys"}, {"$group": {"_id": {"x": "$redemptionKeys.upc" }, "count": {"$sum": 1}}}])
-    #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': True}}}, {'$project':  {"socials": {'clips': '$clippedCount', 'popInt': {'$divide': ['$popularity', 1000]}}, 'newValue': {'$convert': {'input': '$value', 'to':'int'}}}}, {'$sort': {'newValue': 1}}])
-    #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': False}, 'krogerCouponNumber': {'$exists':False}, 'productUpcs': {'$exists': True}}}])
-    res = cursor['promotions'].find_all({'shortDescription': {'$regex': '/^Buy 5.+/'}})
-    res = [x for x in res]
-    print(len(res))
-
-    return None
-
-
 def normalizeStoreData():
     storeFiles = ['/aldi/stores/071822.json', '/dollargeneral/stores/stores.json', '/familydollar/stores/stores.json', '/fooddepot/stores/071822.json', '/publix/stores/071822.json'] 
     head= './requests/server/collections'
+    for storeFile in storeFiles:
+        os.makedirs('../data/raw'+'/'.join(storeFile.split('/')[:-1]), exist_ok=True)
+        os.rename(head+storeFile, "../data/raw/"+storeFile)
+        
     newStores = []
 
     # --- Kroger's ---
@@ -1925,8 +1804,145 @@ def normalizeStoreData():
 
         
     insertData(newStores, 'stores', 'new')
+    for storeFile in storeFiles:
+        os.makedirs('../data/raw'+'/'.join(storeFile.split('/')[:-1]), exist_ok=True)
+        os.rename(head+storeFile, "../data/raw/"+storeFile)
+        
 
     return None
+
+
+def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: dict):
+    # CATEGORY - Combine legacy files w/ current files to create full collections
+    # calls decompose functions that handle database entry
+
+    # TODO: Currently only handles decomposition for legacy files and process would try to entered in all the data at once.
+    # Want to have a legacy version for files (run once, then garabage collect files), then handle newly created cleaned data w/ care to only enter in new information to the database.
+    # Where Best in the cleaning/processsing/insertion chain to apply that is most efficent will be key.    
+    # add stores via api and previously scraped prices to new price collection schema
+    iteration=0
+    listTranslator={"0": "promotions", "1": "items", "2": "prices", "3": "inventories", "4":"trips", "5":"priceModifiers", "6":"users", "7":"sellers"}
+    mytz = pytz.timezone('America/New_York')
+    walkResults = sorted([x for x in os.walk(dataRepoPath)], key=lambda x: x[0], reverse=True)
+    # initial setup if data folders do not exist in repo
+    if os.path.exists('./requests/server/collections/kroger/API/myStores.json'):
+        # setup archive for preprocessed data
+        with open('./requests/server/collections/kroger/API/myStores.json', 'r', encoding='utf-8') as storeFile:
+            stores = json.loads(storeFile.read())
+            insertData(stores, 'stores')
+        os.makedirs('../data/raw/kroger/API', exist_ok=True)
+
+        with open('./requests/server/collections/kroger/API/combinedPrices.json', 'r', encoding='utf-8') as priceFile:
+            oldPrices = json.loads(priceFile.read())
+            oldPrices = list(filter(lambda y: y.get('isPurchase')==False, oldPrices)) # trip price data will already have been recorded
+        
+        newFromOldPrices = []
+        for oldPrice in oldPrices:
+            # turn promo and regular to value
+            oldTimestamp = mytz.localize(dt.datetime.fromtimestamp(oldPrice.get('acquistion_timestamp')/1000)).astimezone(pytz.utc)
+            if oldPrice.get('promo') == oldPrice.get('regular'):
+                newFromOldPrices.append({'locationId': oldPrice.get('locationId'), 'isPurchase': oldPrice.get('isPurchase'), 'value': oldPrice.get('regular'), 'quantity': oldPrice.get('quantity'),\
+                    'upc': oldPrice.get('upc'), 'utcTimestamp': oldTimestamp, "type": 'Regular'})
+            else:
+                newFromOldPrices.append({'locationId': oldPrice.get('locationId'), 'isPurchase': oldPrice.get('isPurchase'), 'value': oldPrice.get('regular'), 'quantity': oldPrice.get('quantity'),\
+                    'upc': oldPrice.get('upc'), 'utcTimestamp': oldTimestamp, "type": 'Regular'})
+                newFromOldPrices.append({'locationId': oldPrice.get('locationId'), 'isPurchase': oldPrice.get('isPurchase'), 'value': oldPrice.get('promo'), 'quantity': oldPrice.get('quantity'),\
+                    'upc': oldPrice.get('upc'), 'utcTimestamp': oldTimestamp, "type": 'Sale'})
+    
+
+        for head, subfolders, files in walkResults:
+            folder = head.split('\\')[-1]
+            if folder in wantedPaths:
+                for file in files:
+                    if iteration == 0 :                
+                        returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=[], itemCollection=[], pricesCollection=[], inventoryCollection=[], tripCollection=[], priceModifierCollection=[], userCollection=[], sellerCollection=[])
+                        iteration+=1
+                    else:
+                        returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=returnTuple[0], itemCollection=returnTuple[1], pricesCollection=returnTuple[2], inventoryCollection=returnTuple[3], tripCollection=returnTuple[4], priceModifierCollection=returnTuple[5], userCollection=returnTuple[6], sellerCollection=returnTuple[7])
+                    os.makedirs(f'../data/raw/kroger/{folder}/', exist_ok=True)
+                    print(f'processed {file}.')
+        
+        
+        for i, finalCollection in enumerate(returnTuple):
+            if i==2:
+                finalCollection.extend(newFromOldPrices)
+            insertData(finalCollection, listTranslator[str(i)])
+    
+        os.rename("./requests/server/collections/kroger/API/myStores.json", "../data/raw/kroger/API/myStores.json")
+        os.rename('./requests/server/collections/kroger/API/combinedPrices.json', "../data/raw/kroger/API/combinedPrices.json")
+    # file does not exist (clean up has happened therefore read from ../)
+    else:
+        # promotions (nonTime bound in db; no duplicates preferrable, filter check)
+        # items (nonTime bound in db; no duplicates preferrable, filter check)
+        # prices (time bound, no duplicates possible)
+        # inventories (time bound, no duplicates possible)
+        # trips (past transactions; not time bound; no duplicates preferrable, filter check)
+            # priceModifierCollection (coupons applied a @ purchase. tied with trips. )
+        # userCollection (nonTime bound in db, no duplicates preferrable, filter check)
+        # sellerCollection (nonTime bound in db, no duplicates preferrable, filter check)
+        promotionsCollection = retrieveData('promotions')
+        itemCollection = retrieveData('items') 
+        tripCollection = retrieveData('trips')
+        priceModifierCollection = retrieveData('priceModifiers')
+        userCollection = retrieveData('users')
+        sellerCollection = retrieveData('sellers') 
+
+        for head, subfolders, files in walkResults:         
+            if head.split('\\')[-1] in wantedPaths:
+                folder = head.split('\\')[-1]
+                for file in files:
+                    if iteration == 0:
+                        returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=promotionsCollection, itemCollection=itemCollection, pricesCollection=[], inventoryCollection=[], tripCollection=tripCollection, priceModifierCollection=priceModifierCollection, userCollection=userCollection, sellerCollection=sellerCollection)
+                        iteration+=1
+                    else:
+                        returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=returnTuple[0], itemCollection=returnTuple[1], pricesCollection=returnTuple[2], inventoryCollection=returnTuple[3], tripCollection=returnTuple[4], priceModifierCollection=returnTuple[5], userCollection=returnTuple[6], sellerCollection=returnTuple[7])
+                    os.makedirs(f'../data/raw/kroger/{folder}/', exist_ok=True)
+                    print(f'processed {file}.')
+
+        for i, finalCollection in enumerate(returnTuple):
+            if i!=2 and i!=3:
+                currentCol = retrieveData(listTranslator[str(i)])
+                if currentCol!=finalCollection:
+                    insertData(finalCollection[len(currentCol):], collection_name=listTranslator[str(i)])
+            else:
+                insertData(finalCollection, collection_name=listTranslator[str(i)])
+
+    if additionalPaths:
+        for repo in additionalPaths:
+            pathName = dataRepoPath.replace('kroger', repo)
+            couponFiles = list(os.walk(pathName))
+            couponFiles = couponFiles[0][2]
+            for ofile in couponFiles:
+                # handles insertion
+                deconstructDollars(pathName+'/'+ofile)
+                os.makedirs(f'../data/raw/{repo}', exist_ok=True)
+                os.rename(pathName+'\\'+ofile, f'../data/raw/{repo}/{ofile}')  
+                print(f'processed {ofile}.')
+    
+    for head, subfolders, files in os.walk(dataRepoPath):         
+        if head.split('\\')[-1] in wantedPaths:
+            folder = head.split('\\')[-1]
+            for file in files:
+                os.rename(head+'\\'+file, f'../data/raw/kroger/{folder}/{file}')
+    normalizeStoreData()
+    backupDatabase()
+    createDBSummaries('new')
+
+    return None
+
+def queryDB(db="new"):
+    uri = os.environ.get("MONGO_CONN_URL")
+    client = MongoClient(uri)
+    cursor = client[db]
+    # res = cursor['promotions'].aggregate(pipeline=[{"$sort": {"redemptions": -1}}, {"$unwind": "$redemptionKeys"}, {"$group": {"_id": {"x": "$redemptionKeys.upc" }, "count": {"$sum": 1}}}])
+    #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': True}}}, {'$project':  {"socials": {'clips': '$clippedCount', 'popInt': {'$divide': ['$popularity', 1000]}}, 'newValue': {'$convert': {'input': '$value', 'to':'int'}}}}, {'$sort': {'newValue': 1}}])
+    #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': False}, 'krogerCouponNumber': {'$exists':False}, 'productUpcs': {'$exists': True}}}])
+    res = cursor['promotions'].find_all({'shortDescription': {'$regex': '/^Buy 5.+/'}})
+    res = [x for x in res]
+    print(len(res))
+
+    return None
+
 
 
 def getStores():
@@ -1942,17 +1958,18 @@ def getStores():
 # setUpBrowser()
 # runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
 # retrieveData('runs')
+
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerCashbackCouponsAndItems', 'flushData'],
-# kwargs=[{"url": "https://www.kroger.com/savings/cl/coupons", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "digital"}, {'reset': False}])
+# kwargs=[{"url": "https://www.kroger.com/savings/cbk/cashback/", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "cashback"}, {'reset': False}])
+
+runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerDigitalCouponsAndItems', 'flushData'],
+kwargs=[{"url": "https://www.kroger.com/savings/cl/coupons", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "digital"}, {'reset': False}])
 
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerDigitalCouponsAndItems', 'flushData'],
 # kwargs=[{"url": "https://www.kroger.com/savings/cl/coupons", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "digital"}, {'reset': False}])
 
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ['setUpBrowser', 'getDollarGeneralCouponsAndItems', 'flushData'],
 # kwargs=[{"n": 'dollar-general-coupons', 'initialSetup': True},{"link": "dollarGeneral"}, {'reset': False}])
-
-# runAndDocument([setUpBrowser, simulateUser, eatThisPage], ['setup', 'getDollarGeneralItemsAndCoupons', 'flushData'],
-# [{'n': 'dollar-general-coupons', 'initialSetup': True}, {'link': 'dollarGeneral'}, {'reset': False}])
 
 # runAndDocument([setUpBrowser, getFamilyDollarItems, eatThisPage], ['setup', 'getFamilyDollarItems', 'flushData'] ,[{'n': 'family-dollar-items', 'initialSetup': True}, {}, {'reset': False}])
 
@@ -1962,5 +1979,7 @@ def getStores():
 # runAndDocument([setUpBrowser, getScrollingData, eatThisPage], ['setup', 'getFoodDepotItems', 'flushData'], [{'n': 'food-depot-items', 'initialSetup': True}, {'chain': 'fooddepot'}, {'reset': False}])
 # runAndDocument([setUpBrowser, getStoreData, eatThisPage], ['setup', 'getStores', 'flushData'], [{'n': None, 'initialSetup': True}, {'chain': 'aldi'}, {'reset':False}])
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
+
+    
 # normalizeStoreData()
-createDBSummaries('new')
+# createDBSummaries('new')
