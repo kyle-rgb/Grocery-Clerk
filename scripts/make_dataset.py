@@ -59,11 +59,11 @@ def switchUrl(x=468, y=63, url="https://www.dollargeneral.com/dgpickup/deals/cou
 
 def eatThisPage(reset=False):
     # flush remaining results after main data call to server using browser context menu
-    pag.moveTo(1114, 123)
+    pag.moveTo(1410, 1004)
     time.sleep(2)
     pag.click(button='right')
     time.sleep(1)
-    pag.moveRel(120, 280, duration=3)
+    pag.moveRel(50, -25, duration=3)
     pag.click()
     time.sleep(15)
     if reset:
@@ -123,8 +123,6 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         # Load Extension 
         loadExtension()
         time.sleep(2)
-
-
     elif n=='kroger-coupons': # @ Kroger Coupons
         # start browser
         # switch to wanted page
@@ -181,7 +179,16 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         pag.moveTo(1307, 194, duration=3)
         time.sleep(2)
         pag.click()
-        time.sleep(3.5)
+        time.sleep(6.5)
+        pag.moveTo(93, 286, duration=3)
+        pag.click()
+        time.sleep(5)
+        pag.moveRel(0, 50, duration=2)
+        pag.click()
+        time.sleep(5)
+        pag.moveTo(371, 397, duration=3)
+        pag.click()
+        time.sleep(6.5)
         loadExtension()
         time.sleep(2)
     elif n=="publix-coupons": # publix Coupons
@@ -1959,14 +1966,14 @@ def getStores():
 # runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
 # retrieveData('runs')
 
-# runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerCashbackCouponsAndItems', 'flushData'],
-# kwargs=[{"url": "https://www.kroger.com/savings/cbk/cashback/", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "cashback"}, {'reset': False}])
-
-runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerDigitalCouponsAndItems', 'flushData'],
-kwargs=[{"url": "https://www.kroger.com/savings/cl/coupons", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "digital"}, {'reset': False}])
+# runAndDocument([setUpBrowser, getScrollingData, eatThisPage], ["setUpBrowserForAldi", 'getAldiItems', 'flushData'],
+# kwargs=[{"n": 'aldi-items', 'initialSetup': True}, {"chain": "aldi"}, {'reset': False}])
 
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerDigitalCouponsAndItems', 'flushData'],
 # kwargs=[{"url": "https://www.kroger.com/savings/cl/coupons", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "digital"}, {'reset': False}])
+
+runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerCashbackCouponsAndItems', 'flushData'],
+kwargs=[{"url": "https://www.kroger.com/savings/cbk/cashback/", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "cashback"}, {'reset': False}])
 
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ['setUpBrowser', 'getDollarGeneralCouponsAndItems', 'flushData'],
 # kwargs=[{"n": 'dollar-general-coupons', 'initialSetup': True},{"link": "dollarGeneral"}, {'reset': False}])
