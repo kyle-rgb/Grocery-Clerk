@@ -1961,7 +1961,13 @@ def getStores():
     pprint(res[0])
     return None
 
+def o():
+    with open('./requests/server/collections/aldi/062022.json', 'r', encoding='utf-8') as file:
+        j = json.loads(file.read())
+        print(len(j))
+        pprint(j[0])
 
+o()
 # setUpBrowser()
 # runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
 # retrieveData('runs')
@@ -1972,8 +1978,8 @@ def getStores():
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerDigitalCouponsAndItems', 'flushData'],
 # kwargs=[{"url": "https://www.kroger.com/savings/cl/coupons", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "digital"}, {'reset': False}])
 
-runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerCashbackCouponsAndItems', 'flushData'],
-kwargs=[{"url": "https://www.kroger.com/savings/cbk/cashback/", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "cashback"}, {'reset': False}])
+# runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerCashbackCouponsAndItems', 'flushData'],
+# kwargs=[{"url": "https://www.kroger.com/savings/cbk/cashback/", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "cashback"}, {'reset': False}])
 
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ['setUpBrowser', 'getDollarGeneralCouponsAndItems', 'flushData'],
 # kwargs=[{"n": 'dollar-general-coupons', 'initialSetup': True},{"link": "dollarGeneral"}, {'reset': False}])
