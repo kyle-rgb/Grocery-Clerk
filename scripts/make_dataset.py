@@ -1941,7 +1941,7 @@ def queryDB(db="new"):
     uri = os.environ.get("MONGO_CONN_URL")
     client = MongoClient(uri)
     cursor = client[db]
-    # res = cursor['promotions'].aggregate(pipeline=[{"$sort": {"redemptions": -1}}, {"$unwind": "$redemptionKeys"}, {"$group": {"_id": {"x": "$redemptionKeys.upc" }, "count": {"$sum": 1}}}])
+    #res = cursor['promotions'].aggregate(pipeline=[{"$sort": {"redemptions": -1}}, {"$unwind": "$redemptionKeys"}, {"$group": {"_id": {"x": "$redemptionKeys.upc" }, "count": {"$sum": 1}}}])
     #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': True}}}, {'$project':  {"socials": {'clips': '$clippedCount', 'popInt': {'$divide': ['$popularity', 1000]}}, 'newValue': {'$convert': {'input': '$value', 'to':'int'}}}}, {'$sort': {'newValue': 1}}])
     #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': False}, 'krogerCouponNumber': {'$exists':False}, 'productUpcs': {'$exists': True}}}])
     res = cursor['promotions'].find_all({'shortDescription': {'$regex': '/^Buy 5.+/'}})
@@ -1949,8 +1949,6 @@ def queryDB(db="new"):
     print(len(res))
 
     return None
-
-
 
 def getStores():
     uri = os.environ.get("MONGO_CONN_URL")
@@ -1961,13 +1959,6 @@ def getStores():
     pprint(res[0])
     return None
 
-def o():
-    with open('./requests/server/collections/aldi/062022.json', 'r', encoding='utf-8') as file:
-        j = json.loads(file.read())
-        print(len(j))
-        pprint(j[0])
-
-o()
 # setUpBrowser()
 # runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
 # retrieveData('runs')
