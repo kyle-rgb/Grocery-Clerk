@@ -2,15 +2,15 @@
    "db": "new",
    "collections": 12,
    "views": 0,
-   "objects": 1629090,
-   "avgObjSize": 310.3083758417276,
-   "dataSize": 505520272.0,
-   "storageSize": 97812480.0,
+   "objects": 1721880,
+   "avgObjSize": 305.2219016423909,
+   "dataSize": 525555488.0,
+   "storageSize": 101666816.0,
    "indexes": 12,
-   "indexSize": 16064512.0,
-   "totalSize": 113876992.0,
+   "indexSize": 17063936.0,
+   "totalSize": 118730752.0,
    "scaleFactor": 1.0,
-   "fsUsedSize": 228618760192.0,
+   "fsUsedSize": 228984098816.0,
    "fsTotalSize": 239380459520.0,
    "ok": 1.0,
    "collectionStats": [
@@ -19,15 +19,31 @@
          "size": 106196,
          "count": 100,
          "avgObjSize": 1061,
-         "storageSize": 61440,
-         "freeStorageSize": 16384,
+         "storageSize": 20480,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 36864,
-         "totalSize": 98304,
+         "totalIndexSize": 20480,
+         "totalSize": 40960,
          "indexSizes": {
-            "_id_": 36864
+            "_id_": 20480
+         },
+         "scaleFactor": 1,
+         "ok": 1.0
+      },
+      {
+         "ns": "new.priceModifiers",
+         "size": 180388,
+         "count": 640,
+         "avgObjSize": 281,
+         "storageSize": 53248,
+         "capped": false,
+         "nindexes": 1,
+         "indexBuilds": [],
+         "totalIndexSize": 24576,
+         "totalSize": 77824,
+         "indexSizes": {
+            "_id_": 24576
          },
          "scaleFactor": 1,
          "ok": 1.0
@@ -51,9 +67,9 @@
       },
       {
          "ns": "new.runs",
-         "size": 16863,
-         "count": 36,
-         "avgObjSize": 468,
+         "size": 20150,
+         "count": 41,
+         "avgObjSize": 491,
          "storageSize": 45056,
          "freeStorageSize": 20480,
          "capped": false,
@@ -68,52 +84,53 @@
          "ok": 1.0
       },
       {
-         "ns": "new.priceModifiers",
-         "size": 178760,
-         "count": 634,
-         "avgObjSize": 281,
-         "storageSize": 57344,
+         "ns": "new.users",
+         "size": 1418,
+         "count": 1,
+         "avgObjSize": 1418,
+         "storageSize": 20480,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 24576,
-         "totalSize": 81920,
+         "totalIndexSize": 20480,
+         "totalSize": 40960,
          "indexSizes": {
-            "_id_": 24576
+            "_id_": 20480
          },
          "scaleFactor": 1,
          "ok": 1.0
       },
       {
-         "ns": "new.inventories",
-         "size": 118638392,
-         "count": 772430,
-         "avgObjSize": 153,
-         "storageSize": 17403904,
+         "ns": "new.trips",
+         "size": 27172,
+         "count": 83,
+         "avgObjSize": 327,
+         "storageSize": 24576,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 7540736,
-         "totalSize": 24944640,
+         "totalIndexSize": 20480,
+         "totalSize": 45056,
          "indexSizes": {
-            "_id_": 7540736
+            "_id_": 20480
          },
          "scaleFactor": 1,
          "ok": 1.0
       },
       {
-         "ns": "new.prices",
-         "size": 202142857,
-         "count": 777924,
-         "avgObjSize": 259,
-         "storageSize": 28868608,
+         "ns": "new.promotions",
+         "size": 10522722,
+         "count": 9354,
+         "avgObjSize": 1124,
+         "storageSize": 3276800,
+         "freeStorageSize": 36864,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 7593984,
-         "totalSize": 36462592,
+         "totalIndexSize": 126976,
+         "totalSize": 3403776,
          "indexSizes": {
-            "_id_": 7593984
+            "_id_": 126976
          },
          "scaleFactor": 1,
          "ok": 1.0
@@ -136,9 +153,27 @@
          "ok": 1.0
       },
       {
+         "ns": "new.items",
+         "size": 132831617,
+         "count": 61794,
+         "avgObjSize": 2149,
+         "storageSize": 32063488,
+         "freeStorageSize": 57344,
+         "capped": false,
+         "nindexes": 1,
+         "indexBuilds": [],
+         "totalIndexSize": 593920,
+         "totalSize": 32657408,
+         "indexSizes": {
+            "_id_": 593920
+         },
+         "scaleFactor": 1,
+         "ok": 1.0
+      },
+      {
          "ns": "new.sellers",
-         "size": 1757,
-         "count": 21,
+         "size": 1842,
+         "count": 22,
          "avgObjSize": 83,
          "storageSize": 20480,
          "capped": false,
@@ -153,70 +188,36 @@
          "ok": 1.0
       },
       {
-         "ns": "new.items",
-         "size": 131340750,
-         "count": 57881,
-         "avgObjSize": 2269,
-         "storageSize": 30965760,
+         "ns": "new.prices",
+         "size": 213591003,
+         "count": 822702,
+         "avgObjSize": 259,
+         "storageSize": 30543872,
+         "freeStorageSize": 36864,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 536576,
-         "totalSize": 31502336,
+         "totalIndexSize": 8085504,
+         "totalSize": 38629376,
          "indexSizes": {
-            "_id_": 536576
+            "_id_": 8085504
          },
          "scaleFactor": 1,
          "ok": 1.0
       },
       {
-         "ns": "new.trips",
-         "size": 26867,
-         "count": 82,
-         "avgObjSize": 327,
-         "storageSize": 24576,
+         "ns": "new.inventories",
+         "size": 125316342,
+         "count": 816149,
+         "avgObjSize": 153,
+         "storageSize": 18378752,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 20480,
-         "totalSize": 45056,
+         "totalIndexSize": 7983104,
+         "totalSize": 26361856,
          "indexSizes": {
-            "_id_": 20480
-         },
-         "scaleFactor": 1,
-         "ok": 1.0
-      },
-      {
-         "ns": "new.users",
-         "size": 1402,
-         "count": 1,
-         "avgObjSize": 1402,
-         "storageSize": 20480,
-         "capped": false,
-         "nindexes": 1,
-         "indexBuilds": [],
-         "totalIndexSize": 20480,
-         "totalSize": 40960,
-         "indexSizes": {
-            "_id_": 20480
-         },
-         "scaleFactor": 1,
-         "ok": 1.0
-      },
-      {
-         "ns": "new.promotions",
-         "size": 10109790,
-         "count": 8987,
-         "avgObjSize": 1124,
-         "storageSize": 3125248,
-         "freeStorageSize": 12288,
-         "capped": false,
-         "nindexes": 1,
-         "indexBuilds": [],
-         "totalIndexSize": 102400,
-         "totalSize": 3227648,
-         "indexSizes": {
-            "_id_": 102400
+            "_id_": 7983104
          },
          "scaleFactor": 1,
          "ok": 1.0

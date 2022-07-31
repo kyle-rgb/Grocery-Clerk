@@ -261,13 +261,13 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         pag.moveTo(73, 222, duration=2)
         pag.click()
         time.sleep(2)
-        pag.moveTo(127, 323, duration=2)
+        pag.moveTo(32, 302, duration=2)
         pag.click()
-        time.sleep(2)
-        pag.moveTo(131, 402, duration=2)
+        time.sleep(3)
+        pag.moveTo(82, 410, duration=2)
         pag.click()
-        time.sleep(2)
-        pag.moveTo(209, 601, duration=2)
+        time.sleep(3)
+        pag.moveTo(239, 574, duration=2)
         pag.click()
         # wait for set iterations
         time.sleep(12)
@@ -1497,10 +1497,6 @@ def deconstructExtensions(filename, **madeCollections):
 def normalizeStoreData():
     storeFiles = ['/aldi/stores/071822.json', '/dollargeneral/stores/stores.json', '/familydollar/stores/stores.json', '/fooddepot/stores/071822.json', '/publix/stores/071822.json'] 
     head= './requests/server/collections'
-    for storeFile in storeFiles:
-        os.makedirs('../data/raw'+'/'.join(storeFile.split('/')[:-1]), exist_ok=True)
-        os.rename(head+storeFile, "../data/raw/"+storeFile)
-        
     newStores = []
 
     # --- Kroger's ---
@@ -1950,6 +1946,23 @@ def queryDB(db="new"):
 
     return None
 
+def getCollectionFeatureCounts(db='new', collection='prices'):
+    uri = os.environ.get("MONGO_CONN_URL")
+    client = MongoClient(uri)
+    cursor = client[db]
+    res = cursor[collection].aggregate(pipeline=[
+        {'$project': {'features': {"$objectToArray": "$$ROOT"}}},
+        {'$unwind': {'path': '$features', 'preserveNullAndEmptyArrays': False}},
+        {'$project': {'keys': '$features.k'}},
+        {'$group': {'_id': "$keys", 'count': {'$sum': 1}}},
+        {'$sort': {'count': -1}}
+    ])
+    res = [x for x in res]
+    pprint(res)
+
+    return None
+
+
 def getStores():
     uri = os.environ.get("MONGO_CONN_URL")
     client = MongoClient(uri)
@@ -1958,6 +1971,8 @@ def getStores():
     res = [r for r in res]
     pprint(res[0])
     return None
+
+# getCollectionFeatureCounts()
 
 # setUpBrowser()
 # runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
@@ -1975,7 +1990,12 @@ def getStores():
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ['setUpBrowser', 'getDollarGeneralCouponsAndItems', 'flushData'],
 # kwargs=[{"n": 'dollar-general-coupons', 'initialSetup': True},{"link": "dollarGeneral"}, {'reset': False}])
 
-# runAndDocument([setUpBrowser, getFamilyDollarItems, eatThisPage], ['setup', 'getFamilyDollarItems', 'flushData'] ,[{'n': 'family-dollar-items', 'initialSetup': True}, {}, {'reset': False}])
+
+# runAndDocument([simulateUser, eatThisPage], ['getDollarGeneralCouponsAndItems', 'flushData'],
+# kwargs=[{"link": "dollarGeneral"}, {'reset': False}])
+
+# runAndDocument([setUpBrowser, getFamilyDollarItems, eatThisPage],
+# ['setup', 'getFamilyDollarItems', 'flushData'] ,[{'n': 'family-dollar-items', 'initialSetup': True}, {}, {'reset': False}])
 
 # runAndDocument([setUpBrowser, eatThisPage], ['setup', 'getFamilyDollarCoupons'], [{'n': 'family-dollar-coupons', 'initialSetup': True}, {'reset': False}])
 
@@ -1983,7 +2003,9 @@ def getStores():
 # runAndDocument([setUpBrowser, getScrollingData, eatThisPage], ['setup', 'getFoodDepotItems', 'flushData'], [{'n': 'food-depot-items', 'initialSetup': True}, {'chain': 'fooddepot'}, {'reset': False}])
 # runAndDocument([setUpBrowser, getStoreData, eatThisPage], ['setup', 'getStores', 'flushData'], [{'n': None, 'initialSetup': True}, {'chain': 'aldi'}, {'reset':False}])
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
-
+normalizeStoreData()
+backupDatabase()
+createDBSummaries('new')
     
 # normalizeStoreData()
 # createDBSummaries('new')
