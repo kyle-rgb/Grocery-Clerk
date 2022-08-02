@@ -231,17 +231,17 @@ aldiKeys.forEach((d,i)=> {
                 clipped_state: boolean  <promotions>
         },
         pricing: {
-            price: "$4.35", <prices value>
+            price: "$4.35", <prices value> -> prices.value as float
             fullPrice: null,
             priceAffix: null,
             priceAffixAria: null,
             pricePerUnit: "$0.41/oz", <prices quantity>
-            pricingUnit: "10.58oz", <prices quantity>
+            pricingUnit: "10.58oz", <prices quantity> -> prices.quantity as float
             pricingUnitSecondary: null,
-            productType: "normal",
+            productType: "normal", -> ~ prices.type
             disclaimer: null,
             fullPriceLabel: null,
-            promotionEndsAt: "2022-07-01T06:59:59.999Z", <prices expirationDate>
+            promotionEndsAt: "2022-07-01T06:59:59.999Z", <prices expirationDate> -> prices.expirationDate as datetime
             badge: {
                 type: "clip_coupon", <promotions> 
                 label: "Buy 2 Save $0.50", <promotions> / <prices>

@@ -1560,9 +1560,9 @@ def normalizeStoreData():
             oldAddress['zipCode'] = oldAddress.pop('postalCode')
             newDoc['address'] = {k:v for k,v in oldAddress.items() if k in {'addressLine1', 'zipCode', 'city', 'county', 'state'}}
             newDoc['chain'] = d.pop('name')
-            newDoc['geoLocation'] = {}
-            newDoc['geoLocation']['latitude'] = d['location']['coordinates'][1]
-            newDoc['geoLocation']['longitude'] = d['location']['coordinates'][0]
+            newDoc['geolocation'] = {}
+            newDoc['geolocation']['latitude'] = d['location']['coordinates'][1]
+            newDoc['geolocation']['longitude'] = d['location']['coordinates'][0]
             # parse hours in to hours 
             oldHours = d.pop('hours').split(';')
             dateRe = r'(\w+)\:\s([0-9\:]+\sAM)-([0-9\:]+\sPM)'
@@ -1602,7 +1602,7 @@ def normalizeStoreData():
         for d in storeLimited:
             newDoc={}
             newDoc['address'] = {'addressLine1': d.get('ad'), 'city': d.get('ct'), 'state': d.get('st'), 'zipCode': d.get('zp')}
-            newDoc['id'] = d.get('sn')
+            newDoc['locationId'] = d.get('sn')
             newDoc['geolocation'] = {'latitude': d.get('la'), 'longitude': d.get('lo')}
             newDoc['chain'] = 'Dollar General'
             newDoc['name'] = 'Dollar General'
@@ -1972,7 +1972,7 @@ def getStores():
     pprint(res[0])
     return None
 
-# getCollectionFeatureCounts()
+# getCollectionFeatureCounts(collection='items')
 
 # setUpBrowser()
 # runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
@@ -2002,10 +2002,7 @@ def getStores():
 # deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
 # runAndDocument([setUpBrowser, getScrollingData, eatThisPage], ['setup', 'getFoodDepotItems', 'flushData'], [{'n': 'food-depot-items', 'initialSetup': True}, {'chain': 'fooddepot'}, {'reset': False}])
 # runAndDocument([setUpBrowser, getStoreData, eatThisPage], ['setup', 'getStores', 'flushData'], [{'n': None, 'initialSetup': True}, {'chain': 'aldi'}, {'reset':False}])
-# createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
-normalizeStoreData()
-backupDatabase()
-createDBSummaries('new')
+createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
     
 # normalizeStoreData()
 # createDBSummaries('new')

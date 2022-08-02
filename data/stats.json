@@ -2,170 +2,32 @@
    "db": "new",
    "collections": 12,
    "views": 0,
-   "objects": 1721880,
-   "avgObjSize": 305.2219016423909,
-   "dataSize": 525555488.0,
-   "storageSize": 101666816.0,
+   "objects": 1737276,
+   "avgObjSize": 304.3956803639721,
+   "dataSize": 528819310.0,
+   "storageSize": 101634048.0,
    "indexes": 12,
-   "indexSize": 17063936.0,
-   "totalSize": 118730752.0,
+   "indexSize": 17154048.0,
+   "totalSize": 118788096.0,
    "scaleFactor": 1.0,
-   "fsUsedSize": 228984098816.0,
+   "fsUsedSize": 229396393984.0,
    "fsTotalSize": 239380459520.0,
    "ok": 1.0,
    "collectionStats": [
-      {
-         "ns": "new.stores",
-         "size": 106196,
-         "count": 100,
-         "avgObjSize": 1061,
-         "storageSize": 20480,
-         "capped": false,
-         "nindexes": 1,
-         "indexBuilds": [],
-         "totalIndexSize": 20480,
-         "totalSize": 40960,
-         "indexSizes": {
-            "_id_": 20480
-         },
-         "scaleFactor": 1,
-         "ok": 1.0
-      },
-      {
-         "ns": "new.priceModifiers",
-         "size": 180388,
-         "count": 640,
-         "avgObjSize": 281,
-         "storageSize": 53248,
-         "capped": false,
-         "nindexes": 1,
-         "indexBuilds": [],
-         "totalIndexSize": 24576,
-         "totalSize": 77824,
-         "indexSizes": {
-            "_id_": 24576
-         },
-         "scaleFactor": 1,
-         "ok": 1.0
-      },
-      {
-         "ns": "new.recipes",
-         "size": 2929589,
-         "count": 7233,
-         "avgObjSize": 405,
-         "storageSize": 892928,
-         "capped": false,
-         "nindexes": 1,
-         "indexBuilds": [],
-         "totalIndexSize": 81920,
-         "totalSize": 974848,
-         "indexSizes": {
-            "_id_": 81920
-         },
-         "scaleFactor": 1,
-         "ok": 1.0
-      },
-      {
-         "ns": "new.runs",
-         "size": 20150,
-         "count": 41,
-         "avgObjSize": 491,
-         "storageSize": 45056,
-         "freeStorageSize": 20480,
-         "capped": false,
-         "nindexes": 1,
-         "indexBuilds": [],
-         "totalIndexSize": 36864,
-         "totalSize": 81920,
-         "indexSizes": {
-            "_id_": 36864
-         },
-         "scaleFactor": 1,
-         "ok": 1.0
-      },
-      {
-         "ns": "new.users",
-         "size": 1418,
-         "count": 1,
-         "avgObjSize": 1418,
-         "storageSize": 20480,
-         "capped": false,
-         "nindexes": 1,
-         "indexBuilds": [],
-         "totalIndexSize": 20480,
-         "totalSize": 40960,
-         "indexSizes": {
-            "_id_": 20480
-         },
-         "scaleFactor": 1,
-         "ok": 1.0
-      },
-      {
-         "ns": "new.trips",
-         "size": 27172,
-         "count": 83,
-         "avgObjSize": 327,
-         "storageSize": 24576,
-         "capped": false,
-         "nindexes": 1,
-         "indexBuilds": [],
-         "totalIndexSize": 20480,
-         "totalSize": 45056,
-         "indexSizes": {
-            "_id_": 20480
-         },
-         "scaleFactor": 1,
-         "ok": 1.0
-      },
       {
          "ns": "new.promotions",
          "size": 10522722,
          "count": 9354,
          "avgObjSize": 1124,
-         "storageSize": 3276800,
-         "freeStorageSize": 36864,
+         "storageSize": 3252224,
+         "freeStorageSize": 12288,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 126976,
-         "totalSize": 3403776,
+         "totalIndexSize": 102400,
+         "totalSize": 3354624,
          "indexSizes": {
-            "_id_": 126976
-         },
-         "scaleFactor": 1,
-         "ok": 1.0
-      },
-      {
-         "ns": "new.recipesInvolved",
-         "size": 40027049,
-         "count": 3761,
-         "avgObjSize": 10642,
-         "storageSize": 16326656,
-         "capped": false,
-         "nindexes": 1,
-         "indexBuilds": [],
-         "totalIndexSize": 49152,
-         "totalSize": 16375808,
-         "indexSizes": {
-            "_id_": 49152
-         },
-         "scaleFactor": 1,
-         "ok": 1.0
-      },
-      {
-         "ns": "new.items",
-         "size": 132831617,
-         "count": 61794,
-         "avgObjSize": 2149,
-         "storageSize": 32063488,
-         "freeStorageSize": 57344,
-         "capped": false,
-         "nindexes": 1,
-         "indexBuilds": [],
-         "totalIndexSize": 593920,
-         "totalSize": 32657408,
-         "indexSizes": {
-            "_id_": 593920
+            "_id_": 102400
          },
          "scaleFactor": 1,
          "ok": 1.0
@@ -189,35 +51,172 @@
       },
       {
          "ns": "new.prices",
-         "size": 213591003,
-         "count": 822702,
+         "size": 215598840,
+         "count": 829971,
          "avgObjSize": 259,
-         "storageSize": 30543872,
-         "freeStorageSize": 36864,
+         "storageSize": 30785536,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 8085504,
-         "totalSize": 38629376,
+         "totalIndexSize": 8126464,
+         "totalSize": 38912000,
          "indexSizes": {
-            "_id_": 8085504
+            "_id_": 8126464
+         },
+         "scaleFactor": 1,
+         "ok": 1.0
+      },
+      {
+         "ns": "new.priceModifiers",
+         "size": 180648,
+         "count": 641,
+         "avgObjSize": 281,
+         "storageSize": 53248,
+         "capped": false,
+         "nindexes": 1,
+         "indexBuilds": [],
+         "totalIndexSize": 24576,
+         "totalSize": 77824,
+         "indexSizes": {
+            "_id_": 24576
+         },
+         "scaleFactor": 1,
+         "ok": 1.0
+      },
+      {
+         "ns": "new.users",
+         "size": 1434,
+         "count": 1,
+         "avgObjSize": 1434,
+         "storageSize": 20480,
+         "capped": false,
+         "nindexes": 1,
+         "indexBuilds": [],
+         "totalIndexSize": 20480,
+         "totalSize": 40960,
+         "indexSizes": {
+            "_id_": 20480
+         },
+         "scaleFactor": 1,
+         "ok": 1.0
+      },
+      {
+         "ns": "new.items",
+         "size": 132837205,
+         "count": 61796,
+         "avgObjSize": 2149,
+         "storageSize": 31592448,
+         "capped": false,
+         "nindexes": 1,
+         "indexBuilds": [],
+         "totalIndexSize": 569344,
+         "totalSize": 32161792,
+         "indexSizes": {
+            "_id_": 569344
+         },
+         "scaleFactor": 1,
+         "ok": 1.0
+      },
+      {
+         "ns": "new.recipes",
+         "size": 2929589,
+         "count": 7233,
+         "avgObjSize": 405,
+         "storageSize": 892928,
+         "capped": false,
+         "nindexes": 1,
+         "indexBuilds": [],
+         "totalIndexSize": 81920,
+         "totalSize": 974848,
+         "indexSizes": {
+            "_id_": 81920
+         },
+         "scaleFactor": 1,
+         "ok": 1.0
+      },
+      {
+         "ns": "new.runs",
+         "size": 20805,
+         "count": 42,
+         "avgObjSize": 495,
+         "storageSize": 45056,
+         "freeStorageSize": 20480,
+         "capped": false,
+         "nindexes": 1,
+         "indexBuilds": [],
+         "totalIndexSize": 36864,
+         "totalSize": 81920,
+         "indexSizes": {
+            "_id_": 36864
          },
          "scaleFactor": 1,
          "ok": 1.0
       },
       {
          "ns": "new.inventories",
-         "size": 125316342,
-         "count": 816149,
+         "size": 126564514,
+         "count": 824269,
          "avgObjSize": 153,
-         "storageSize": 18378752,
+         "storageSize": 18558976,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 7983104,
-         "totalSize": 26361856,
+         "totalIndexSize": 8065024,
+         "totalSize": 26624000,
          "indexSizes": {
-            "_id_": 7983104
+            "_id_": 8065024
+         },
+         "scaleFactor": 1,
+         "ok": 1.0
+      },
+      {
+         "ns": "new.recipesInvolved",
+         "size": 40027049,
+         "count": 3761,
+         "avgObjSize": 10642,
+         "storageSize": 16326656,
+         "capped": false,
+         "nindexes": 1,
+         "indexBuilds": [],
+         "totalIndexSize": 49152,
+         "totalSize": 16375808,
+         "indexSizes": {
+            "_id_": 49152
+         },
+         "scaleFactor": 1,
+         "ok": 1.0
+      },
+      {
+         "ns": "new.trips",
+         "size": 27477,
+         "count": 84,
+         "avgObjSize": 327,
+         "storageSize": 24576,
+         "capped": false,
+         "nindexes": 1,
+         "indexBuilds": [],
+         "totalIndexSize": 20480,
+         "totalSize": 45056,
+         "indexSizes": {
+            "_id_": 20480
+         },
+         "scaleFactor": 1,
+         "ok": 1.0
+      },
+      {
+         "ns": "new.stores",
+         "size": 107185,
+         "count": 102,
+         "avgObjSize": 1050,
+         "storageSize": 61440,
+         "freeStorageSize": 16384,
+         "capped": false,
+         "nindexes": 1,
+         "indexBuilds": [],
+         "totalIndexSize": 36864,
+         "totalSize": 98304,
+         "indexSizes": {
+            "_id_": 36864
          },
          "scaleFactor": 1,
          "ok": 1.0
