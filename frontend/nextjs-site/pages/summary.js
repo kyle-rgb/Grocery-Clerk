@@ -1,19 +1,25 @@
 const fs = require('fs')
 const js_summary = require('json-summary') 
+const {difference} = require('set-operations')
 
  let targetDirs = [ '../../../scripts/requests/server/collections/fooddepot/items', '../../../scripts/requests/server/collections/fooddepot/coupons',
  '../../../scripts/requests/server/collections/publix/items', '../../../scripts/requests/server/collections/publix/coupons',
  '../../../scripts/requests/server/collections/aldi']
-function clean(obj) {
-    newObj = {}
-    Object.entries(obj).map((d, i)=> {
-        k = d[0]
-        v = d[1]
-        if (!(v==={} | v===null | v==='' | v===[])){
-            typeof(v)==='object' ? newObj[k]=clean(v) : newObj[k]=v;
+
+function cleanup(object){
+    Object.entries(object).forEach(([k, v])=>{
+        if (v && typeof v ==='object'){
+            cleanup(v);
+        }
+        if (v && typeof v ==='object' && !Object.keys(v).length || v===null || v === undefined || v === '' || k === '__typename' || v === 'none' || (Object.keys(object).length===1 && typeof v === 'boolean' && !v)) {
+            if (Array.isArray(object)) {
+                object.splice(k, 1)
+            } else {
+                delete object[k];
+            }
         }
     })
-    return newObj
+    return object
 }
 
 // aldi : graphql?operationName=Items
@@ -21,18 +27,37 @@ function clean(obj) {
     // : opetationName=collectionProductsWithFeaturedProducts 
 function readAndMove(target){
     let allItems = []
+    let fullPrices = []
     let files = fs.readdirSync(target, {encoding: 'utf8', withFileTypes: true})
     files = files.filter((d)=> d.isFile())
     let iter = 0
     for (let file of files){
+        console.log(file.name)
         data = fs.readFileSync(target+"/"+file.name, {encoding: 'utf8'})
         data = JSON.parse(data)
         allItems = allItems.concat(data)
+        let col = allItems.filter((d)=>d.url.includes('CollectionProducts'))
+        let item = allItems.filter((d)=>d.url.includes('operationName=Items'))
+        let itemA = allItems.filter((d)=>d.url.includes('item_attributes'))
+        console.log(Object.keys(itemA[0].view[0]))
+        let locationId = "23150" // col[0].data.collectionProducts.items[0].id.match(/items_(\d+)-\d+/)[1] | "23150"
+        
+        itemA.map((d)=>{
+            d.view.map((v)=>{
+                fullPrices.push({
+                    'utcTimestamp': (new Date(d.acquisition_timestamp)).toISOString(),
+                    'item_id': v.trackingParams.item_id,
+                    'quantity': 1,
+                    'value': parseFloat(v.pricing.price.replace('$', '')),
+                    'locationId': locationId,
+                    'isPurchase': false
+                })
+                v.pricing.promotionEndsAt ? fullPrices.slice(-1)[0].expirationDate = v.pricing.promotionEndsAt : v;
+            })
+            
+        })
         if (iter==1){
-            console.log(file)
-            let col = allItems.filter((d)=>d.url.includes('CollectionProducts'))
-            console.log(typeof(col[1]))
-            console.log(clean(col[1]))
+            console.log(file.name)
             
             // collectionProducts.collection.id <- department id = items.categories.id
                                 // .collection.name <- department name = items.categories.name
@@ -51,11 +76,46 @@ function readAndMove(target){
                                     // .viewSection.on_sale_ind = { on_sale, retailer, buy_one_get_one, cpg_coupon }
                                     // .viewSection.trackingProperties.stock_level, .blackout, .availability_score, .
                                 // .dietary.viewSection.attributesString!==null <- product categorization tah
-            let item = allItems.filter((d)=>d.url.includes('operationName=Items'))[1]
-            item = item.data.items.filter((d)=>Object.values(d.viewSection.trackingProperties.on_sale_ind).includes(true))
+            
+            
+
+            // let collectionProductsColumns = {
+            //     'collection': ['id', 'name', 'slug', 'legacyPath', 'viewSection.trackingProperties.source_type/source_value/collection_type/collection_id/?parent_collection_id'],
+            // 'items': ['id', 'name', 'size', 'productId', 'legacyId', 'legacyV3Id', 'quantityAttributes.quantityType/viewSection.unitString/unitAriaString',
+            // 'availability.stockLevel', 'viewSection.itemImage.url/trackingProperties.element_details.product_id/retailer_location_id/?on_sale_ind./product_id,item_id,stock_level,availability_score,available_ind,?tags,?comboPromotions']
+            // }
+
+            // let totalItems = []
+            // let colItems = []
+            // col.map((d)=>{
+            //     totalItems = totalItems.concat(d.data.collectionProducts.items)
+            //     colItems = colItems.concat(d.data.collectionProducts.itemIds)
+            // })
+            // console.log('col length = ', totalItems.length, colItems.length)
+            // console.log(Object.keys(cleanup(totalItems[0])))
+            // //console.log(cleanup(totalItems[0]))
+            // totalItems = []
+            // item.map((d)=>totalItems = totalItems.concat(d.data.items))
+            // console.log('item length = ', totalItems.length)
+            // console.log(cleanup(col[0].data.collectionProducts.items[0].id).match(/items_(\d+)-\d+/)[1])
+            // //console.log(cleanup(totalItems[0]))
+            // totalItems = []
+            // itemA.map((d)=>
+            //     totalItems = totalItems.concat(d.view)
+            // )
+            // console.log('itemAttributesLength = ', totalItems.length)
+            // console.log(cleanup(totalItems[1]))
+            //console.log(cleanup(totalItems.filter((d)=>d.pricing.productType==='normal'))[1])
+
+            
+            // console.log(decodeURIComponent(itemA[0].url))
+            // console.log(decodeURIComponent(item[0].url))
+            // console.log(decodeURIComponent(col.slice(-1)[0].url))
+
+            
+
                 // same as CollectionProducts w/
                     // .tags: ['storeBrand], .comboPromotions: [] 
-            let itemA = allItems.filter((d)=>d.url.includes('item_attributes'))[1]
                 // url, acquisition_timestamp, view
                 // view: {itemId : item_1489353135(item_id), itemUpdatedAt: a utcTimestamp, viewAttributes:[],
                 /* trackingParams: {
@@ -97,7 +157,7 @@ function readAndMove(target){
     // target.includes('aldi') ? prefix='aldi' : type=target.split('/').slice(-1)[0];
 
     // fs.writeFileSync(`../../../data/${prefix}${type}Summary.json`, summary)
-    
+    fs.writeFileSync(`./prices.json`, JSON.stringify(fullPrices))
     return null
 
 }

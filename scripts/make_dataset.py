@@ -1306,12 +1306,12 @@ def deconstructExtensions(filename, **madeCollections):
                                             # setup prices collection
                                             if item.get('extendedPrice')==item.get('pricePaid'):
                                                 value = round(item.get('extendedPrice') / item.get('quantity'), 2)
-                                                pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'utcTimestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'Regular'})
+                                                pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'utcTimestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'Regular', 'locationId': tripDocument['locationId']})
                                             else:
                                                 value = round(item.get('extendedPrice') / item.get('quantity'), 2)
-                                                pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'utcTimestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'Regular'})
+                                                pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'utcTimestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'Regular', 'locationId': tripDocument['locationId']})
                                                 value = round(item.get('pricePaid') / item.get('quantity'), 2)
-                                                pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'utcTimestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'Sale',
+                                                pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'utcTimestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'Sale', 'locationId': tripDocument['locationId'],
                                                 'offerIds': ','.join(list(map(lambda pm: pm.get('promotionId'), item.get('priceModifiers'))))})
 
                                             if item.get('isWeighted'):
@@ -1940,9 +1940,10 @@ def queryDB(db="new"):
     #res = cursor['promotions'].aggregate(pipeline=[{"$sort": {"redemptions": -1}}, {"$unwind": "$redemptionKeys"}, {"$group": {"_id": {"x": "$redemptionKeys.upc" }, "count": {"$sum": 1}}}])
     #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': True}}}, {'$project':  {"socials": {'clips': '$clippedCount', 'popInt': {'$divide': ['$popularity', 1000]}}, 'newValue': {'$convert': {'input': '$value', 'to':'int'}}}}, {'$sort': {'newValue': 1}}])
     #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': False}, 'krogerCouponNumber': {'$exists':False}, 'productUpcs': {'$exists': True}}}])
-    res = cursor['promotions'].find_all({'shortDescription': {'$regex': '/^Buy 5.+/'}})
+    #res = cursor['promotions'].find_all({'shortDescription': {'$regex': '/^Buy 5.+/'}})
+    res = cursor['prices'].aggregate(pipeline=[{'$group': {'_id': '$type', 'count': {'$sum': 1}}}])
     res = [x for x in res]
-    print(len(res))
+    pprint(res)
 
     return None
 
@@ -1972,8 +1973,7 @@ def getStores():
     pprint(res[0])
     return None
 
-# getCollectionFeatureCounts(collection='items')
-
+#getCollectionFeatureCounts(collection='prices')
 # setUpBrowser()
 # runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
 # retrieveData('runs')
@@ -2002,7 +2002,8 @@ def getStores():
 # deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
 # runAndDocument([setUpBrowser, getScrollingData, eatThisPage], ['setup', 'getFoodDepotItems', 'flushData'], [{'n': 'food-depot-items', 'initialSetup': True}, {'chain': 'fooddepot'}, {'reset': False}])
 # runAndDocument([setUpBrowser, getStoreData, eatThisPage], ['setup', 'getStores', 'flushData'], [{'n': None, 'initialSetup': True}, {'chain': 'aldi'}, {'reset':False}])
-createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
+# createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
     
 # normalizeStoreData()
-# createDBSummaries('new')
+backupDatabase()
+createDBSummaries('new')
