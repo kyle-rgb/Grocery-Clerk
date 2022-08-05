@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "json-summary": "^1.3.0",
+    "mongodb": "^4.8.1",
     "set-operations": "^1.2.2"
   }
 }

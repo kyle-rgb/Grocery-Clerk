@@ -918,6 +918,7 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
             couponId = list(filter(lambda x: x[0].endswith('couponId'), params))[0][1]
             itemList = item.get('eligibleProductsResult').get('Items')
             for i in itemList:
+                i['UPC']=str(i['UPC'])
                 modalities = []
                 for key, val in booleans.get('prices').items():
                     if i[key]:
@@ -1963,6 +1964,22 @@ def getCollectionFeatureCounts(db='new', collection='prices'):
 
     return None
 
+def getCollectionFeatureTypes(db='new', collection='items', feature='upc'):
+    uri = os.environ.get("MONGO_CONN_URL")
+    client = MongoClient()
+    cursor = client[db]
+    res = cursor[collection].aggregate(pipeline=[
+        {'$project': {'upc': f'${feature}', 'type': {'$type' : f'${feature}'}}},
+        {'$group': {'_id': '$type', 'count': {'$sum': 1}}},
+        {'$sort': {'_id': -1}}
+    ])
+    res = [x for x in res]
+    
+    pprint(res[:55])
+    # print(set(map(lambda x: x['_id'], res)))
+
+    return None
+
 
 def getStores():
     uri = os.environ.get("MONGO_CONN_URL")
@@ -1973,7 +1990,8 @@ def getStores():
     pprint(res[0])
     return None
 
-#getCollectionFeatureCounts(collection='prices')
+# getCollectionFeatureCounts(collection='prices')
+# getCollectionFeatureTypes(collection='inventories', feature='availableToSell')
 # setUpBrowser()
 # runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
 # retrieveData('runs')

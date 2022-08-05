@@ -1,33 +1,33 @@
 {
    "db": "new",
-   "collections": 12,
+   "collections": 13,
    "views": 0,
-   "objects": 1986054,
-   "avgObjSize": 289.64881317426415,
-   "dataSize": 575258184.0,
-   "storageSize": 109703168.0,
-   "indexes": 12,
-   "indexSize": 19734528.0,
-   "totalSize": 129437696.0,
+   "objects": 1881624,
+   "avgObjSize": 297.41149825895076,
+   "dataSize": 559616613.0,
+   "storageSize": 107053056.0,
+   "indexes": 13,
+   "indexSize": 21110784.0,
+   "totalSize": 128163840.0,
    "scaleFactor": 1.0,
-   "fsUsedSize": 224778862592.0,
+   "fsUsedSize": 226129772544.0,
    "fsTotalSize": 239380459520.0,
    "ok": 1.0,
    "collectionStats": [
       {
          "ns": "new.prices",
-         "size": 250464145,
-         "count": 1041515,
-         "avgObjSize": 240,
-         "storageSize": 36806656,
-         "freeStorageSize": 32768,
+         "size": 229435515,
+         "count": 901167,
+         "avgObjSize": 254,
+         "storageSize": 33099776,
+         "freeStorageSize": 16384,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 10305536,
-         "totalSize": 47112192,
+         "totalIndexSize": 11231232,
+         "totalSize": 44331008,
          "indexSizes": {
-            "_id_": 10305536
+            "_id_": 11231232
          },
          "scaleFactor": 1,
          "ok": 1.0
@@ -103,17 +103,36 @@
       },
       {
          "ns": "new.inventories",
-         "size": 132167733,
-         "count": 860151,
+         "size": 137554697,
+         "count": 896066,
          "avgObjSize": 153,
-         "storageSize": 19390464,
+         "storageSize": 20410368,
+         "freeStorageSize": 40960,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 8429568,
-         "totalSize": 27820032,
+         "totalIndexSize": 8843264,
+         "totalSize": 29253632,
          "indexSizes": {
-            "_id_": 8429568
+            "_id_": 8843264
+         },
+         "scaleFactor": 1,
+         "ok": 1.0
+      },
+      {
+         "ns": "new.test",
+         "size": 95,
+         "count": 3,
+         "avgObjSize": 31,
+         "storageSize": 36864,
+         "freeStorageSize": 16384,
+         "capped": false,
+         "nindexes": 1,
+         "indexBuilds": [],
+         "totalIndexSize": 36864,
+         "totalSize": 73728,
+         "indexSizes": {
+            "_id_": 36864
          },
          "scaleFactor": 1,
          "ok": 1.0
