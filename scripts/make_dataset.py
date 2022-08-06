@@ -1942,7 +1942,8 @@ def queryDB(db="new"):
     #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': True}}}, {'$project':  {"socials": {'clips': '$clippedCount', 'popInt': {'$divide': ['$popularity', 1000]}}, 'newValue': {'$convert': {'input': '$value', 'to':'int'}}}}, {'$sort': {'newValue': 1}}])
     #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': False}, 'krogerCouponNumber': {'$exists':False}, 'productUpcs': {'$exists': True}}}])
     #res = cursor['promotions'].find_all({'shortDescription': {'$regex': '/^Buy 5.+/'}})
-    res = cursor['prices'].aggregate(pipeline=[{'$group': {'_id': '$type', 'count': {'$sum': 1}}}])
+    res = cursor['inventories'].find({'stockLevel': 'out_of_stock'})
+    #res = cursor['inventories'].aggregate(pipeline=[{'$group': {'_id': '$stockLevel', 'count': {'$sum': 1}}}])
     res = [x for x in res]
     pprint(res)
 
@@ -1990,7 +1991,13 @@ def getStores():
     pprint(res[0])
     return None
 
+# queryDB()
+
 # getCollectionFeatureCounts(collection='prices')
+# getCollectionFeatureCounts(collection='inventories')
+# getCollectionFeatureCounts(collection='items')
+
+
 # getCollectionFeatureTypes(collection='inventories', feature='availableToSell')
 # setUpBrowser()
 # runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
