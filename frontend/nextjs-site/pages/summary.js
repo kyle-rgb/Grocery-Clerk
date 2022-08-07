@@ -149,8 +149,8 @@ function readAndMove(target){
     
     // console.log(util.inspect(toCollectionItems.slice(10, 14), false, null, true))
     insertData(toCollectionItems, 'items')
-    // insertData(fullPrices, 'prices')
-    // insertData(fullInventories, 'inventories')
+    insertData(fullPrices, 'prices')
+    insertData(fullInventories, 'inventories')
     return null
 
 }

@@ -1307,17 +1307,18 @@ def deconstructExtensions(filename, **madeCollections):
                                             # setup prices collection
                                             if item.get('extendedPrice')==item.get('pricePaid'):
                                                 value = round(item.get('extendedPrice') / item.get('quantity'), 2)
-                                                pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'utcTimestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'Regular', 'locationId': tripDocument['locationId']})
+                                                pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'utcTimestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'Regular', 'locationId': trip.get('receiptId').get('divisionNumber')+trip.get('receiptId').get('storeNumber')})
                                             else:
                                                 value = round(item.get('extendedPrice') / item.get('quantity'), 2)
-                                                pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'utcTimestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'Regular', 'locationId': tripDocument['locationId']})
+                                                pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'utcTimestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'Regular', 'locationId': trip.get('receiptId').get('divisionNumber')+trip.get('receiptId').get('storeNumber')})
                                                 value = round(item.get('pricePaid') / item.get('quantity'), 2)
-                                                pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'utcTimestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'Sale', 'locationId': tripDocument['locationId'],
+                                                pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'utcTimestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'Sale', 'locationId': trip.get('receiptId').get('divisionNumber')+trip.get('receiptId').get('storeNumber'),
                                                 'offerIds': ','.join(list(map(lambda pm: pm.get('promotionId'), item.get('priceModifiers'))))})
 
                                             if item.get('isWeighted'):
                                                 averageWgt = item.get('detail').get('averageWeight')
-                                                pricesCollection.append({'value': item.get('unitPrice'), 'quantity': averageWgt, 'utcTimestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': False, 'transactionId': transactionId, 'type': 'Average'})
+                                                pricesCollection.append({'value': item.get('unitPrice'), 'quantity': averageWgt, 'utcTimestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': False, 'transactionId': transactionId,
+                                                'type': 'Average', 'locationId': trip.get('receiptId').get('divisionNumber')+trip.get('receiptId').get('storeNumber')})
 
                                             for booleanCategory in itemKeep:
                                                 if bool(item.get(booleanCategory)):
@@ -2019,8 +2020,8 @@ def getStores():
 # runAndDocument([simulateUser, eatThisPage], ['getDollarGeneralCouponsAndItems', 'flushData'],
 # kwargs=[{"link": "dollarGeneral"}, {'reset': False}])
 
-# runAndDocument([setUpBrowser, getFamilyDollarItems, eatThisPage],
-# ['setup', 'getFamilyDollarItems', 'flushData'] ,[{'n': 'family-dollar-items', 'initialSetup': True}, {}, {'reset': False}])
+# runAndDocument([setUpBrowser, eatThisPage],
+# ['getFamilyDollarCoupons', 'flushData'] ,[{'n': 'family-dollar-coupons', 'initialSetup': True}, {'reset': False}])
 
 # runAndDocument([setUpBrowser, eatThisPage], ['setup', 'getFamilyDollarCoupons'], [{'n': 'family-dollar-coupons', 'initialSetup': True}, {'reset': False}])
 

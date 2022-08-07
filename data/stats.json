@@ -1,33 +1,33 @@
 {
    "db": "new",
-   "collections": 13,
+   "collections": 12,
    "views": 0,
-   "objects": 1889931,
-   "avgObjSize": 298.0280534051243,
-   "dataSize": 563252457.0,
-   "storageSize": 108212224.0,
-   "indexes": 13,
-   "indexSize": 21204992.0,
-   "totalSize": 129417216.0,
+   "objects": 1911273,
+   "avgObjSize": 297.86632521884627,
+   "dataSize": 569303865.0,
+   "storageSize": 109600768.0,
+   "indexes": 12,
+   "indexSize": 19009536.0,
+   "totalSize": 128610304.0,
    "scaleFactor": 1.0,
-   "fsUsedSize": 222719324160.0,
+   "fsUsedSize": 228570144768.0,
    "fsTotalSize": 239380459520.0,
    "ok": 1.0,
    "collectionStats": [
       {
-         "ns": "new.prices",
-         "size": 229435515,
-         "count": 901167,
-         "avgObjSize": 254,
-         "storageSize": 33099776,
-         "freeStorageSize": 16384,
+         "ns": "new.items",
+         "size": 143191871,
+         "count": 73242,
+         "avgObjSize": 1955,
+         "storageSize": 34320384,
+         "freeStorageSize": 57344,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 11231232,
-         "totalSize": 44331008,
+         "totalIndexSize": 704512,
+         "totalSize": 35024896,
          "indexSizes": {
-            "_id_": 11231232
+            "_id_": 704512
          },
          "scaleFactor": 1,
          "ok": 1.0
@@ -50,17 +50,17 @@
          "ok": 1.0
       },
       {
-         "ns": "new.runs",
-         "size": 22456,
-         "count": 44,
-         "avgObjSize": 510,
-         "storageSize": 45056,
-         "freeStorageSize": 20480,
+         "ns": "new.stores",
+         "size": 107185,
+         "count": 102,
+         "avgObjSize": 1050,
+         "storageSize": 61440,
+         "freeStorageSize": 16384,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
          "totalIndexSize": 36864,
-         "totalSize": 81920,
+         "totalSize": 98304,
          "indexSizes": {
             "_id_": 36864
          },
@@ -68,70 +68,17 @@
          "ok": 1.0
       },
       {
-         "ns": "new.items",
-         "size": 142096898,
-         "count": 71246,
-         "avgObjSize": 1994,
-         "storageSize": 33796096,
-         "freeStorageSize": 24576,
-         "capped": false,
-         "nindexes": 1,
-         "indexBuilds": [],
-         "totalIndexSize": 675840,
-         "totalSize": 34471936,
-         "indexSizes": {
-            "_id_": 675840
-         },
-         "scaleFactor": 1,
-         "ok": 1.0
-      },
-      {
-         "ns": "new.users",
-         "size": 1434,
-         "count": 1,
-         "avgObjSize": 1434,
-         "storageSize": 20480,
-         "capped": false,
-         "nindexes": 1,
-         "indexBuilds": [],
-         "totalIndexSize": 20480,
-         "totalSize": 40960,
-         "indexSizes": {
-            "_id_": 20480
-         },
-         "scaleFactor": 1,
-         "ok": 1.0
-      },
-      {
-         "ns": "new.inventories",
-         "size": 137554697,
-         "count": 896066,
-         "avgObjSize": 153,
-         "storageSize": 20410368,
-         "freeStorageSize": 40960,
-         "capped": false,
-         "nindexes": 1,
-         "indexBuilds": [],
-         "totalIndexSize": 8843264,
-         "totalSize": 29253632,
-         "indexSizes": {
-            "_id_": 8843264
-         },
-         "scaleFactor": 1,
-         "ok": 1.0
-      },
-      {
-         "ns": "new.test",
-         "size": 95,
-         "count": 3,
-         "avgObjSize": 31,
-         "storageSize": 36864,
-         "freeStorageSize": 16384,
+         "ns": "new.runs",
+         "size": 24191,
+         "count": 47,
+         "avgObjSize": 514,
+         "storageSize": 45056,
+         "freeStorageSize": 20480,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
          "totalIndexSize": 36864,
-         "totalSize": 73728,
+         "totalSize": 81920,
          "indexSizes": {
             "_id_": 36864
          },
@@ -156,6 +103,76 @@
          "ok": 1.0
       },
       {
+         "ns": "new.prices",
+         "size": 232170580,
+         "count": 910441,
+         "avgObjSize": 255,
+         "storageSize": 33533952,
+         "freeStorageSize": 40960,
+         "capped": false,
+         "nindexes": 1,
+         "indexBuilds": [],
+         "totalIndexSize": 8982528,
+         "totalSize": 42516480,
+         "indexSizes": {
+            "_id_": 8982528
+         },
+         "scaleFactor": 1,
+         "ok": 1.0
+      },
+      {
+         "ns": "new.promotions",
+         "size": 11636542,
+         "count": 9795,
+         "avgObjSize": 1188,
+         "storageSize": 3678208,
+         "freeStorageSize": 8192,
+         "capped": false,
+         "nindexes": 1,
+         "indexBuilds": [],
+         "totalIndexSize": 102400,
+         "totalSize": 3780608,
+         "indexSizes": {
+            "_id_": 102400
+         },
+         "scaleFactor": 1,
+         "ok": 1.0
+      },
+      {
+         "ns": "new.priceModifiers",
+         "size": 180996,
+         "count": 642,
+         "avgObjSize": 281,
+         "storageSize": 53248,
+         "capped": false,
+         "nindexes": 1,
+         "indexBuilds": [],
+         "totalIndexSize": 24576,
+         "totalSize": 77824,
+         "indexSizes": {
+            "_id_": 24576
+         },
+         "scaleFactor": 1,
+         "ok": 1.0
+      },
+      {
+         "ns": "new.trips",
+         "size": 27823,
+         "count": 85,
+         "avgObjSize": 327,
+         "storageSize": 24576,
+         "capped": false,
+         "nindexes": 1,
+         "indexBuilds": [],
+         "totalIndexSize": 20480,
+         "totalSize": 45056,
+         "indexSizes": {
+            "_id_": 20480
+         },
+         "scaleFactor": 1,
+         "ok": 1.0
+      },
+      {
          "ns": "new.recipesInvolved",
          "size": 40027049,
          "count": 3761,
@@ -173,34 +190,16 @@
          "ok": 1.0
       },
       {
-         "ns": "new.promotions",
-         "size": 10867572,
-         "count": 9561,
-         "avgObjSize": 1136,
-         "storageSize": 3424256,
-         "freeStorageSize": 32768,
-         "capped": false,
-         "nindexes": 1,
-         "indexBuilds": [],
-         "totalIndexSize": 126976,
-         "totalSize": 3551232,
-         "indexSizes": {
-            "_id_": 126976
-         },
-         "scaleFactor": 1,
-         "ok": 1.0
-      },
-      {
-         "ns": "new.trips",
-         "size": 27477,
-         "count": 84,
-         "avgObjSize": 327,
-         "storageSize": 24576,
+         "ns": "new.users",
+         "size": 1450,
+         "count": 1,
+         "avgObjSize": 1450,
+         "storageSize": 20480,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
          "totalIndexSize": 20480,
-         "totalSize": 45056,
+         "totalSize": 40960,
          "indexSizes": {
             "_id_": 20480
          },
@@ -208,36 +207,19 @@
          "ok": 1.0
       },
       {
-         "ns": "new.priceModifiers",
-         "size": 180648,
-         "count": 641,
-         "avgObjSize": 281,
-         "storageSize": 53248,
+         "ns": "new.inventories",
+         "size": 139004747,
+         "count": 905902,
+         "avgObjSize": 153,
+         "storageSize": 20623360,
+         "freeStorageSize": 45056,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 24576,
-         "totalSize": 77824,
+         "totalIndexSize": 8929280,
+         "totalSize": 29552640,
          "indexSizes": {
-            "_id_": 24576
-         },
-         "scaleFactor": 1,
-         "ok": 1.0
-      },
-      {
-         "ns": "new.stores",
-         "size": 107185,
-         "count": 102,
-         "avgObjSize": 1050,
-         "storageSize": 61440,
-         "freeStorageSize": 16384,
-         "capped": false,
-         "nindexes": 1,
-         "indexBuilds": [],
-         "totalIndexSize": 36864,
-         "totalSize": 98304,
-         "indexSizes": {
-            "_id_": 36864
+            "_id_": 8929280
          },
          "scaleFactor": 1,
          "ok": 1.0
