@@ -3,11 +3,10 @@ const js_summary = require('json-summary')
 const {difference} = require('set-operations')
 const {MongoClient} = require('mongodb')
 const util = require('util')
-util.format()
 
- let targetDirs = [ '../../../scripts/requests/server/collections/fooddepot/items', '../../../scripts/requests/server/collections/fooddepot/coupons',
- '../../../scripts/requests/server/collections/publix/items', '../../../scripts/requests/server/collections/publix/coupons',
- '../../../scripts/requests/server/collections/aldi']
+let targetDirs = [ '../../../scripts/requests/server/collections/fooddepot/items', '../../../scripts/requests/server/collections/fooddepot/coupons',
+'../../../scripts/requests/server/collections/publix/items', '../../../scripts/requests/server/collections/publix/coupons',
+'../../../scripts/requests/server/collections/aldi']
 
 function cleanup(object){
     Object.entries(object).forEach(([k, v])=>{
@@ -52,6 +51,7 @@ function readAndMove(target){
     let fullPrices = []
     let fullInventories = []
     let fullCollectionItemIds = []
+    let t = 0
     let files = fs.readdirSync(target, {encoding: 'utf8', withFileTypes: true})
     files = files.filter((d)=> d.isFile())
     for (let file of files){
@@ -61,7 +61,10 @@ function readAndMove(target){
         let collections = data.filter((d)=>d.url.includes('CollectionProducts'))
         let items = data.filter((d)=>d.url.includes('operationName=Items'))
         let itemAttributes = data.filter((d)=>d.url.includes('item_attributes'))
-        let locationId = "23150" // col[0].data.collectionProducts.items[0].id.match(/items_(\d+)-\d+/)[1] | "23150"
+        let locationId = "121659" // col[0].data.collectionProducts.items[0].id.match(/items_(\d+)-\d+/)[1] | "23150" | "121659"
+        console.log('collections.length', collections.length)
+        console.log('items.length', items.length)
+        console.log('item_attributes.length', itemAttributes.length)
         itemAttributes.map((d)=>{
             d.view.map((v)=>{
                 fullPrices.push({
@@ -72,22 +75,25 @@ function readAndMove(target){
                     'locationId': locationId,
                     'isPurchase': false
                 });
-                v.pricing.promotionEndsAt ? fullPrices.slice(-1)[0].expirationDate = v.pricing.promotionEndsAt : v;
+                v.pricing.promotionEndsAt ? fullPrices.slice(-1)[0].expirationDate = new Date(v.pricing.promotionEndsAt) : v;
                 allItemAttributes.push(cleanup(v))
             })
         })
-        items.map((d)=> {
-            d.data.items.map((di)=>{
-                fullInventories.push({
-                    'utcTimestamp': new Date(d.acquisition_timestamp),
-                    'item_id': di.viewSection.trackingProperties.item_id,
-                    'stockLevel': di.viewSection.trackingProperties.stock_level,
-                    'locationId': locationId,
-                    'availability_score': di.viewSection.trackingProperties.stock_level
+
+        if (items.length > 0){
+            items.map((d)=> {
+                d.data.items.map((di)=>{
+                    fullInventories.push({
+                        'utcTimestamp': new Date(d.acquisition_timestamp),
+                        'item_id': di.viewSection.trackingProperties.item_id,
+                        'stockLevel': di.viewSection.trackingProperties.stock_level,
+                        'locationId': locationId,
+                        'availability_score': di.viewSection.trackingProperties.stock_level
+                    })
                 })
+                allItems = allItems.concat(cleanup(d.data.items))
             })
-            allItems = allItems.concat(cleanup(d.data.items))
-        })
+        }
         if (collections.length > 0){
             collections.map((d)=>{
                 d.data.collectionProducts.items.map((di)=>{
@@ -96,7 +102,7 @@ function readAndMove(target){
                         'item_id': di.viewSection.trackingProperties.item_id,
                         'stockLevel': di.viewSection.trackingProperties.stock_level,
                         'locationId': locationId,
-                        'availability_score': di.viewSection.trackingProperties.stock_level
+                        'availability_score': di.viewSection.trackingProperties.availability_score
                     })
                 })
                 fullCollectionItemIds = fullCollectionItemIds.concat(d.data.collectionProducts.itemIds)
@@ -106,7 +112,7 @@ function readAndMove(target){
                 allCollections.push(collections_entry)
             })
         }
-        
+
         let collectionProductsColumns = {
         'collection': ['id', 'name', 'slug', 'legacyPath', 'viewSection.trackingProperties.source_type/source_value/collection_type/collection_id/element_details.element_value/?parent_collection_id'],
         'items': ['id', 'name', 'size', 'productId', 'legacyId', 'legacyV3Id', 'quantityAttributes.quantityType/viewSection.unitString/unitAriaString',
@@ -114,7 +120,6 @@ function readAndMove(target){
         'itemAttributes': ['itemId', 'itemUpdatedAt', 'trackingParams.product_id/item_id/?policy_id/on_sale_ind.*/name/pricing.price/pricePerUnit/pricingUnit/productType/?promotionEndsAt/badge.*']
         }   
     }
-
     var toCollectionItems = []
     var uniqueItems = new Set()
     allItems.map((d)=> {
@@ -130,7 +135,7 @@ function readAndMove(target){
                 images: [{url: d.viewSection.itemImage.url, perspective: 'front', main: true}],
             })
             d.tags ? toCollectionItems.slice(-1)[0].isStoreBrand = true : d;
-            d.dietary ? toCollectionItems.slice(-1)[0].dietary = d.dietary.viewSection.attributesString: d;
+            d.dietary ? 'attributeSections' in d.dietary.viewSection ? toCollectionItems.slice(-1)[0].dietary = d.dietary.viewSection.attributeSections.map((x)=>x.attributeString):  toCollectionItems.slice(-1)[0].dietary = d.dietary.viewSection.attributeString:  d;
             uniqueItems.add(d.id)
         }
     })
@@ -155,7 +160,7 @@ function readAndMove(target){
 
 }
 
-readAndMove('../../../scripts/requests/server/collections/aldi')
-// for (let targetDir of targetDirs){
-//     readAndMove(target=targetDir)
-// }
+readAndMove('../../../scripts/requests/server/collections/publix/items')
+
+
+// console.log(util.inspect(toCollectionItems.slice(10, 14), false, null, true))
