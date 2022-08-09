@@ -4,8 +4,6 @@ import Pagination from '@/components/Pagination'
 import { API_URL, PER_PAGE } from '@/config/index'
 
 export default function PromotionsPage({promotions, page, total}){
-    console.log('promotions', promotions)
-
     return (
         <Layout>
             <h1>Current Promotions</h1>

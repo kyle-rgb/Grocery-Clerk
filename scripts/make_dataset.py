@@ -918,6 +918,7 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
             couponId = list(filter(lambda x: x[0].endswith('couponId'), params))[0][1]
             itemList = item.get('eligibleProductsResult').get('Items')
             for i in itemList:
+                i = {k:(v.strip() if type(v)==str else v) for k, v in i.items()}
                 i['UPC']=str(i['UPC'])
                 modalities = []
                 for key, val in booleans.get('prices').items():
@@ -954,7 +955,10 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
                         print(i)
                         itemDoc['maximumOrderQuantity'] = i.get('shipToHomeQuantity')
                 
-                newProducts.append(itemDoc)
+                
+                wasProcessed = list(filter(lambda x: x.get('upc')==itemDoc.get('upc'), newProducts))
+                if len(wasProcessed)==0:
+                    newProducts.append(itemDoc)
         for coupon in coupons:
             utcTimestamp = coupon.pop('acquisition_timestamp')
             for coup in coupon.get('Coupons'):
@@ -1844,7 +1848,7 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
         newFromOldPrices = []
         for oldPrice in oldPrices:
             # turn promo and regular to value
-            oldTimestamp = mytz.localize(dt.datetime.fromtimestamp(oldPrice.get('acquistion_timestamp')/1000)).astimezone(pytz.utc)
+            oldTimestamp = mytz.localize(dt.datetime.fromtimestamp(oldPrice.get('acquistion_timestamp'))).astimezone(pytz.utc)
             if oldPrice.get('promo') == oldPrice.get('regular'):
                 newFromOldPrices.append({'locationId': oldPrice.get('locationId'), 'isPurchase': oldPrice.get('isPurchase'), 'value': oldPrice.get('regular'), 'quantity': oldPrice.get('quantity'),\
                     'upc': oldPrice.get('upc'), 'utcTimestamp': oldTimestamp, "type": 'Regular'})
@@ -1943,9 +1947,10 @@ def queryDB(db="new"):
     #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': True}}}, {'$project':  {"socials": {'clips': '$clippedCount', 'popInt': {'$divide': ['$popularity', 1000]}}, 'newValue': {'$convert': {'input': '$value', 'to':'int'}}}}, {'$sort': {'newValue': 1}}])
     #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': False}, 'krogerCouponNumber': {'$exists':False}, 'productUpcs': {'$exists': True}}}])
     #res = cursor['promotions'].find_all({'shortDescription': {'$regex': '/^Buy 5.+/'}})
-    res = cursor['inventories'].find({'stockLevel': 'out_of_stock'})
+    res = cursor['items'].find({'customerFacingSize': {'$exists': False}})
     #res = cursor['inventories'].aggregate(pipeline=[{'$group': {'_id': '$stockLevel', 'count': {'$sum': 1}}}])
-    res = [x for x in res]
+    res = [' '.join(x['description'].split(' ')[-2:]) for x in res]
+    res = set(x for x in res)
     pprint(res)
 
     return None

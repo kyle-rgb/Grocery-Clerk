@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import styles from '@/styles/Promotions.module.css'
 
+
 export default function Promotion ({ promo }) {
     console.log('promo', promo)
     let id;
@@ -12,6 +13,10 @@ export default function Promotion ({ promo }) {
     } else {
         id = promo.id
     }
+
+    let start = new Date(promo.startDate+"Z")
+    let end = new Date(promo.expirationDate+"Z")
+    let length = Math.floor((end-start) / (1000 * 60 * 24 * 24))
 
 
     return (
@@ -33,6 +38,12 @@ export default function Promotion ({ promo }) {
                     </span>
                     <h3>{promo.shortDescription}</h3>
                     <span>Savings to You: ${(+promo.value).toFixed(2)}</span>
+                    <br />
+                    <span>Started At: {(new Date(promo.startDate+"Z").toLocaleString())}</span>
+                    <br />
+                    <span>Ended At: {(new Date(promo.expirationDate+"Z").toLocaleString())}</span>
+                    <br />
+                    <span>Length : {length}</span>
                 </div>
 
             </div>

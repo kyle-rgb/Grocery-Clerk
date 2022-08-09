@@ -1,67 +1,41 @@
 import Link from 'next/link'
 import Layout from '@/components/Layout'
 import Item from '@/components/Item'
+import { API_URL, PER_PAGE } from '@/config/index'
 
 
 
 
-export default function Home({ items }){
+export default function Home({ items, page, total }){
+  console.log(items)
   return (
-    <Layout>
-      <h1>
-        Current Items
-      </h1>
-      {items.length === 0 && <h3>No Current Items to Show</h3>}
+      <Layout>
+          <h1>Current Items</h1>
+          {items.length===0 && <h3>No items to show</h3>}
 
-      {items.map((item)=> (
-        <Item key={item.id} item={item} />
-      ))}
+          {items.map((item)=> (
+              <Item key={item.upc} item={item}></Item>
+          ))}
+          
+          <Link href={`/items`}>
+                <button className='btn-secondary'>See All Items</button>
+          </Link>
 
-      {items.length>0 && (<Link href='/items'><a>View All Items</a></Link>)}
-    </Layout>
+      </Layout>
   )
 }
 
-Home.defaultProps = {
-  items: [{
-    id: 1,
-    upc: "0129210112",
-    description: 'Raspberries',
-    categories: [{name: 'Fruit'}, {name: 'Produce'}]
-  }, {
-    id: 2,
-    upc: "0129210432",
-    description: 'BlackBerries',
-    categories: [{name: 'Fruit'}, {name: 'Produce'}]
-  }]
+export async function getServerSideProps({ query: { page = 1 } }){
+  const totalRecords = await fetch(`${API_URL}/items/count`) 
+  const total = await totalRecords.json()
+
+  const randStart = Math.floor(Math.random() * total.count - 3)
+
+  const itemRes = await fetch(`${API_URL}/get_items?type=items&limit=3&start=${randStart}`)
+  const items = await itemRes.json()
+
+  return {props: { items, page:+page, total }}
 }
-
-
-// export async function getStaticProps(){
-//   // const res = await fetch(`PLACE API ROUTE HERE`)
-//   // const items = await res.json()
-//   var items = [{
-//     id: 1,
-//     date: "2022-07-21",
-//     time: "10pm",
-//     name: 'Raspberries',
-//     link: '/items/raspberries',
-//     slug: 'raspberries', 
-//   }, {
-//     id: 2,
-//     date: "2022-07-26",
-//     time: "1pm",
-//     name: 'Blackberries',
-//     link: '/items/blackberries',
-//     slug: 'blackberries', 
-//   }]
-
-//   return {
-//     props: {items},
-//     revalidate: 1
-//   }
-// }
-
 
 
 

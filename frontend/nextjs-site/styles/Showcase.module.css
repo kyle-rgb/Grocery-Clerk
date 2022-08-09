@@ -1,7 +1,7 @@
 .showcase {
     height: 300px;
     width: 100%;
-    background: #000 url('/images/showcase.jpg') no-repeat center center;
+    background: #fff url('/images/showcase.jpg') no-repeat center center;
     color: #FFF;
     position: relative;
     display: flex;
@@ -22,11 +22,13 @@
 }
 
 .showcase * {
-    z-index: 20
+    z-index: 20;
+    color:#fff;
 }
 
 .showcase h1 {
     font-size: 40px;
     margin-bottom: 0;
+    
 }
 

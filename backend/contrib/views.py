@@ -24,6 +24,8 @@ def get_items(request):
         print(err)
         result = {'error': 'collection does not exist'}
 
+    print(result[1])
+
     return JsonResponse(result, safe=False)
 
 def count_items(request, collection=''):

@@ -28,4 +28,4 @@ export async function getServerSideProps({ query: { page = 1 } }){
     const items = await itemRes.json()
 
     return {props: { items, page:+page, total }}
-} 
+}

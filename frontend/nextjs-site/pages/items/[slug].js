@@ -13,8 +13,8 @@ const { Column, ColumnGroup } = Table
 
 export default function ItemPage ({ item }){
     const router = useRouter();
-    console.log(item)
-
+    const lastUpdated = item.prices//.map((d)=>d.utcTimestamp = new Date(d.utcTimestamp)).sort((a, b)=> a>b)
+    console.log(item.prices.slice(0, 5))
     return (
         <Layout>
         <div styles={styles.event}>
@@ -49,7 +49,6 @@ export default function ItemPage ({ item }){
                     dataIndex={'type'}
                     key={'type'}
                     render={(type)=>{
-                        console.log('type', type)
                         let color = ''
                         type==='YellowTag'? color='yellow' : color='blue';
                        return (<Tag color={color} key={type}>
@@ -73,7 +72,7 @@ export default function ItemPage ({ item }){
 export async function getServerSideProps({ query: { slug }}) {
     const res = await fetch(`${API_URL}/item?slug=${slug}&collection=items`)
     const item = await res.json()
-
+    item.prices.map((d)=>d.utcTimestamp = String(d.utcTimestamp))
     return {
         props: {
             item: item

@@ -61,7 +61,7 @@ function readAndMove(target){
         let collections = data.filter((d)=>d.url.includes('CollectionProducts'))
         let items = data.filter((d)=>d.url.includes('operationName=Items'))
         let itemAttributes = data.filter((d)=>d.url.includes('item_attributes'))
-        let locationId = "121659" // col[0].data.collectionProducts.items[0].id.match(/items_(\d+)-\d+/)[1] | "23150" | "121659"
+        let locationId = "23150" // col[0].data.collectionProducts.items[0].id.match(/items_(\d+)-\d+/)[1] | "23150" | "121659"
         console.log('collections.length', collections.length)
         console.log('items.length', items.length)
         console.log('item_attributes.length', itemAttributes.length)
@@ -160,7 +160,7 @@ function readAndMove(target){
 
 }
 
-readAndMove('../../../scripts/requests/server/collections/publix/items')
+readAndMove('../../../scripts/requests/server/collections/aldi')
 
 
 // console.log(util.inspect(toCollectionItems.slice(10, 14), false, null, true))
