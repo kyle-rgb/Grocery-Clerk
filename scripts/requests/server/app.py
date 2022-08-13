@@ -24,10 +24,8 @@ def docs():
                 past_data = json.loads(file.read())
                 data.extend(past_data)
         else:
-            try:
-                os.mkdir(f"./collections/{store}")
-            except:
-                print('skipping directory creation')
+            os.makedirs(f"./collections/{store}/{folder}", exist_ok=True)
+        
         with open(f'./collections/{store}/{folder}{dateCode}.json', 'w', encoding='utf-8') as file:
             file.write(json.dumps(data))
     

@@ -1947,7 +1947,7 @@ def queryDB(db="new"):
     #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': True}}}, {'$project':  {"socials": {'clips': '$clippedCount', 'popInt': {'$divide': ['$popularity', 1000]}}, 'newValue': {'$convert': {'input': '$value', 'to':'int'}}}}, {'$sort': {'newValue': 1}}])
     #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': False}, 'krogerCouponNumber': {'$exists':False}, 'productUpcs': {'$exists': True}}}])
     #res = cursor['promotions'].find_all({'shortDescription': {'$regex': '/^Buy 5.+/'}})
-    res = cursor['items'].find({'customerFacingSize': {'$exists': False}})
+    res = cursor['recipes'].find()
     #res = cursor['inventories'].aggregate(pipeline=[{'$group': {'_id': '$stockLevel', 'count': {'$sum': 1}}}])
     res = [' '.join(x['description'].split(' ')[-2:]) for x in res]
     res = set(x for x in res)
@@ -1997,9 +1997,9 @@ def getStores():
     pprint(res[0])
     return None
 
-# queryDB()
+#queryDB()
 
-# getCollectionFeatureCounts(collection='prices')
+#getCollectionFeatureCounts(collection='recipes')
 # getCollectionFeatureCounts(collection='inventories')
 # getCollectionFeatureCounts(collection='items')
 
@@ -2035,8 +2035,8 @@ def getStores():
 # ['setup', 'getFoodDepotItems', 'flushData'],
 # [{'n': 'food-depot-items', 'initialSetup': True}, {'chain': 'fooddepot'}, {'reset': False}])
 # runAndDocument([setUpBrowser, getStoreData, eatThisPage], ['setup', 'getStores', 'flushData'], [{'n': None, 'initialSetup': True}, {'chain': 'aldi'}, {'reset':False}])
-# createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
+createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1', 'buy3save6'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
     
 # normalizeStoreData()
-backupDatabase()
-createDBSummaries('new')
+# backupDatabase()
+# createDBSummaries('new')
