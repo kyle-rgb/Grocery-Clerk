@@ -3,6 +3,7 @@ const js_summary = require('json-summary')
 const {difference} = require('set-operations')
 const {MongoClient} = require('mongodb')
 const util = require('util')
+const { exec } = require('child_process')
 
 let targetDirs = [ '../../../scripts/requests/server/collections/fooddepot/items', '../../../scripts/requests/server/collections/fooddepot/coupons',
 '../../../scripts/requests/server/collections/publix/items', '../../../scripts/requests/server/collections/publix/coupons',
@@ -61,7 +62,7 @@ function readAndMove(target){
         let collections = data.filter((d)=>d.url.includes('CollectionProducts'))
         let items = data.filter((d)=>d.url.includes('operationName=Items'))
         let itemAttributes = data.filter((d)=>d.url.includes('item_attributes'))
-        let locationId = "23150" // col[0].data.collectionProducts.items[0].id.match(/items_(\d+)-\d+/)[1] | aldi =  "23150" | publix = "121659"
+        let locationId = "121659" // col[0].data.collectionProducts.items[0].id.match(/items_(\d+)-\d+/)[1] | aldi =  "23150" | publix = "121659"
         console.log('collections.length', collections.length)
         console.log('items.length', items.length)
         console.log('item_attributes.length', itemAttributes.length)
@@ -156,11 +157,20 @@ function readAndMove(target){
     insertData(toCollectionItems, 'items')
     insertData(fullPrices, 'prices')
     insertData(fullInventories, 'inventories')
+    fs.mkdirSync('../../../data/raw/aldi', {recursive: true})
+    for (file of files){
+        fs.renameSync(target+file.name, '../../../data/raw/aldi/'+file.name)
+    }
+
+    exec(`7z a ../../../data/archive.7z ../../../data/raw -p${process.env.EXTENSION_ARCHIVE_KEY} -mhe -sdel`, (err, stdout, stderr)=>{
+        console.log(`stdout: ${stdout}`)
+    })
+
     return null
 
 }
 
-readAndMove('../../../scripts/requests/server/collections/aldi/')
+readAndMove('../../../scripts/requests/server/collections/publix/items/')
 
 
 // console.log(util.inspect(toCollectionItems.slice(10, 14), false, null, true))

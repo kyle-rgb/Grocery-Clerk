@@ -267,7 +267,7 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         pag.moveTo(82, 410, duration=2)
         pag.click()
         time.sleep(3)
-        pag.moveTo(239, 574, duration=2)
+        pag.moveTo(239, 440, duration=2)
         pag.click()
         # wait for set iterations
         time.sleep(12)
@@ -562,16 +562,31 @@ def simulateUser(link):
             else:
                 pag.moveRel(-70, 0, duration=1.5)
                 pag.moveRel(0, -125, duration=1.5)
-                # expand items
+                issuesCount = requests.get("http://127.0.0.1:5000/issues").json().get('issues')
+                # expand to items page
                 pag.keyDown('ctrlleft')
                 pag.click()
                 time.sleep(3)
                 pag.keyUp('ctrlleft')
                 time.sleep(6)
+                # page level activities
+                issuesAfterRequest = requests.get("http://127.0.0.1:5000/issues").json().get('issues')
+                while issuesCount!=issuesAfterRequest:
+                    pag.keyDown('ctrlleft')
+                    pag.keyDown('r')
+                    time.sleep(1)
+                    pag.keyUp('ctrlleft')
+                    pag.keyDown('r')
+                    time.sleep(12)
+                    prevIssueCt = issuesAfterRequest
+                    issuesAfterRequest = requests.get("http://127.0.0.1:5000/issues").json().get('issues')
+                    if (issuesCount+5==issuesAfterRequest) or (issuesAfterRequest==prevIssueCt):
+                        break
                 pag.press('end')
                 time.sleep(3)
                 # check for load more button (indicating more loadable items) 
                 moreItems = loadMoreAppears()
+                issuesCt = requests.get("http://127.0.0.1:5000/issues").json().get('issues')
                 while bool(moreItems):
                     button = moreItems
                     pag.moveTo(button.x, button.y, duration=0.5)
@@ -583,7 +598,7 @@ def simulateUser(link):
                 pag.keyDown('w')
                 pag.keyUp('ctrlleft')
                 pag.keyUp('w')
-                time.sleep(2.5)
+                time.sleep(12.5)
                     
 
         if i<=1 and link=='dollarGeneral':
@@ -2021,12 +2036,11 @@ def getStores():
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ['setUpBrowser', 'getDollarGeneralCouponsAndItems', 'flushData'],
 # kwargs=[{"n": 'dollar-general-coupons', 'initialSetup': True},{"link": "dollarGeneral"}, {'reset': False}])
 
-
 # runAndDocument([simulateUser, eatThisPage], ['getDollarGeneralCouponsAndItems', 'flushData'],
 # kwargs=[{"link": "dollarGeneral"}, {'reset': False}])
 
-# runAndDocument([setUpBrowser, eatThisPage],
-# ['getFamilyDollarCoupons', 'flushData'] ,[{'n': 'family-dollar-coupons', 'initialSetup': True}, {'reset': False}])
+# runAndDocument([setUpBrowser, getFamilyDollarItems, eatThisPage],
+# ['initialSetup', 'getFamilyDollarItems', 'flushData'] ,[{'n': 'family-dollar-items', 'initialSetup': True}, {}, {'reset': False}])
 
 # runAndDocument([setUpBrowser, eatThisPage], ['setup', 'getFamilyDollarCoupons'], [{'n': 'family-dollar-coupons', 'initialSetup': True}, {'reset': False}])
 
@@ -2035,8 +2049,8 @@ def getStores():
 # ['setup', 'getFoodDepotItems', 'flushData'],
 # [{'n': 'food-depot-items', 'initialSetup': True}, {'chain': 'fooddepot'}, {'reset': False}])
 # runAndDocument([setUpBrowser, getStoreData, eatThisPage], ['setup', 'getStores', 'flushData'], [{'n': None, 'initialSetup': True}, {'chain': 'aldi'}, {'reset':False}])
-createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1', 'buy3save6'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
+# createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1', 'buy3save6'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
     
 # normalizeStoreData()
-# backupDatabase()
-# createDBSummaries('new')
+backupDatabase()
+createDBSummaries('new')

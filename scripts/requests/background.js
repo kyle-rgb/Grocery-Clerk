@@ -41,9 +41,13 @@ async function setIterations(count){
     return null
 }
 
-function logURL(requestDetails) {
-    console.log("Loading: " + requestDetails.url);
-    console.log("details: ", requestDetails)   
+function verifyURLIntegrity(responseDetails) {
+    console.log("loading: " + responseDetails.url);
+    if (responseDetails.statusCode !== 200){
+      fetch(`http://127.0.0.1:5000/issues`, {method: 'POST', body: responseDetails.url}) 
+    } else {
+      console.log('succesfully loaded : ', responseDetails)
+    }
     return null
   }
 
@@ -203,4 +207,10 @@ chrome.webRequest.onCompleted.removeListener(
   ], 
   types: ["xmlhttprequest", "object"]}, // 
   ["blocking"]
+)
+
+chrome.webRequest.onCompleted.addListener(
+  verifyURLIntegrity,
+  {urls: ["<all_urls>"],
+  types: ["xmlhttprequest", "object"]}, 
 )

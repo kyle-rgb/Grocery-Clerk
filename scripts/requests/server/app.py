@@ -1,10 +1,11 @@
 from flask import Flask, request, render_template
 
 import time, json, re, os, datetime as dt
-
+from werkzeug.exceptions import HTTPException
 
 app = Flask(__name__)
 i = None
+issues = []
 @app.route('/docs', methods=['GET', 'POST'])
 def docs():
     d = dt.datetime.now()
@@ -48,7 +49,20 @@ def setPost():
         else:
             return json.dumps({'wait': True})
 
+@app.route('/issues', methods=['GET', 'POST'])
+def tackleIssue():
+    if request.method=="POST":
+        global issues
+        issues.append(request.get_data(as_text=True))
+        print(issues)
+        return {'set': True}
+    else:
+        return {'issues': len(issues)}
 
+@app.route('/testing', methods=['GET'])
+def returnvars():
+    global issues
+    return {"issues": issues}
 
 
 if __name__ == "__main__":
