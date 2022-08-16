@@ -45,7 +45,10 @@ function insertData(listOfObjects, collectionName){
         .finally(()=> client.close())
 }
 
-function readAndMove(target){
+function readAndMove(target, defaultLocation=null){
+    let storeRegex = /publix|aldi|kroger|dollargeneral|familydollar|fooddepot/
+    let targetHeirarchy = target.match(storeRegex)
+    targetHeirarchy = target.slice(targetHeirarchy.index)
     let allItems = []
     let allItemAttributes = []
     let allCollections = []
@@ -62,7 +65,7 @@ function readAndMove(target){
         let collections = data.filter((d)=>d.url.includes('CollectionProducts'))
         let items = data.filter((d)=>d.url.includes('operationName=Items'))
         let itemAttributes = data.filter((d)=>d.url.includes('item_attributes'))
-        let locationId = "121659" // col[0].data.collectionProducts.items[0].id.match(/items_(\d+)-\d+/)[1] | aldi =  "23150" | publix = "121659"
+        let locationId = defaultLocation 
         console.log('collections.length', collections.length)
         console.log('items.length', items.length)
         console.log('item_attributes.length', itemAttributes.length)
@@ -157,20 +160,25 @@ function readAndMove(target){
     insertData(toCollectionItems, 'items')
     insertData(fullPrices, 'prices')
     insertData(fullInventories, 'inventories')
-    fs.mkdirSync('../../../data/raw/aldi', {recursive: true})
+    fs.mkdirSync('../../../data/raw/'+targetHeirarchy, {recursive: true})
     for (file of files){
-        fs.renameSync(target+file.name, '../../../data/raw/aldi/'+file.name)
+        fs.renameSync(target+file.name, `../../../data/raw/${targetHeirarchy}`+file.name)
     }
-
-    exec(`7z a ../../../data/archive.7z ../../../data/raw -p${process.env.EXTENSION_ARCHIVE_KEY} -mhe -sdel`, (err, stdout, stderr)=>{
-        console.log(`stdout: ${stdout}`)
-    })
 
     return null
 
 }
 
-readAndMove('../../../scripts/requests/server/collections/publix/items/')
+const zipUp = () => {
+    exec(`7z a ../../../data/archive.7z ../../../data/raw -p${process.env.EXTENSION_ARCHIVE_KEY} -mhe -sdel`, (err, stdout, stderr)=>{
+        console.log(`stdout: ${stdout}`)
+    })
+    return null
+}
+
+readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659")
+readAndMove('../../../scripts/requests/server/collections/aldi/', "23150")
+zipUp()
 
 
 // console.log(util.inspect(toCollectionItems.slice(10, 14), false, null, true))

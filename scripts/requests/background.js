@@ -181,6 +181,7 @@ chrome.webRequest.onBeforeRequest.addListener(
   "*://*.dollargeneral.com/bin/omni/pickup/storeSearch*", "*://*.dollargeneral.com/bin/omni/pickup/storeDetails*", // Dollar General Stores
   "*://*.noq-servers.net/api/v1/application/stores/*/products?*", "*://*.appcard.com/baseapi/1.0/token/*/offers/unclipped_recommendation_flag*", // Food Depot : Products, Coupons
   "*://production-us-1.noq-servers.net/api/v1/application/franchises/*/summary","*://production-us-1.noq-servers.net/api/v1/application/stores/*/summary", // Food Depot Stores
+  "*://production-us-1.noq-servers.net/api/v1/application/coupons*",
   "*://services.publix.com/api*", // Publix Coupons
   "*://delivery.publix.com/*/view/item_attributes*", "*://delivery.publix.com/graphql?operationName=Items", "*://delivery.publix.com/graphql?operationName=CollectionProductsWithFeaturedProducts*", // publix prices and items
   "*://shop.aldi.us/graphql?operationName=CollectionProductsWithFeaturedProducts*", "*://shop.aldi.us/graphql?operationName=Items*", "*://shop.aldi.us/*/view/item_attributes*", // Aldi: Items
@@ -200,6 +201,7 @@ chrome.webRequest.onCompleted.removeListener(
   "*://*.dollargeneral.com/bin/omni/pickup/storeSearch*", "*://*.dollargeneral.com/bin/omni/pickup/storeDetails*", // Dollar General Stores
   "*://*.noq-servers.net/api/v1/application/stores/*/products?*", "*://*.appcard.com/baseapi/1.0/token/*/offers/unclipped_recommendation_flag*", // Food Depot : Products, Coupons
   "*://production-us-1.noq-servers.net/api/v1/application/franchises/*/summary","*://production-us-1.noq-servers.net/api/v1/application/stores/*/summary", // Food Depot Stores
+  "*://production-us-1.noq-servers.net/api/v1/application/coupons*",
   "*://services.publix.com/api*", // Publix Coupons
   "*://delivery.publix.com/*/view/item_attributes*", "*://delivery.publix.com/graphql?operationName=Items", "*://delivery.publix.com/graphql?operationName=CollectionProductsWithFeaturedProducts*", // publix prices and items
   "*://shop.aldi.us/graphql?operationName=CollectionProductsWithFeaturedProducts*", "*://shop.aldi.us/graphql?operationName=Items*", "*://shop.aldi.us/*/view/item_attributes*", // Aldi: Items

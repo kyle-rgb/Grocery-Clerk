@@ -917,6 +917,7 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
     booleans = {'prices': {'IsSellable': 'IN_STORE', 'IsBopisEligible': 'PICKUP', 'isShipToHome': 'SHIP'}, 'items': {'IsGenericBrand', 'IsBopisEligible', 'isShipToHome'}}
     inventoryKeys= {'1': 'TEMPORARILY_OUT_OF_STOCK', '2': "LOW", "3": 'HIGH'}
     productsForCoupons = {}
+    descriptionRegex = re.compile(r"^save", re.IGNORECASE)
 
     if 'dollargeneral' in file:
         # deconstructs into coupons (promotions), items, prices, and inventories 
@@ -925,7 +926,9 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
             products = filter(lambda p: 'eligibleProductsResult' in p.keys(), data)
             coupons = filter(lambda p: 'Coupons' in p.keys(), data)
         for item in products:
-            utcTimestamp = item["acquisition_timestamp"]
+            utcTimestamp = item["acquisition_timestamp"] / 1000
+            utcTimestamp = dt.datetime.fromtimestamp(utcTimestamp)
+            utcTimestamp = mytz.localize(utcTimestamp).astimezone(pytz.utc)
             url = item['url']
             params = urllib.parse.parse_qsl(url)
             if bool(storeCode)==False:
@@ -987,11 +990,17 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
                 # OfferSummary + OfferDescription => shortDescription
                 # OfferDisclaimer => terms
                 # RewaredCategoryName => categories[]
-                newC['brandName'] = coup.get('Brandname') 
+                startsWithSave = re.findall(descriptionRegex, coup.get('OfferDescription'))
+                if startsWithSave:
+                    newC['shortDescription'] = coup.get('OfferDescription')
+                else:
+                    newC['shortDescription'] = coup.get('OfferSummary') + coup.get('OfferDescription')
+
+                newC['brandName'] = coup.get('BrandName') 
                 newC['companyName'] = coup.get('Companyname') 
                 newC['offerType'] = coup.get('OfferType')
                 if bool(coup.get('OfferDisclaimer')):
-                    newC['terms'] = coup.get('OffeDisclaimer') 
+                    newC['terms'] = coup.get('OfferDisclaimer') 
                 newC['isManufacturerCoupon'] = coup.get('IsManufacturerCoupon') 
                 newC['categories'] = [coup.get('RewaredCategoryName')] 
                 # OfferActivationDate => startDate  %Y-%m-%dT%H:%M:%S
@@ -1057,9 +1066,9 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
             clipEndDate = dt.datetime.strptime(coup.get('clipEndDateTime').get('iso'), '%Y-%m-%dT%H:%M:%S.%fZ')
             newC['clipEndDate'] = mytz.localize(clipEndDate).astimezone(pytz.utc)
             # offerSortValue => value
-            newC['value'] = coup.get('offerSortValue')
+            newC['value'] = int(coup.get('offerSortValue'))
             # minPurchase => requirementQuantity
-            newC['requirementQuantity'] = coup.get('minPurchase')
+            newC['requirementQuantity'] = int(coup.get('minPurchase'))
             # redemptionsPerTransaction => redemptionsAllowed
             newC['redemptionsAllowed'] = coup.get('redemptionsPerTransaction')
             # imageUrl => imageUrl, + enchancedImageUrl
@@ -1222,6 +1231,7 @@ def deconstructExtensions(filename, **madeCollections):
                     newPromotion['shortDescription'] = allOffers.get('webDescription')
                     # upcs => productUpcs[]
                     newPromotion['productUpcs'] = list(allUpcs)
+                    newPromotion['redemptionsAllowed'] = -1
                     promotionsCollection.append(newPromotion)
                 else:
                     hasNewPromotion[0]['productUpcs'].extend(list(allUpcs))
@@ -1272,7 +1282,9 @@ def deconstructExtensions(filename, **madeCollections):
                     tripDocument = {}
                     transactionId = trip.get('receiptId').get('transactionId')
                     isProcessed = bool(list(filter(lambda x: x.get('transactionId')==transactionId, tripCollection)))
+                    
                     if isProcessed==False:
+                        purchaseTimestamp = pytz.utc.localize(dt.datetime.strptime(trip.get("transactionTimeWithTimezone"), "%Y-%m-%dT%H:%M:%SZ"))
                         for key, value in trip.items():
                             if key in tripKeep:
                                 if key=='tenders':
@@ -1293,8 +1305,8 @@ def deconstructExtensions(filename, **madeCollections):
                                             user['trips'].append(transactionId)
                                 elif key=='items':
                                     # offshoots to new collections
-                                    # needs to reference back to items (by baseUpc), trip (via trip Id), priceModifiers (pointes to priceModifier) and time (via acquistion timestamp)
-                                    
+                                    # needs to reference back to items (by baseUpc), trip (via trip Id), priceModifiers (pointers to priceModifier) and time (via acquistion timestamp)
+        
                                     currentPMs = set(map(lambda x: x.get('promotionId'), priceModifierCollection))
                                     for item in value:
                                         if item.get('itemType')!='STORE_COUPON':
@@ -1326,16 +1338,16 @@ def deconstructExtensions(filename, **madeCollections):
                                             # setup prices collection
                                             if item.get('extendedPrice')==item.get('pricePaid'):
                                                 value = round(item.get('extendedPrice') / item.get('quantity'), 2)
-                                                pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'utcTimestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'Regular', 'locationId': trip.get('receiptId').get('divisionNumber')+trip.get('receiptId').get('storeNumber')})
+                                                pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'utcTimestamp': purchaseTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'Regular', 'locationId': trip.get('receiptId').get('divisionNumber')+trip.get('receiptId').get('storeNumber')})
                                             else:
                                                 value = round(item.get('extendedPrice') / item.get('quantity'), 2)
-                                                pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'utcTimestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'Regular', 'locationId': trip.get('receiptId').get('divisionNumber')+trip.get('receiptId').get('storeNumber')})
+                                                pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'utcTimestamp': purchaseTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'Regular', 'locationId': trip.get('receiptId').get('divisionNumber')+trip.get('receiptId').get('storeNumber')})
                                                 value = round(item.get('pricePaid') / item.get('quantity'), 2)
-                                                pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'utcTimestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'Sale', 'locationId': trip.get('receiptId').get('divisionNumber')+trip.get('receiptId').get('storeNumber'),
+                                                pricesCollection.append({'value': value, 'quantity': item.get('quantity'), 'utcTimestamp': purchaseTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': True, 'transactionId': transactionId, 'type': 'Sale', 'locationId': trip.get('receiptId').get('divisionNumber')+trip.get('receiptId').get('storeNumber'),
                                                 'offerIds': ','.join(list(map(lambda pm: pm.get('promotionId'), item.get('priceModifiers'))))})
 
                                             if item.get('isWeighted'):
-                                                averageWgt = item.get('detail').get('averageWeight')
+                                                averageWgt = item.get('detail').get('averageWeight') or 1
                                                 pricesCollection.append({'value': item.get('unitPrice'), 'quantity': averageWgt, 'utcTimestamp': acquistionTimestamp, 'upc': item.get('baseUpc'), 'isPurchase': False, 'transactionId': transactionId,
                                                 'type': 'Average', 'locationId': trip.get('receiptId').get('divisionNumber')+trip.get('receiptId').get('storeNumber')})
 
@@ -2016,7 +2028,7 @@ def getStores():
 
 #getCollectionFeatureCounts(collection='recipes')
 # getCollectionFeatureCounts(collection='inventories')
-# getCollectionFeatureCounts(collection='items')
+getCollectionFeatureCounts(collection='promotions')
 
 
 # getCollectionFeatureTypes(collection='inventories', feature='availableToSell')
@@ -2050,7 +2062,5 @@ def getStores():
 # [{'n': 'food-depot-items', 'initialSetup': True}, {'chain': 'fooddepot'}, {'reset': False}])
 # runAndDocument([setUpBrowser, getStoreData, eatThisPage], ['setup', 'getStores', 'flushData'], [{'n': None, 'initialSetup': True}, {'chain': 'aldi'}, {'reset':False}])
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1', 'buy3save6'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
-    
-# normalizeStoreData()
 backupDatabase()
 createDBSummaries('new')
