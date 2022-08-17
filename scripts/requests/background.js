@@ -42,14 +42,11 @@ async function setIterations(count){
 }
 
 function verifyURLIntegrity(responseDetails) {
-    console.log("loading: " + responseDetails.url);
-    if (responseDetails.statusCode !== 200){
+    if (responseDetails.statusCode >= 205){
       fetch(`http://127.0.0.1:5000/issues`, {method: 'POST', body: responseDetails.url}) 
-    } else {
-      console.log('succesfully loaded : ', responseDetails)
-    }
+    } 
     return null
-  }
+}
 
 function listener(details) {
     let filter = chrome.webRequest.filterResponseData(details.requestId);

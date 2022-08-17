@@ -54,7 +54,6 @@ def tackleIssue():
     if request.method=="POST":
         global issues
         issues.append(request.get_data(as_text=True))
-        print(issues)
         return {'set': True}
     else:
         return {'issues': len(issues)}

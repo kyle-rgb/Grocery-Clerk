@@ -67,6 +67,7 @@ def eatThisPage(reset=False):
     pag.click()
     time.sleep(15)
     if reset:
+        time.sleep(46)
         subprocess.Popen(['taskkill', '/IM', 'firefox.exe', '/F'])
     return None
 
@@ -2000,7 +2001,7 @@ def getCollectionFeatureCounts(db='new', collection='prices'):
 
 def getCollectionFeatureTypes(db='new', collection='items', feature='upc'):
     uri = os.environ.get("MONGO_CONN_URL")
-    client = MongoClient()
+    client = MongoClient(uri)
     cursor = client[db]
     res = cursor[collection].aggregate(pipeline=[
         {'$project': {'upc': f'${feature}', 'type': {'$type' : f'${feature}'}}},
@@ -2014,6 +2015,21 @@ def getCollectionFeatureTypes(db='new', collection='items', feature='upc'):
 
     return None
 
+def aggregate(db="new", collection="items"):
+    uri = os.environ.get("MONGO_CONN_URL")
+    client = MongoClient(uri)
+    cursor = client[db]
+    res = cursor[collection].aggregate(pipeline=[
+        {'$match': {'nutrition': {"$exists": True}}},
+        {"$project": {'pairs': {'$objectToArray': "$$ROOT.nutrition"}}},
+        {"$unwind": {'path': '$pairs', 'preserveNullAndEmptyArrays': False}},
+        {"$match": {'pairs.v': {"$type": "bool"}}},
+        {"$group": {"_id": "$pairs.k", "count": {"$sum": 1}}},
+        {"$sort": {"count": 1}}
+    ])
+    pprint([x for x in res])
+
+    return None
 
 def getStores():
     uri = os.environ.get("MONGO_CONN_URL")
@@ -2026,9 +2042,9 @@ def getStores():
 
 #queryDB()
 
-#getCollectionFeatureCounts(collection='recipes')
-# getCollectionFeatureCounts(collection='inventories')
-getCollectionFeatureCounts(collection='promotions')
+# aggregate()
+# getCollectionFeatureCounts(collection='prices')
+# getCollectionFeatureCounts(collection='promotions')
 
 
 # getCollectionFeatureTypes(collection='inventories', feature='availableToSell')
@@ -2040,7 +2056,7 @@ getCollectionFeatureCounts(collection='promotions')
 # kwargs=[{"n": 'aldi-items', 'initialSetup': True}, {"chain": "aldi"}, {'reset': False}])
 
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerDigitalCouponsAndItems', 'flushData'],
-# kwargs=[{"url": "https://www.kroger.com/savings/cl/coupons", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "digital"}, {'reset': False}])
+# kwargs=[{"url": "https://www.kroger.com/savings/cl/coupons", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "digital"}, {'reset': True}])
 
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerCashbackCouponsAndItems', 'flushData'],
 # kwargs=[{"url": "https://www.kroger.com/savings/cbk/cashback/", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "cashback"}, {'reset': False}])

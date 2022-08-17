@@ -176,9 +176,182 @@ const zipUp = () => {
     return null
 }
 
-readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659")
-readAndMove('../../../scripts/requests/server/collections/aldi/', "23150")
+function summarizeFoodDepot(target){
+    // totalItems = 182,177
+    // Items 
+        // Categories.map((d)=>d.Id, d.ParentCategoryId?, d.PriorityRank, d.Name)
+            // => item.categories = [{item.Categories.map((d)=> {return {code: d.Id, }})}]
+        // Id <- main id, ProductCatalogueId
+        // ImageUrl
+        
+        // IsAlcohol, IsTobacco
+        // IsChargedByWeight, IsSoldByWeight
+        // IsFeatured
+
+        // MaxOrderQuantity, MinOrderQuantity, QuantityDefault, QuantityInterval
+        // MeasuredCode = each | per lb
+        // Name
+        // Tags = [{Name, Value}] => {Kosher, Low Fat, Gluten Free, Dairy Free, Sugar Free, Lactose Free, Halal, Low Sodium, Fat Free, Organic, Vegan, Peanut Free, Egg Free}
+            // Brand ==> x.toLowerCase()
+        // TaxRate
+
+    // Promotions
+        // HasCoupons
+    
+    // Prices
+        // Price
+        // PriceRegular
+        // PriceSaving = PriceRegular - Price
+        // PriceType = StoreSpecial | Regular
+        // ~Savings = Savings %
+        // ?UnitPrice
+        // ?WeightPerUnit
+
+    //! Categories {DecorationImageUrl: x2, Id: x2, ImageUrl: x1, IsAlcohol:  x2, IsTobacco: x2, Name: , ParentCategoryId: x1, PriorityRank: x2 <- Greater Means More General Catagory, Version: x2}
+        // Id, ParentCategoryId?, PriorityRank, Name :: Items
+    //! Deposit 0 <- remove
+    //! HasCoupons true/false :: Promotions
+    //! Id :: Items
+    //! ImageUrl :: Items
+    //! IsAlcohol :: Items
+    //! IsChargedByWeight :: Items 
+    //! IsFeatured :: Items (monetizationId) | Promotions
+    //! IsSoldByWeight :: Items 
+    //! IsTobacco :: Items
+    //! MaxOrderQuantity :: Items
+    //! MeasureCode :: each | per lb
+    //! MinOrderQuantity :: Items / Prices ? 
+    //! Name :: Items
+    // Price :: Prices
+    // PriceRegular :: Prices
+    // PriceSaving :: Prices 
+    // PriceType :: StoreSpecial | Regular
+    // ProductCatalogueId 
+    // ProductOptionIds
+    // PromotionId :: Promotions 
+    // QuantityDefault :: Prices / Items 
+    // QuantityInterval :: Prices / Items 
+    // Savings <- Savings Percentage
+    // Tags 224,440 / 156,196 [Name: {Brand, Kosher=Y, Low Fat=Y, Gluten Free=Y, Organic=Y, Fat Free=Y, 
+        // Dairy Free, Sugar Free, Lactose Free, Halal, Low Sodium, Vegan, Peanut Free, Egg Free}]
+        // lower to compare then title  :: Items {brandName, nutrition Info} 
+    // TaxRate :: Prices
+    // UnitOfMeasureText? average weight per = $8.75 per lb. Approx 1.75 lb each :: Prices
+    // UnitPrice 840 :: Prices
+    // WeightPerUnit 840 :: Prices
+    let files = fs.readdirSync(target, {encoding: 'utf-8', withFileTypes: true})
+    files = files.filter((d)=>d.isFile())
+    var totalData = []
+    var allPrices = []
+    var allItems = []
+    var itemIdSet = new Set()
+    itemAttributes = new Set(['categories', 'Id', 'ProductCatalogueId', 'images', 'sellBy', 'orderBy', 'description', 'nutrition', 'brand', 'taxGroupCode'])
+    for (let file of files){
+        console.log(file.name)
+        data = fs.readFileSync(target+"/"+file.name, {encoding: 'utf8'})
+        data = JSON.parse(data)
+        totalData = totalData.concat(data)
+        let items = data.filter((d)=>d.url.includes('products?'))
+        for (let itemSet of items){
+            let utcTimestamp = new Date(itemSet.acquisition_timestamp);
+            let url = itemSet.url
+            let path = url.split('/')
+            let locationId = path[path.indexOf('stores')+1]
+            itemSet = itemSet.Result.Products.map((d)=>cleanup(d))
+            itemSet.map((item)=>{
+                item.PriceSaving===0 ? allPrices.push({
+                    isPurchase: false,
+                    utcTimestamp: utcTimestamp,
+                    value: Math.floor(item.Price*1.1*100)/100,
+                    quantity: item.QuantityDefault,
+                    id: item.Id,
+                    locationId: locationId,
+                    type: item.PriceType 
+                }) : allPrices.push({
+                    isPurchase: false,
+                    utcTimestamp: utcTimestamp,
+                    value: Math.floor(item.Price*1.1*100)/100,
+                    quantity: item.QuantityDefault,
+                    id: item.Id,
+                    locationId: locationId,
+                    type: item.PriceType
+                }, {
+                    isPurchase: false,
+                    utcTimestamp: utcTimestamp,
+                    value: Math.floor(item.PriceRegular*1.1*100)/100,
+                    quantity: item.QuantityDefault,
+                    id: item.Id,
+                    locationId: locationId,
+                    type: 'Regular'
+                });
+                if ('WeightPerUnit' in item){
+                    allPrices.push({
+                        isPurchase: false,
+                        utcTimestamp: utcTimestamp,
+                        value: Math.floor(item.UnitPrice*1.1*100)/100,
+                        quantity: item.WeightPerUnit,
+                        id: item.Id,
+                        locationId: locationId,
+                        type: 'Average'
+                    })
+                }
+
+                item.categories = []
+                item.Categories.map((d)=>{
+                    if ('ParentCategoryId' in d){
+                        item.categories.push({name: d.Name, id: d.Id})
+                    } else {
+                        item.categories.push({name: d.Name, id: d.Id})
+                    }
+                })
+                item.images = [{url: item.ImageUrl, perspective: 'front', main: true, size: "medium"}]  
+                delete item.ImageUrl
+                item.desciption = item.Name;
+                delete item.Name;
+                if (item.IsSoldByWeight){
+                    item.sellBy = 'WEIGHT'
+                    item.orderBy = 'WEIGHT'    
+                } else {
+                    item.sellBy = 'UNIT'
+                    item.orderBy = "UNIT"
+                }
+                
+                if (item.Tags){
+                    for (let tag of item.Tags){
+                        if (tag.Name==='Brand'){
+                            let brand = tag.Value.toLowerCase().trim().split(' ')
+                            .map((word)=> {return word.charAt(0).toUpperCase() + word.slice(1)}).join(' ');
+                            item.brand = brand
+                        } else if (tag.Value==="Y") {
+                            let nutritionalCategory = tag.Name.replace(' ', '')
+                            item.nutrition===undefined ? item.nutrition = {} : 1; 
+                            item.nutrition[nutritionalCategory] = true
+                        }
+                    }
+                }
+
+                item.taxGroupCode = item.TaxRate
+                let itemDoc = {}
+                Object.keys(item).filter((d)=>itemAttributes.has(d)).map((d)=> itemDoc[d]=item[d])
+                if (!itemIdSet.has(itemDoc.Id)){
+                    allItems.push(itemDoc)
+                    itemIdSet.add(itemDoc.Id)
+                }
+                
+            })
+        }
+    }
+    
+    // console.log(allItems.length, ' items')
+    // console.log(allPrices.length, ' prices')
+    insertData(allItems, 'items')
+    insertData(allPrices, 'prices')
+
+    return null
+}
+
+
+// readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659")
+// readAndMove('../../../scripts/requests/server/collections/aldi/', "23150")
+// summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items')
 zipUp()
-
-
-// console.log(util.inspect(toCollectionItems.slice(10, 14), false, null, true))
