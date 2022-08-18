@@ -350,8 +350,48 @@ function summarizeFoodDepot(target){
     return null
 }
 
+function summarizeNewCoupons(target){
+    // let files = fs.readdirSync(target, {encoding: 'utf-8', withFileTypes: true})
+    // files = files.filter((d)=>d.isFile())
+    // for (let file of files){
+    //     console.log(file.name)
+    //     data = fs.readFileSync(target+"/"+file.name, {encoding: 'utf8'})
+    // }
+    // ---Publix---
+    /* IsPersonalizationEnabled,
+    PersonalizedStoreNumber = locationId,
+    url = no relevant params,
+    acquisition_timestamp,
+    Stores, HolidaySummary, StatusCode, StatusMessage
+    Savings {  }
+    
+    */ 
 
+
+
+    let files = fs.readdirSync(target, {encoding: 'utf-8', withFileTypes: true})
+    files = files.filter((d)=>d.isFile())
+    allCoupons = []
+    let storesRegex = /fooddepot|publix/
+    for (let file of files){
+        console.log(file.name)
+        data = fs.readFileSync(target+'/'+file.name, {encoding: 'utf-8'})
+        let chunk = JSON.parse(data)
+        if (!Array.isArray(chunk)){
+            chunk = [chunk]
+        }
+        chunk.map((d)=> cleanup(d))
+        allCoupons = allCoupons.concat(chunk)
+    }
+    let summary = JSON.stringify(js_summary.summarize(allCoupons, {arraySampleCount: allCoupons.length}), null, 3)
+    let endName=target.split(/\//).map((d)=>d.match(storesRegex)).filter((d)=>d!==null)[0][0]
+    console.log(endName)
+    fs.writeFileSync(`./${endName}-summary.json`, summary)
+    return null
+}
+summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons")
+summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons")
 // readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659")
 // readAndMove('../../../scripts/requests/server/collections/aldi/', "23150")
 // summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items')
-zipUp()
+// zipUp()

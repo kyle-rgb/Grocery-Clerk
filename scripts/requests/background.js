@@ -1,7 +1,42 @@
 var setMaster = new Set() 
 var masterArray = []
 var iWasSet = false
-var settingStores = false
+var settingStores = true
+var scrapingUrls = [
+  "*://*.kroger.com/cl/api*",
+  "*://*.kroger.com/atlas/v1/product/v2/products*",
+  "*://*.kroger.com/mypurchases/api/v1/receipt*", // Kroger: Coupons, Products/Prices, Trips
+  "*://*.kroger.com/products/api/products/details-basic", // for buy 5, save $5 -- general items
+  "*://ice-familydollar.dpn.inmar.com/v2/offers*",
+  "*://dollartree-cors.groupbycloud.com/api*", // Family Dollar : Coupons, Products
+  "*://*.dollargeneral.com/bin/omni/coupons/products*",
+  "*://*.dollargeneral.com/bin/omni/coupons/recommended*", // Dollar General: Products, Coupons 
+  "*://*.noq-servers.net/api/v1/application/stores/*/products?*",
+  "*://*.appcard.com/baseapi/1.0/token/*/offers/unclipped_recommendation_flag*", 
+  "*://production-us-1.noq-servers.net/api/v1/application/coupons*",// Food Depot : Products, 3rd Party Coupons, 1st Party Coupons
+  "*://services.publix.com/api*", 
+  "*://delivery.publix.com/*/view/item_attributes*",
+  "*://delivery.publix.com/graphql?operationName=Items*",
+  "*://delivery.publix.com/graphql?operationName=CollectionProductsWithFeaturedProducts*", // // Publix 1st Party Coupons and Instacart Price and Items
+  "*://shop.aldi.us/graphql?operationName=CollectionProductsWithFeaturedProducts*",
+  "*://shop.aldi.us/graphql?operationName=Items*",
+  "*://shop.aldi.us/*/view/item_attributes*", // Aldi Instacart Prices and Items
+]
+
+if (settingStores){
+  scrapingUrls = [
+    "https://storelocations.familydollar.com/rest/locatorsearch*", // family dollar
+    "https://www.dollargeneral.com/bin/omni/pickup/storeDetails*", // dollar general
+    "https://www.dollargeneral.com/bin/omni/pickup/storeSearch*", // dollar general
+    "*://*.liquidus.net/*", // aldi store search
+    "https://services.publix.com/api/v1/storelocation*", // publix 1st party site search
+    "https://production-us-1.noq-servers.net/api/v1/application/stores*", // food depot stores
+    "https://production-us-1.noq-servers.net/api/v1/application/franchises*", // food depot stores
+    "https://shop.aldi.us/graphql?operationName=AvailablePickupRetailerServices*", // NEW : aldi 
+    "https://delivery.publix.com/graphql?operationName=AvailablePickupRetailerServices*" // NEW: publix
+  ]
+}
+  
 
 
 async function createType(){
@@ -9,11 +44,13 @@ async function createType(){
     var t = ''
     let t2 =''
     let reg = /kroger|aldi|publix|dollargeneral|familydollar|fooddepot/
-    let regKroger = /mypurchases|cashback|coupons|Buy5Save1|Buy3Save6|\?N=/
+    let regKroger = /mypurchases|cashback|coupons|Buy5Save1|Buy3Save6|Buy2Save10|\?N=/
     let regFamilyDollar = /\?N=|smart-coupons/
     let regPublix = /savings/
     let regFoodDepot = /coupons/
-    var fileTypes = {'mypurchases': 'trips', 'cashback': 'cashback', "coupons": "digital", "Buy5Save1": "buy5save1", "Buy3Save6": "buy3save6", '?N=': 'items', 'smart-coupons': 'coupons'}
+    var fileTypes = {'mypurchases': 'trips', 'cashback': 'cashback', "coupons": "digital",
+    "Buy5Save1": "buy5save1", "Buy3Save6": "buy3save6", '?N=': 'items', 'smart-coupons': 'coupons',
+    "Buy2Save10": "buy2save10"}
     var fileTypePub = {'savings': 'coupons'}
 
     for (let tab of tabs){
@@ -127,29 +164,12 @@ chrome.contextMenus.create({
 
 chrome.contextMenus.onClicked.addListener(function(info, tab) {
     createType().then((t) => {
-      let storeUrls = ["https://storelocations.familydollar.com/rest/locatorsearch",
-      "https://www.dollargeneral.com/bin/omni/pickup/storeDetails",
-      "https://www.dollargeneral.com/bin/omni/pickup/storeSearch",
-      "https://graphql-cdn-slplatform.liquidus.net/",
-      "https://services.publix.com/api/v1/storelocation",
-      "https://production-us-1.noq-servers.net/api/v1/application/stores",
-      "https://production-us-1.noq-servers.net/api/v1/application/franchises"
-      ]
       let type = t ;
-      if (settingStores){
-        masterArray.filter((d)=> {
-          var isAMatch = false
-          for (let storeUrl of storeUrls){
-            isAMatch = d.url.startsWith(storeUrl) | isAMatch
-          }
-          return Boolean(isAMatch)
-        })
-        response = fetch(`http://127.0.0.1:5000/docs?${type}`, {method: "POST", body: JSON.stringify(masterArray)})
-      }else {
-        response = fetch(`http://127.0.0.1:5000/docs?${type}`, {method: "POST", body: JSON.stringify(masterArray)})
-      }
-      masterArray = []
-      fetch(`http://127.0.0.1:5000/i?directive=true`, {method: "POST", body: ''})
+      response = fetch(`http://127.0.0.1:5000/docs?${type}`, {method: "POST", body: JSON.stringify(masterArray)})
+      setTimeout(()=>{
+        masterArray = []
+        fetch(`http://127.0.0.1:5000/i?directive=true`, {method: "POST", body: ''})
+      }, 3000)
       iWasSet = false
       return null
     })
@@ -166,45 +186,18 @@ document.addEventListener("click", function(e){
     })  
   }
 })
-
-
+// general listener for normal scraping events
 chrome.webRequest.onBeforeRequest.addListener(
   listener,
-  {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*", "*://*.kroger.com/mypurchases/api/v1/receipt*", // Kroger: Coupons, Products/Prices, Trips
-  "*://*.kroger.com/products/api/products/details-basic", // for buy 5, save $5
-  "*://ice-familydollar.dpn.inmar.com/v2/offers*", "*://dollartree-cors.groupbycloud.com/api*", // Family Dollar : Coupons, Products
-  "*://storelocations.familydollar.com/rest/locatorsearch*", // Family Dollar Stoes
-  "*://*.dollargeneral.com/bin/omni/coupons/products*", "*://*.dollargeneral.com/bin/omni/coupons/recommended*", // Dollar General: Products, Coupons 
-  "*://*.dollargeneral.com/bin/omni/pickup/storeSearch*", "*://*.dollargeneral.com/bin/omni/pickup/storeDetails*", // Dollar General Stores
-  "*://*.noq-servers.net/api/v1/application/stores/*/products?*", "*://*.appcard.com/baseapi/1.0/token/*/offers/unclipped_recommendation_flag*", // Food Depot : Products, Coupons
-  "*://production-us-1.noq-servers.net/api/v1/application/franchises/*/summary","*://production-us-1.noq-servers.net/api/v1/application/stores/*/summary", // Food Depot Stores
-  "*://production-us-1.noq-servers.net/api/v1/application/coupons*",
-  "*://services.publix.com/api*", // Publix Coupons
-  "*://delivery.publix.com/*/view/item_attributes*", "*://delivery.publix.com/graphql?operationName=Items", "*://delivery.publix.com/graphql?operationName=CollectionProductsWithFeaturedProducts*", // publix prices and items
-  "*://shop.aldi.us/graphql?operationName=CollectionProductsWithFeaturedProducts*", "*://shop.aldi.us/graphql?operationName=Items*", "*://shop.aldi.us/*/view/item_attributes*", // Aldi: Items
-  "*://graphql-cdn-slplatform.liquidus.net/", //aldi stores,
-  ], 
+  {urls: scrapingUrls, 
   types: ["xmlhttprequest", "object"]},
   ["blocking"]
 )
 
 chrome.webRequest.onCompleted.removeListener(
   listener,
-  {urls: ["*://*.kroger.com/cl/api*", "*://*.kroger.com/atlas/v1/product/v2/products*", "*://*.kroger.com/mypurchases/api/v1/receipt*", // Kroger: Coupons, Products/Prices, Trips
-  "*://*.kroger.com/products/api/products/details-basic", // for buy 5, save $5
-  "*://ice-familydollar.dpn.inmar.com/v2/offers*", "*://dollartree-cors.groupbycloud.com/api*", // Family Dollar : Coupons, Products
-  "*://storelocations.familydollar.com/rest/locatorsearch*", // Family Dollar Stoes
-  "*://*.dollargeneral.com/bin/omni/coupons/products*", "*://*.dollargeneral.com/bin/omni/coupons/recommended*", // Dollar General: Products, Coupons 
-  "*://*.dollargeneral.com/bin/omni/pickup/storeSearch*", "*://*.dollargeneral.com/bin/omni/pickup/storeDetails*", // Dollar General Stores
-  "*://*.noq-servers.net/api/v1/application/stores/*/products?*", "*://*.appcard.com/baseapi/1.0/token/*/offers/unclipped_recommendation_flag*", // Food Depot : Products, Coupons
-  "*://production-us-1.noq-servers.net/api/v1/application/franchises/*/summary","*://production-us-1.noq-servers.net/api/v1/application/stores/*/summary", // Food Depot Stores
-  "*://production-us-1.noq-servers.net/api/v1/application/coupons*",
-  "*://services.publix.com/api*", // Publix Coupons
-  "*://delivery.publix.com/*/view/item_attributes*", "*://delivery.publix.com/graphql?operationName=Items", "*://delivery.publix.com/graphql?operationName=CollectionProductsWithFeaturedProducts*", // publix prices and items
-  "*://shop.aldi.us/graphql?operationName=CollectionProductsWithFeaturedProducts*", "*://shop.aldi.us/graphql?operationName=Items*", "*://shop.aldi.us/*/view/item_attributes*", // Aldi: Items
-  "*://graphql-cdn-slplatform.liquidus.net/", //aldi stores,
-  ], 
-  types: ["xmlhttprequest", "object"]}, // 
+  {urls: scrapingUrls, 
+  types: ["xmlhttprequest", "object"]},
   ["blocking"]
 )
 

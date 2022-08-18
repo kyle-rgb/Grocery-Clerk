@@ -68,6 +68,7 @@ def eatThisPage(reset=False):
     time.sleep(15)
     if reset:
         time.sleep(46)
+        # add: browser.config : restore_after_crash = false
         subprocess.Popen(['taskkill', '/IM', 'firefox.exe', '/F'])
     return None
 
@@ -1529,10 +1530,21 @@ def deconstructExtensions(filename, **madeCollections):
         
 
 def normalizeStoreData():
-    storeFiles = ['/aldi/stores/071822.json', '/dollargeneral/stores/stores.json', '/familydollar/stores/stores.json', '/fooddepot/stores/071822.json', '/publix/stores/071822.json'] 
-    head= './requests/server/collections'
-    newStores = []
 
+    storeDirectories = ['/aldi/stores/', '/dollargeneral/stores/', '/familydollar/stores/', '/fooddepot/stores/', '/publix/stores/'] 
+    head= './requests/server/collections/'
+    newStores = []
+    storeFiles = []
+    instacartFiles = []
+    for folder, subfolders, files in os.walk(head):
+        for file in files:
+            if 'stores' in folder:
+                if 'IC' not in file:
+                    storeFiles.append(folder.replace('\\', '/')+'/'+file)
+                else:
+                    instacartFiles.append(folder.replace('\\', '/')+'/'+file)
+    print(storeFiles)
+    print(instacartFiles)
     # --- Kroger's ---
     # address { 
     #   {addressLine1, city, county, state, zipCode} <String>
@@ -1572,7 +1584,7 @@ def normalizeStoreData():
     #   referenceNumber, retailer.id, retailer.name==pretailer.name : null : retailer.name; 
     # }
 
-    with open(head+storeFiles[0], 'r', encoding='utf-8') as file:
+    with open(storeFiles[0], 'r', encoding='utf-8') as file:
         data = json.loads(file.read())
         data = map(lambda x: x.get('data'), data)
         stores = filter(lambda x:'store' in x.keys() or 'storeList' in x.keys(), data)
@@ -1626,7 +1638,7 @@ def normalizeStoreData():
         # st=state, um=3793, uu='hex-code', zp=zipCode full 
     
 
-    with open(head+storeFiles[1], 'r', encoding='utf-8') as file:
+    with open(storeFiles[1], 'r', encoding='utf-8') as file:
         data=json.loads(file.read())
         storeLimited = list(map(lambda x: x.get('data').get('storeDetails'), data))
         storeFull = list(map(lambda x: x.get('data').get('stores'), data))
@@ -1665,7 +1677,7 @@ def normalizeStoreData():
             else:
                 newDoc = {}
                 newDoc['address'] = {'addressLine1': d.get('address'), 'city': d.get('city'), 'state': d.get('state'), 'zipCode': d.get('zip')}
-                newDoc['id'] = d.get('storenumber')
+                newDoc['locationId'] = d.get('storenumber')
                 newDoc['geolocation'] = {'latitude': d.get('latitude'), 'longitude': d.get('longitude')}
                 newDoc['chain'] = 'Dollar General'
                 newDoc['name'] = 'Dollar General'
@@ -1675,65 +1687,13 @@ def normalizeStoreData():
                 newDoc['departments'] = d.get('storeServices')
                 newStores.append(newDoc)
 
-    # ---Publix---
-  
-    # Stores : [15] {ADDR, CITY, CLAT, CLON, DISTANCE, EPPH, IMAGE{}, ISENABLED, KEY, NAME, OPTION, PHMPHONE, PHONE, SHORTNAME, STATE, STOREDATETIME, STOREMAPSID,
-                # STORETIMEZONE, STRHOURS format "%a %-h:%M %p,", TYPE, WABREAK, ZIP}
-            # NULL {CLOSINGDATE, CSPH, DEPTS, EMPTY, FAX, LQHOURS, LQRPHONE, MAPH, OPENINGDATE, PHMHOURS, PXFHOURS, PXFPHONE, SERVICES, STATUS, STOREMAPTOGGLE, 
-            #  StoreAdjustedHoursMobileApp, StoreAdjustedHoursWebsite, UNIQUE, WASTORENUMBER}
-        
-        # address {addressLine1, city, county, state, zipCode } <String> => {ADDR, CITY, _, STATE, ZIP}
-        # chain => 'Publix'
-
-        # departments: [{'departmentId': <String>, 'name': <String> +
-        #   ?hours: {weekday: {close, open, open24}, open24, name, ?phone} <String> + <Bool::open24>
-        # }]
-
-        # geolocation: {latLng: <String>, latitude: <Float>, longitude: <Float>} => {f'{CLAT} {CLON}', latitude:LAT, longitude:CLON, ~DISTANCE}
-        # hours: {gmtOffset: <String>, open24: <Bool>, timezone:<String>, <:weekdays:>: {open24, open, close}} => {timezone:STORETIMEZONE, STRHOURS "%a %-h:%M %p,",}
-        # locationId: <String> <- Connector to Items, Inventory, et all. => {KEY}
-        # name: <String> - chain + real estate name => {SHORTNAME, NAME}
-        # phone: <String>  => {PHMPHONE, PHONE, EPPH, }
-        # !image: {hero:IMAGE.Hero, thumbnail:IMAGE.Thumbnail}
-        # !others = {OPTION=<varchar>, TYPE='R', OPENINGDATE=<datetime>, STATUS=''|'Coming Soon', WABREAK='4|None'}
-
-    with open(head+storeFiles[4], 'r', encoding='utf-8') as file:
-        data = json.loads(file.read())
-        data = data[0].get('Stores')
-        
-        for d in data:
-            d = {k:v for k, v in d.items() if v!='-' and v!=''}
-            newDoc = {}
-            newDoc['address'] = {'addressLine1': d.get('ADDR'), 'city': d.get('CITY'), 'zipCode': d.get('ZIP'), 'state': d.get('STATE')}      
-            newDoc['geolocation'] = {'latitude': d.get('CLAT'), 'longitude': d.get('CLON')}
-            if 'STRHOURS' in d:
-                oldHours = d.get('STRHOURS').split(',')
-                oldHours = list(filter(None, oldHours))
-                dateRe = r'(\w+)\s([0-9\:]+\sAM)\s-\s([0-9\:]+\sPM)'
-                newDoc['hours'] = {}
-                for hour in oldHours:
-                    day, openH, closeH = re.findall(dateRe, hour)[0]
-                    day = normalizeDay(day)
-                    newDoc['hours'][day] = {'open': dt.datetime.strptime(openH , '%I:%M %p').strftime('%H:%M'),'close': dt.datetime.strptime(closeH, '%I:%M %p').strftime('%H:%M')}
-                    newDoc['hours'][day]['open24'] = newDoc['hours'][day]['open']==newDoc['hours'][day]['close']
-                newDoc['hours']['timezone'] = d.get('STORETIMEZONE')
-            newDoc['locationId'] =d.get('KEY')
-            newDoc['images'] = d.get('IMAGE')
-            newDoc['name'] = f"Publix - {d.get('SHORTNAME')}"
-            newDoc['chain'] = 'Publix'
-            newDoc['phone'] = d.get('PHONE')
-            newDoc['additionalIds'] = [
-                {'path': 'OPTION', 'id': d.get('OPTION')},
-            ]
-            newStores.append(newDoc)
-            
     # ---FamilyDollar--- {features, web, times, address}
         # _distance, _distanceuom, address1<street>, address2<place>, adult_beverages, adwordlabels, atm, bho, billpay, bopis, city, clientkey, coming_soon
         # country, dc_localpage_address, distributioncenter, ebt, end_date, fax, friclose, friopen, frozen_meat, geofence_radius, gt_radius, h1_text, h2_text, helium,
         # hiring_banner_url, holidayhours, hybrid_stores, ice, icon, job_search_url, latitude, localpage_banner, longitude, main_paragraph, monclose, monopen, name<-with #ID, 
         # now_open, phone, postalcode, propane, province, red_box, refrigerated_frozen, reopen_date, sameday_delivery, satclose, satopen, second_paragraph, start_date, state, store<-ID,
         # store_open_date, sunclose, sunopen, temp_closed, thuclose, thuopen, timezone, tobacco, tueclose, tueopen, uid, water_machine, wedclose, wedopen, wic
-    with open(head+storeFiles[2], 'r', encoding='utf-8') as file:
+    with open(storeFiles[2], 'r', encoding='utf-8') as file:
         data = json.loads(file.read())
         data = data.get('data').get('response').get('collection')
 
@@ -1787,7 +1747,7 @@ def normalizeStoreData():
             # PickupFee = pickuplocations[0][TimeSlots][0]['defaultFee']
             # ProductCountOnSpecial, ?ShippingOptions, SupportedCreditCards,
             # SupportPhone, TimeZoneName  
-    with open(head+storeFiles[3], 'r', encoding='utf-8') as file:
+    with open(storeFiles[3], 'r', encoding='utf-8') as file:
         data = json.loads(file.read())
         data = list(map(lambda x: x.get('Result'), data[:2]))
         # address {addressLine1, city, county, state, zipCode}, departments [{id, name, hours{close, open, open24}, open24}]
@@ -1809,14 +1769,11 @@ def normalizeStoreData():
 
                 newDoc['images'] = {'Icon' : d.get('IconImageUrl'), 'Logo': d.get('LogoImageUrl')}
                 newDoc['restraints'] = {'max_spend': d.get('MaximumOrderSpend'), 'additionalFees': d.get('PickingVariationPercentag')}
-
-
                 # newDoc['departments'] = []
                 # newDoc['geolocation'] = {}
                 # newDoc['hours'] = {}
                 # newDoc['phone'] = ''
                 moreStoreInfo = list(filter(lambda x: x.get('Id')==newDoc.get('locationId'), data[1:]))
-                print(newDoc.get('locationId'))
                 if moreStoreInfo:
                     for msi in moreStoreInfo:
                         newDoc['phone'] = msi.get('ContactPhone')
@@ -1839,11 +1796,85 @@ def normalizeStoreData():
                             newDoc['departments'] = departments
                 newStores.append(newDoc)
 
+    # ---Publix---
+  
+    # Stores : [15] {ADDR, CITY, CLAT, CLON, DISTANCE, EPPH, IMAGE{}, ISENABLED, KEY, NAME, OPTION, PHMPHONE, PHONE, SHORTNAME, STATE, STOREDATETIME, STOREMAPSID,
+                # STORETIMEZONE, STRHOURS format "%a %-h:%M %p,", TYPE, WABREAK, ZIP}
+            # NULL {CLOSINGDATE, CSPH, DEPTS, EMPTY, FAX, LQHOURS, LQRPHONE, MAPH, OPENINGDATE, PHMHOURS, PXFHOURS, PXFPHONE, SERVICES, STATUS, STOREMAPTOGGLE, 
+            #  StoreAdjustedHoursMobileApp, StoreAdjustedHoursWebsite, UNIQUE, WASTORENUMBER}
+        
+        # address {addressLine1, city, county, state, zipCode } <String> => {ADDR, CITY, _, STATE, ZIP}
+        # chain => 'Publix'
+
+        # departments: [{'departmentId': <String>, 'name': <String> +
+        #   ?hours: {weekday: {close, open, open24}, open24, name, ?phone} <String> + <Bool::open24>
+        # }]
+
+        # geolocation: {latLng: <String>, latitude: <Float>, longitude: <Float>} => {f'{CLAT} {CLON}', latitude:LAT, longitude:CLON, ~DISTANCE}
+        # hours: {gmtOffset: <String>, open24: <Bool>, timezone:<String>, <:weekdays:>: {open24, open, close}} => {timezone:STORETIMEZONE, STRHOURS "%a %-h:%M %p,",}
+        # locationId: <String> <- Connector to Items, Inventory, et all. => {KEY}
+        # name: <String> - chain + real estate name => {SHORTNAME, NAME}
+        # phone: <String>  => {PHMPHONE, PHONE, EPPH, }
+        # !image: {hero:IMAGE.Hero, thumbnail:IMAGE.Thumbnail}
+        # !others = {OPTION=<varchar>, TYPE='R', OPENINGDATE=<datetime>, STATUS=''|'Coming Soon', WABREAK='4|None'}
+
+    with open(storeFiles[4], 'r', encoding='utf-8') as file:
+        data = json.loads(file.read())
+        data = data[0].get('Stores')
+        
+        for d in data:
+            d = {k:v for k, v in d.items() if v!='-' and v!=''}
+            newDoc = {}
+            newDoc['address'] = {'addressLine1': d.get('ADDR'), 'city': d.get('CITY'), 'zipCode': d.get('ZIP'), 'state': d.get('STATE')}      
+            newDoc['geolocation'] = {'latitude': float(d.get('CLAT')), 'longitude': float(d.get('CLON'))}
+            if 'STRHOURS' in d:
+                oldHours = d.get('STRHOURS').split(',')
+                oldHours = list(filter(None, oldHours))
+                dateRe = r'(\w+)\s([0-9\:]+\sAM)\s-\s([0-9\:]+\sPM)'
+                newDoc['hours'] = {}
+                for hour in oldHours:
+                    day, openH, closeH = re.findall(dateRe, hour)[0]
+                    day = normalizeDay(day)
+                    newDoc['hours'][day] = {'open': dt.datetime.strptime(openH , '%I:%M %p').strftime('%H:%M'),'close': dt.datetime.strptime(closeH, '%I:%M %p').strftime('%H:%M')}
+                    newDoc['hours'][day]['open24'] = newDoc['hours'][day]['open']==newDoc['hours'][day]['close']
+                newDoc['hours']['timezone'] = d.get('STORETIMEZONE')
+            newDoc['locationId'] =d.get('KEY')
+            newDoc['images'] = d.get('IMAGE')
+            newDoc['name'] = f"Publix - {d.get('SHORTNAME')}"
+            newDoc['chain'] = 'Publix'
+            newDoc['phone'] = d.get('PHONE')
+            newDoc['additionalIds'] = [
+                {'path': 'OPTION', 'id': d.get('OPTION')},
+            ]
+            newStores.append(newDoc)
+            
+    for icFile in instacartFiles:
+        with open(icFile, 'r', encoding='utf-8') as file:
+            additionalStoreData = json.loads(file.read())[0]
+            stores = additionalStoreData['data']['availablePickupRetailerServices']['pickupRetailers'][0]['locations']
+            # retailerLocationId + streetAddress 
+            if 'aldi' in icFile:
+                chain = 'ALDI'
+            elif 'publix' in icFile:
+                chain = 'Publix'
+            
+            possibleStores = filter(lambda x: x.get('chain')==chain, newStores)
+            pprint(chain)
+            for x in possibleStores:
+                sums = [abs((x['geolocation']['latitude']-y['coordinates']['latitude'])+(x['geolocation']['longitude']-y['coordinates']['longitude'])) for y in stores]
+                guessIndex = sums.index(min(sums))
+                # pprint(x['address']['addressLine1'])
+                # pprint(stores[guessIndex]['streetAddress'])
+                # print() 
+                x['locationId2'] = stores[guessIndex]['retailerLocationId']
+
+
+
         
     insertData(newStores, 'stores', 'new')
     for storeFile in storeFiles:
         os.makedirs('../data/raw'+'/'.join(storeFile.split('/')[:-1]), exist_ok=True)
-        os.rename(head+storeFile, "../data/raw/"+storeFile)
+        os.rename(head+storeFile, "../data/collections/"+storeFile)
         
 
     return None
@@ -1867,7 +1898,7 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
         with open('./requests/server/collections/kroger/API/myStores.json', 'r', encoding='utf-8') as storeFile:
             stores = json.loads(storeFile.read())
             insertData(stores, 'stores')
-        os.makedirs('../data/raw/kroger/API', exist_ok=True)
+        os.makedirs('../data/collections/kroger/API', exist_ok=True)
 
         with open('./requests/server/collections/kroger/API/combinedPrices.json', 'r', encoding='utf-8') as priceFile:
             oldPrices = json.loads(priceFile.read())
@@ -1896,7 +1927,7 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
                         iteration+=1
                     else:
                         returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=returnTuple[0], itemCollection=returnTuple[1], pricesCollection=returnTuple[2], inventoryCollection=returnTuple[3], tripCollection=returnTuple[4], priceModifierCollection=returnTuple[5], userCollection=returnTuple[6], sellerCollection=returnTuple[7])
-                    os.makedirs(f'../data/raw/kroger/{folder}/', exist_ok=True)
+                    os.makedirs(f'../data/collections/kroger/{folder}/', exist_ok=True)
                     print(f'processed {file}.')
         
         
@@ -1905,8 +1936,8 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
                 finalCollection.extend(newFromOldPrices)
             insertData(finalCollection, listTranslator[str(i)])
     
-        os.rename("./requests/server/collections/kroger/API/myStores.json", "../data/raw/kroger/API/myStores.json")
-        os.rename('./requests/server/collections/kroger/API/combinedPrices.json', "../data/raw/kroger/API/combinedPrices.json")
+        os.rename("./requests/server/collections/kroger/API/myStores.json", "../data/collections/kroger/API/myStores.json")
+        os.rename('./requests/server/collections/kroger/API/combinedPrices.json', "../data/collections/kroger/API/combinedPrices.json")
     # file does not exist (clean up has happened therefore read from ../)
     else:
         # promotions (nonTime bound in db; no duplicates preferrable, filter check)
@@ -1933,7 +1964,7 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
                         iteration+=1
                     else:
                         returnTuple = deconstructExtensions(head+"\\"+file, promotionsCollection=returnTuple[0], itemCollection=returnTuple[1], pricesCollection=returnTuple[2], inventoryCollection=returnTuple[3], tripCollection=returnTuple[4], priceModifierCollection=returnTuple[5], userCollection=returnTuple[6], sellerCollection=returnTuple[7])
-                    os.makedirs(f'../data/raw/kroger/{folder}/', exist_ok=True)
+                    os.makedirs(f'../data/collections/kroger/{folder}/', exist_ok=True)
                     print(f'processed {file}.')
 
         for i, finalCollection in enumerate(returnTuple):
@@ -1952,15 +1983,15 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
             for ofile in couponFiles:
                 # handles insertion
                 deconstructDollars(pathName+'/'+ofile)
-                os.makedirs(f'../data/raw/{repo}', exist_ok=True)
-                os.rename(pathName+'\\'+ofile, f'../data/raw/{repo}/{ofile}')  
+                os.makedirs(f'../data/collections/{repo}', exist_ok=True)
+                os.rename(pathName+'\\'+ofile, f'../data/collections/{repo}/{ofile}')  
                 print(f'processed {ofile}.')
     
     for head, subfolders, files in os.walk(dataRepoPath):         
         if head.split('\\')[-1] in wantedPaths:
             folder = head.split('\\')[-1]
             for file in files:
-                os.rename(head+'\\'+file, f'../data/raw/kroger/{folder}/{file}')
+                os.rename(head+'\\'+file, f'../data/collections/kroger/{folder}/{file}')
     normalizeStoreData()
     backupDatabase()
     createDBSummaries('new')
@@ -2027,6 +2058,10 @@ def aggregate(db="new", collection="items"):
         {"$group": {"_id": "$pairs.k", "count": {"$sum": 1}}},
         {"$sort": {"count": 1}}
     ])
+    # res = cursor[collection].aggregate(pipeline=[
+    #     {'$group': {"_id": "$locationId"}},
+    #     {''}
+    # ])
     pprint([x for x in res])
 
     return None
@@ -2040,11 +2075,12 @@ def getStores():
     pprint(res[0])
     return None
 
-#queryDB()
 
+
+#queryDB()
 # aggregate()
 # getCollectionFeatureCounts(collection='prices')
-# getCollectionFeatureCounts(collection='promotions')
+# getCollectionFeatureCounts(collection='stores')
 
 
 # getCollectionFeatureTypes(collection='inventories', feature='availableToSell')
@@ -2059,7 +2095,7 @@ def getStores():
 # kwargs=[{"url": "https://www.kroger.com/savings/cl/coupons", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "digital"}, {'reset': True}])
 
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerCashbackCouponsAndItems', 'flushData'],
-# kwargs=[{"url": "https://www.kroger.com/savings/cbk/cashback/", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "cashback"}, {'reset': False}])
+# kwargs=[{"url": "https://www.kroger.com/savings/cbk/cashback/", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "cashback"}, {'reset': True}])
 
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ['setUpBrowser', 'getDollarGeneralCouponsAndItems', 'flushData'],
 # kwargs=[{"n": 'dollar-general-coupons', 'initialSetup': True},{"link": "dollarGeneral"}, {'reset': False}])
@@ -2078,5 +2114,6 @@ def getStores():
 # [{'n': 'food-depot-items', 'initialSetup': True}, {'chain': 'fooddepot'}, {'reset': False}])
 # runAndDocument([setUpBrowser, getStoreData, eatThisPage], ['setup', 'getStores', 'flushData'], [{'n': None, 'initialSetup': True}, {'chain': 'aldi'}, {'reset':False}])
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1', 'buy3save6'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
-backupDatabase()
-createDBSummaries('new')
+normalizeStoreData()
+# backupDatabase()
+# createDBSummaries('new')
