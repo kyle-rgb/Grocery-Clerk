@@ -65,5 +65,6 @@ def returnvars():
 
 
 if __name__ == "__main__":
+    print("started @ = ", dt.datetime.now())
     app.config['TEMPLATES_AUTO_RELOAD'] = True
     app.run(debug = False)

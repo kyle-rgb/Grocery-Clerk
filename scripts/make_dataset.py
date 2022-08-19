@@ -1,6 +1,6 @@
 
 from pprint import pprint
-import time, re, random, datetime as dt, os, json, urllib, pytz, sys
+import time, re, random, datetime as dt, os, json, urllib, pytz, sys, math
 import pyautogui as pag
 import subprocess, shutil, requests
 
@@ -1097,7 +1097,7 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
 
 def backupDatabase():
     # move and compressed extension files to separate archive 
-    subprocess.Popen(['7z', "a", "../data/archive.7z", "../data/raw", f"-p{EXTENSION_ARCHIVE_KEY}", "-mhe", "-sdel"])
+    subprocess.Popen(['7z', "a", "../data/archive.7z", "../data/collections", f"-p{EXTENSION_ARCHIVE_KEY}", "-mhe", "-sdel"])
     # helper to dump bsons and zip files for archive
     if os.path.exists("../data/archive/"):
         os.remove('../data/archive/')
@@ -1543,8 +1543,7 @@ def normalizeStoreData():
                     storeFiles.append(folder.replace('\\', '/')+'/'+file)
                 else:
                     instacartFiles.append(folder.replace('\\', '/')+'/'+file)
-    print(storeFiles)
-    print(instacartFiles)
+
     # --- Kroger's ---
     # address { 
     #   {addressLine1, city, county, state, zipCode} <String>
@@ -1561,77 +1560,95 @@ def normalizeStoreData():
 
 
     # --- Aldi ---
-    # data[0] = store <- the single store
-    # data[1] = gmap api with my lat/long / gmapsigner => just url
-    # data[2] = specialevents => []
-    # data[3] = listing => __typename and so on {}
-    # data[4] = promotions => {} of promos w/ keys {promos, dpv2api, __typename} Query parms and user data
-    # data[5] = promotion => {} the actual promotions
-    # data[6] = 4 closest stores <- storeList
+    ## response.entities <- list of objects 
+        # alt ids: distance.id 
+        # main ids : .profile = x
+            # address = {addressLine1: x.address.line1, zipCode: x.address.postalCode, city: x.address.city, county: n/a, state: x.address.region, }
+                # c_facebookDescriptor = additional address
+            # chain, name = "ALDI", chain.title() = x.name
+            # geolocation = {latitude: x.geocodedCoordinates.lat, longitude: x.geoCodedCoordinates.long}
+            # hours: {sunday...monday} = x.hours.map(lambda y: y.day.lower(): {open: y.intervals[0].start, close: y.intervals.end, open24: false})
+            # locationId <- derived with geolocation
+            # name : chain.title() = x.name
+            # additionalIds: {path: , id: } = {'c_internalALDIID', facebookStoreId, c_corpId, c_dIV, c_corpIdExpandedName}
 
-    # {address: {city:actual city, dmaName:City,ST, line1:street address, line2: None, postalCode: 30084, state} <string>
-    # } ==> { city, addressLine1 : line1, bool(line2), zipCode: postalCode, state:  dmaName.split(',')[-1] }
-    # currentPromotions: <Int> / previewPromotions / previewPromotions: <Int> / napi / listingCount
-    # chain: name, 
-    # locationId: id, # id: <String> <- storeId
-    # hours: parse format <String> of "(%a): (%-H:%M %p)-(%-H:%M %p);" => {\1 : {open: \2, close: \3}, gmtOffset, timezone, open24}
-    # geolocation: {latLng: f"{location.lat} {location.lng}", ~location.distance}
-    # phone: bool(phone+areaCode, phone.phoneNumber)
+            # add to stores = > pickupAndDeliveryServices, paymentOptions, mainPhone.display, 
 
-    # logo: logos.logURL
-    # additional_ids = {
-    #   pretailer.id, pretailer.name,
-    #   referenceNumber, retailer.id, retailer.name==pretailer.name : null : retailer.name; 
-    # }
+
 
     with open(storeFiles[0], 'r', encoding='utf-8') as file:
         data = json.loads(file.read())
-        data = map(lambda x: x.get('data'), data)
-        stores = filter(lambda x:'store' in x.keys() or 'storeList' in x.keys(), data)
-        data = []
-        for s in stores:
-            if 'store' in s.keys():
-                data.append(s['store'])
-            else:
-                data.extend(s['storeList'])
+        maxRadius = 0
+        data = list(filter(lambda x: 'r=' in x['url'], data))
+        for d in data:
+            urlVars = urllib.parse.parse_qsl(d.get('url'))
+            radius = filter(lambda x: x[0]=='r', urlVars)
+            radius = float(list(radius)[0][1])
+            if radius>maxRadius:
+                maxRadius = radius
+        maxRadius = math.floor(maxRadius)
+        data = list(filter(lambda x: f'r={maxRadius}' in x['url'] , data))
+        data = [item.get('profile') for sublist in data for item in sublist.get('response').get('entities') if 'closed' not in item.get('profile')]
+         ## response.entities <- list of objects 
+        # alt ids: distance.id 
+        # main ids : .profile = x
+            # XX address = {addressLine1: x.address.line1, zipCode: x.address.postalCode, city: x.address.city, county: n/a, state: x.address.region, }
+                # c_facebookDescriptor = additional address
+
+            # XX chain, name = "ALDI", chain.title() = x.name
+            # XX geolocation = {latitude: x.geocodedCoordinates.lat, longitude: x.geoCodedCoordinates.long}
+            # XX hours: {sunday...monday} = x.hours.map(lambda y: y.day.lower(): {open: y.intervals[0].start, close: y.intervals.end, open24: false})
+            # locationId <- derived with geolocation
+            # XX name : chain.title() = x.name
+            # additionalIds: {path: , id: } = {}
+
+            # add to stores = > pickupAndDeliveryServices, paymentOptions, mainPhone.display, 
+
         # all stores
         # address {addressLine1, city, county, state, zipCode}, departments [{id, name, hours{close, open, open24}, open24}]
         # geolocation {latLng, latitude, longitude},
         # hours {timezone, gmtOffset, open24, <weekdays:{close, open, open24}>}, locationId, name, phone
-        ###tzWhere = tzwhere.tzwhere()
-        for d in data:
-            newDoc = {}
-            oldAddress = d.pop('address')
-            oldAddress['addressLine1'] = oldAddress.pop("line1")
-            oldAddress['zipCode'] = oldAddress.pop('postalCode')
-            newDoc['address'] = {k:v for k,v in oldAddress.items() if k in {'addressLine1', 'zipCode', 'city', 'county', 'state'}}
-            newDoc['chain'] = d.pop('name')
-            newDoc['geolocation'] = {}
-            newDoc['geolocation']['latitude'] = d['location']['coordinates'][1]
-            newDoc['geolocation']['longitude'] = d['location']['coordinates'][0]
-            # parse hours in to hours 
-            oldHours = d.pop('hours').split(';')
-            dateRe = r'(\w+)\:\s([0-9\:]+\sAM)-([0-9\:]+\sPM)'
-            newDoc['hours'] = {}
-            for hour in oldHours:
-                day, openH, closeH = re.findall(dateRe, hour)[0]
-                day = normalizeDay(day)
-                newDoc['hours'][day] = {'open': dt.datetime.strptime(openH , '%I:%M %p').strftime('%H:%M'),'close': dt.datetime.strptime(closeH, '%I:%M %p').strftime('%H:%M')}
-                newDoc['hours'][day]['open24'] = newDoc['hours'][day]['open']==newDoc['hours'][day]['close']
-            ###newDoc['hours']['timezone'] = tzWhere.tzNameAt(newDoc['geoLocation']['latitude'], newDoc['geoLocation']['longitude'])
-            newDoc['locationId'] = d.get('id')
-            newDoc['name'] = newDoc.get('chain').title()
 
-            if d.get('phone').get('phoneNumber'):
-                newDoc['phone'] = d.get('phone').get('areaCode') + d.get('phone').get('phoneNumber')
-            
-            newDoc['additionalIds'] = [
-                {'path': 'pretailer.id', 'id': d.get('pretailer').get('id')},
-                {'path': 'retailer.id', 'id': d.get('retailer').get('id')},
-                {'path': 'referenceNumber', 'id': d.get('referenceNumber')},
-            ]
-            newStores.append(newDoc)
-    
+        additionalIds = {'c_internalALDIID', 'facebookStoreId', 'c_corpId', 'c_dIV', 'c_corpIdExpandedName'}
+        for storeData in data:
+            oldAddress = storeData.pop('address')
+            newDoc = {}
+            newDoc['address'] = {
+                "addressLine1": oldAddress.get('line1'),
+                "zipCode": oldAddress.get('postalCode'),
+                "city": oldAddress.get('city'),
+                "state": oldAddress.get('region')
+            }
+            newDoc['chain'] = storeData.get('name')
+            newDoc['name'] = newDoc.get('chain').title()
+            # newDoc['locationId'] = d.get('id') <- to be set by join down below
+            newDoc['altAddress'] = storeData['facebookDescriptor']
+            newDoc['geolocation'] = {}
+            newDoc['geolocation']['latitude'] = storeData.get('geocodedCoordinate').get('lat')
+            newDoc['geolocation']['longitude'] = storeData.get('geocodedCoordinate').get('long')
+            # parse hours in to hours 
+            oldHours = storeData.pop('hours')
+            oldHours = oldHours['normalHours']
+            newDoc.setdefault('hours', {})
+            for hour in oldHours:
+                day = hour['day'].lower()
+                newDoc['hours'][day] = {'open':  hour['intervals'][0]['start'],'close': hour['intervals'][0]['end']}
+                newDoc['hours'][day]['open24'] = newDoc['hours'][day]['open']==newDoc['hours'][day]['close']
+
+
+            if storeData.get('mainPhone').get('display'):
+                newDoc['phone'] = storeData['mainPhone']['display']
+
+            newDoc['modalities'] = storeData['pickupAndDeliveryServices']
+            newDoc['payments'] = storeData['paymentOptions']
+
+            for addId in additionalIds:
+                if addId in storeData:
+                    newDoc.setdefault('additionalIds', [])
+                    newDoc['additionalIds'].append({f"{addId}": storeData[addId]})
+
+            if 'Curbside Pickup' in newDoc.get('modalities'):
+                newStores.append(newDoc) 
     # ---DollarGeneral---
         # ad=address, cc<Int>, ct=city, di='U', dm=<datetime>, ef<Int>, hf<hours friday>, hh<hours thursday>, hm<hours monday>,
         # hs<hours sat>, ht, hu, hw, la=latitude, lo=longitude, pn='4708932140', se=1, sg=0, si=2, sn=id<13141>, ss=123054, 
@@ -1848,32 +1865,40 @@ def normalizeStoreData():
             ]
             newStores.append(newDoc)
             
+    addressRegex = re.compile(r'^(\d+)')
     for icFile in instacartFiles:
         with open(icFile, 'r', encoding='utf-8') as file:
             additionalStoreData = json.loads(file.read())[0]
             stores = additionalStoreData['data']['availablePickupRetailerServices']['pickupRetailers'][0]['locations']
             # retailerLocationId + streetAddress 
             if 'aldi' in icFile:
-                chain = 'ALDI'
+                possibleStores = filter(lambda x: x.get('chain')=='ALDI', newStores)
             elif 'publix' in icFile:
-                chain = 'Publix'
+                possibleStores = filter(lambda x: x.get('chain')=='Publix', newStores)
             
-            possibleStores = filter(lambda x: x.get('chain')==chain, newStores)
-            pprint(chain)
+            
             for x in possibleStores:
                 sums = [abs((x['geolocation']['latitude']-y['coordinates']['latitude'])+(x['geolocation']['longitude']-y['coordinates']['longitude'])) for y in stores]
                 guessIndex = sums.index(min(sums))
-                # pprint(x['address']['addressLine1'])
-                # pprint(stores[guessIndex]['streetAddress'])
-                # print() 
-                x['locationId2'] = stores[guessIndex]['retailerLocationId']
-
-
-
-        
+                addressNumbersGuess = re.findall(addressRegex , stores[guessIndex]['streetAddress'])[0]
+                addressNumbers = re.findall(addressRegex, x['address']['addressLine1'])[0]
+                if addressNumbersGuess==addressNumbers:
+                    finalGuess = stores[guessIndex]
+                else:
+                    if 'altAddress' in x:
+                        altAddressNumbers = re.findall(addressRegex , x['altAddress'])[0]
+                        if altAddressNumbers == addressNumbers:
+                            finalGuess = stores[guessIndex]
+                        elif altAddressNumbers == addressNumbersGuess:
+                            finalGuess = stores[guessIndex]  
+                    else:
+                        moreGuesses = [i for i, x in enumerate(sums) if x<.01]
+                        finalGuess = [stores[i] for i in moreGuesses if re.findall(addressRegex, stores[i]['streetAddress'])[0]==addressNumbers][0]
+                x['locationId'] = finalGuess['retailerLocationId']
+                
     insertData(newStores, 'stores', 'new')
     for storeFile in storeFiles:
-        os.makedirs('../data/raw'+'/'.join(storeFile.split('/')[:-1]), exist_ok=True)
+        os.makedirs('../data/collections'+'/'.join(storeFile.split('/')[:-1]), exist_ok=True)
         os.rename(head+storeFile, "../data/collections/"+storeFile)
         
 
@@ -2113,7 +2138,7 @@ def getStores():
 # ['setup', 'getFoodDepotItems', 'flushData'],
 # [{'n': 'food-depot-items', 'initialSetup': True}, {'chain': 'fooddepot'}, {'reset': False}])
 # runAndDocument([setUpBrowser, getStoreData, eatThisPage], ['setup', 'getStores', 'flushData'], [{'n': None, 'initialSetup': True}, {'chain': 'aldi'}, {'reset':False}])
-# createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1', 'buy3save6'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
-normalizeStoreData()
+createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1', 'buy3save6', 'buy2save10'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
+# normalizeStoreData()
 # backupDatabase()
 # createDBSummaries('new')

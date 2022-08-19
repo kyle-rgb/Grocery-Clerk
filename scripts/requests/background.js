@@ -1,7 +1,7 @@
 var setMaster = new Set() 
 var masterArray = []
 var iWasSet = false
-var settingStores = true
+var settingStores = false
 var scrapingUrls = [
   "*://*.kroger.com/cl/api*",
   "*://*.kroger.com/atlas/v1/product/v2/products*",
@@ -29,6 +29,7 @@ if (settingStores){
     "https://www.dollargeneral.com/bin/omni/pickup/storeDetails*", // dollar general
     "https://www.dollargeneral.com/bin/omni/pickup/storeSearch*", // dollar general
     "*://*.liquidus.net/*", // aldi store search
+    "https://stores.aldi.us/stores?q=*",
     "https://services.publix.com/api/v1/storelocation*", // publix 1st party site search
     "https://production-us-1.noq-servers.net/api/v1/application/stores*", // food depot stores
     "https://production-us-1.noq-servers.net/api/v1/application/franchises*", // food depot stores
