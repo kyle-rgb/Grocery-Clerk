@@ -359,34 +359,130 @@ function summarizeNewCoupons(target){
     // }
     // ---Publix---
     /* IsPersonalizationEnabled,
-    PersonalizedStoreNumber = locationId,
+    PersonalizedStoreNumber = ~locationId from publix internal site,
     url = no relevant params,
     acquisition_timestamp,
+    ---store data leaks--
     Stores, HolidaySummary, StatusCode, StatusMessage
-    Savings {  }
+    Savings { [
+        "id": "hexString",
+        "dcId": 2880318,
+        "?baseProductId": "RIO-PCI-207605",
+        "waId": -2025301544,
+        "savings": "$0.90",
+        "finalPrice": 2.99,
+        "?title": "Deer Park Spring Water, 100% Natural",
+        "?description": "12 - 12 fl oz (355 ml) plastic bottles [144 fl oz ",
+        "imageUrl": "https://...",
+        "minimumPurchase": 1, 
+        "redemptionsPerTransaction": 1,
+        "originalDeal": 3.89,
+        "originalMinimumPurchase": 2,
+        "wa_startDate": "0001-01-01T00:00:00Z",
+        "wa_endDate": "0001-01-01T00:00:00Z",
+        "wa_startDateFormatted": "1/1",
+        "wa_endDateFormatted": "1/1",
+        "wa_postStartDate": "0001-01-01T00:00:00Z",
+        "wa_postEndDate": "0001-01-01T00:00:00Z",
+        "dc_startDate": "0001-01-01T00:00:00Z",
+        "dc_endDate": "0001-01-01T00:00:00Z",
+        "dc_startDateFormatted": "1/1",
+        "dc_endDateFormatted": "1/1",
+        "dc_popularity": 9999,
+        "categories": ["grocery"] | ["beer-and-wine"] ... ,
+        "brand": "4C",
+        "savingType": "Tpr",
+        "isPrintable": true/false,
+        "isRelevant": true/false,
+        "?relevancy": 1098,
+        "isClipped": true/false,
+        "isSneakPeak": true/false,
+        "personalizationType": "Unknown",
+        "?tprGroupId": 101315,
+        "?Terms": 1088,
+        "?enhancedImageUrl": "https...",
+        "?finePrint": "(Only Sizes Marked &quot;Family Size&quot;)",
+        "?department": "Crackers",
+        "?additionalDealInfo": "SAVE UP TO $3.50",
+        "?additionalSavings": "SAVE $1.00",
+        "?dc_brand": "Publix",
+        "?apiDescription": "Save $1.00 Off The Purchase of One (1) Publix...",
+        "?priceQualifier": "WITH MFR DIGITAL COUPON",
+    ] }
+
+    ---Food Depot---
+    {
+        "offers": [ <= app cards
+            {
+                "details": "limit 1 coupon per purchase ...",
+                "image": {
+                    "links": {lg, md, sm}<= links to pictures,
+                    "id": "66359",
+                    "ratio": "square"
+                },
+                "description": "any One (1) of ..." ,
+                "title": "$1.00 OFF",
+                "offerId": "49744",
+                "targetOfferId": "3370744",
+                "brand": "Angel Soft Bath Tissue",
+                "expireDateString": "Exp 07/10/22",
+                "saveValue": "100",
+                "offer_recommendation_flag": 0,
+                "expireDate": "2022-07-10T23:59:59",
+                "effectiveDate": "2022-05-29T00:01:00",
+                "sameTransactionRedeem": false/true,
+                "category": "Household" ,
+                "offerType": "buy_x_get_y_at_z_dollars_off_trig_list",
+                "activated": true/false,
+            }
+        ],
+        "url": "",
+        "acquistionTimestamp": Int,
+        "HasErrors, HasNoErrors, Result <= Previous Store Level Data": null,
+        "Result": [{
+            "Brand": ,"Colgate Toothpaste" 
+            "Category": "Personal Care",
+            "DisplayEndDate": "2022-08-20T23:59:59",
+            "DisplayStartDate": "2022-08-14T00:01:00",
+            "ExpirationDate": "2022-08-20T23:59:59",
+            "Id": 406 || 407,
+            "ImageUrl": "https://appcard-web-images.s3.amazonaws.com/69329_200x200",
+            "Index": 10,
+            "IsItemLevel": true/false,
+            "IsNew": true/false,
+            "IsRedeemableOnline": true,
+            "LongDescription": ' only one coupon per purchase ...',
+            "RequirementDescription": "on THREE (3) bubly 8 packs",
+            "ShortDescription": "$1.00 OFF",
+            "Status": "Available",
+            "Value": 1
+        }]
+    }
     
     */ 
-
-
-
     let files = fs.readdirSync(target, {encoding: 'utf-8', withFileTypes: true})
     files = files.filter((d)=>d.isFile())
     allCoupons = []
     let storesRegex = /fooddepot|publix/
     for (let file of files){
-        console.log(file.name)
+        console.log(target+"/"+file.name)
         data = fs.readFileSync(target+'/'+file.name, {encoding: 'utf-8'})
         let chunk = JSON.parse(data)
         if (!Array.isArray(chunk)){
             chunk = [chunk]
         }
+        chunk = chunk.filter((d)=> d.url.includes('savings') || d.url.includes('coupons') || d.url.includes('offers'))
         chunk.map((d)=> cleanup(d))
+        console.log(chunk.map((d)=>{
+            //'Result' in d ? console.log("\n", d.Result.map((dx)=>dx), "\n") : undefined;
+            'Savings' in d ? console.log("\n", d.Savings.slice(0, 5), "\n") : undefined;
+        }))
         allCoupons = allCoupons.concat(chunk)
     }
     let summary = JSON.stringify(js_summary.summarize(allCoupons, {arraySampleCount: allCoupons.length}), null, 3)
     let endName=target.split(/\//).map((d)=>d.match(storesRegex)).filter((d)=>d!==null)[0][0]
-    console.log(endName)
-    fs.writeFileSync(`./${endName}-summary.json`, summary)
+    
+    // fs.writeFileSync(`./${endName}-summary.json`, summary)
     return null
 }
 summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons")

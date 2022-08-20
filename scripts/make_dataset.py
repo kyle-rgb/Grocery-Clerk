@@ -1209,9 +1209,28 @@ def deconstructExtensions(filename, **madeCollections):
                     allUpcs.add(q.get('upc'))
                     for offer in q.get('offers'):
                         allOffers.add(str(offer).replace("'", "\""))
-                allOffers = json.loads(list(allOffers)[0])
-                hasNewPromotion = list(filter(lambda x: x.get('krogerCouponNumber')==allOffers.get('couponNumber'), promotionsCollection))
-                if len(hasNewPromotion)==0:
+
+                if not allOffers:
+                    reqAmt, savings = re.findall(re.compile(r"buy(\d+)save(\d+)"), filename)[0]
+                    reqAmt = reqAmt
+                    savings = savings
+                    upcsQual = list(filter(lambda x: 'products' in x, startingArray))
+                    upcsQual = [u['upc'] for sublist in upcsQual for u in sublist['products']]
+                    hasNewPromotion = list(filter(lambda x: x.get('id')==f"buy{reqAmt}save{savings}", promotionsCollection))
+                    if not hasNewPromotion:
+                        promotionsCollection.append({
+                            "value": savings,
+                            "type": "Amount off",
+                            "requirementQuantity": reqAmt,
+                            "shortDescription": f"Buy {reqAmt} or More, Save ${savings} Total",
+                            "redemptionsAllowed": -1,
+                            "productUpcs": upcsQual,
+                            "id": f"buy{reqAmt}save{savings}"
+                        })  
+                else: 
+                    allOffers = json.loads(list(allOffers)[0])
+                    hasNewPromotion = list(filter(lambda x: x.get('krogerCouponNumber')==allOffers.get('couponNumber'), promotionsCollection))
+                if len(hasNewPromotion)==0 and type(allOffers)==dict:
                     newPromotion = {}
                     # couponAmount => value
                     newPromotion['value'] = allOffers.get('couponAmount')
@@ -1235,7 +1254,7 @@ def deconstructExtensions(filename, **madeCollections):
                     newPromotion['productUpcs'] = list(allUpcs)
                     newPromotion['redemptionsAllowed'] = -1
                     promotionsCollection.append(newPromotion)
-                else:
+                elif len(hasNewPromotion)>0:
                     hasNewPromotion[0]['productUpcs'].extend(list(allUpcs))
             elif re.match(couponsDetailsRegex, url):
                 coupons = data.get('coupons')
@@ -1897,10 +1916,10 @@ def normalizeStoreData():
                 x['locationId'] = finalGuess['retailerLocationId']
                 
     insertData(newStores, 'stores', 'new')
+    storeFiles.extend(instacartFiles)
     for storeFile in storeFiles:
-        os.makedirs('../data/collections'+'/'.join(storeFile.split('/')[:-1]), exist_ok=True)
-        os.rename(head+storeFile, "../data/collections/"+storeFile)
-        
+        os.makedirs('../data/'+'/'.join(storeFile.split('/')[3:-1]), exist_ok=True)
+        os.rename(storeFile , "../data/"+'/'.join(storeFile.split('/')[3:]))
 
     return None
 
@@ -2011,7 +2030,7 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
                 os.makedirs(f'../data/collections/{repo}', exist_ok=True)
                 os.rename(pathName+'\\'+ofile, f'../data/collections/{repo}/{ofile}')  
                 print(f'processed {ofile}.')
-    
+
     for head, subfolders, files in os.walk(dataRepoPath):         
         if head.split('\\')[-1] in wantedPaths:
             folder = head.split('\\')[-1]
@@ -2139,6 +2158,7 @@ def getStores():
 # [{'n': 'food-depot-items', 'initialSetup': True}, {'chain': 'fooddepot'}, {'reset': False}])
 # runAndDocument([setUpBrowser, getStoreData, eatThisPage], ['setup', 'getStores', 'flushData'], [{'n': None, 'initialSetup': True}, {'chain': 'aldi'}, {'reset':False}])
 createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1', 'buy3save6', 'buy2save10'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
+# createDecompositions('./requests/server/collections/kroger', wantedPaths=['buy2save10'], additionalPaths=[])
 # normalizeStoreData()
 # backupDatabase()
 # createDBSummaries('new')
