@@ -160,9 +160,9 @@ function readAndMove(target, defaultLocation=null){
     insertData(toCollectionItems, 'items')
     insertData(fullPrices, 'prices')
     insertData(fullInventories, 'inventories')
-    fs.mkdirSync('../../../data/raw/'+targetHeirarchy, {recursive: true})
+    fs.mkdirSync('../../../data/collections/'+targetHeirarchy, {recursive: true})
     for (file of files){
-        fs.renameSync(target+file.name, `../../../data/raw/${targetHeirarchy}`+file.name)
+        fs.renameSync(target+file.name, `../../../data/collections/${targetHeirarchy}`+file.name)
     }
 
     return null
@@ -170,7 +170,7 @@ function readAndMove(target, defaultLocation=null){
 }
 
 const zipUp = () => {
-    exec(`7z a ../../../data/archive.7z ../../../data/raw -p${process.env.EXTENSION_ARCHIVE_KEY} -mhe -sdel`, (err, stdout, stderr)=>{
+    exec(`7z a ../../../data/archive.7z ../../../data/collections -p${process.env.EXTENSION_ARCHIVE_KEY} -mhe -sdel`, (err, stdout, stderr)=>{
         console.log(`stdout: ${stdout}`)
     })
     return null
@@ -485,9 +485,9 @@ function summarizeNewCoupons(target){
     // fs.writeFileSync(`./${endName}-summary.json`, summary)
     return null
 }
-summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons")
-summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons")
-// readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659")
-// readAndMove('../../../scripts/requests/server/collections/aldi/', "23150")
-// summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items')
-// zipUp()
+// summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons")
+// summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons")
+readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659")
+readAndMove('../../../scripts/requests/server/collections/aldi/', "23150")
+summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items')
+zipUp()

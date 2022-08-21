@@ -2,18 +2,36 @@
    "db": "new",
    "collections": 11,
    "views": 0,
-   "objects": 2022431,
-   "avgObjSize": 300.38916284412176,
-   "dataSize": 607516355.0,
-   "storageSize": 116011008.0,
+   "objects": 2359948,
+   "avgObjSize": 284.3023613232156,
+   "dataSize": 670938789.0,
+   "storageSize": 131870720.0,
    "indexes": 11,
-   "indexSize": 20152320.0,
-   "totalSize": 136163328.0,
+   "indexSize": 23547904.0,
+   "totalSize": 155418624.0,
    "scaleFactor": 1.0,
-   "fsUsedSize": 225619288064.0,
+   "fsUsedSize": 220585275392.0,
    "fsTotalSize": 239380459520.0,
    "ok": 1.0,
    "collectionStats": [
+      {
+         "ns": "new.items",
+         "size": 162170339,
+         "count": 90625,
+         "avgObjSize": 1789,
+         "storageSize": 38920192,
+         "freeStorageSize": 65536,
+         "capped": false,
+         "nindexes": 1,
+         "indexBuilds": [],
+         "totalIndexSize": 856064,
+         "totalSize": 39776256,
+         "indexSizes": {
+            "_id_": 856064
+         },
+         "scaleFactor": 1,
+         "ok": 1.0
+      },
       {
          "ns": "new.trips",
          "size": 28511,
@@ -25,6 +43,40 @@
          "indexBuilds": [],
          "totalIndexSize": 20480,
          "totalSize": 45056,
+         "indexSizes": {
+            "_id_": 20480
+         },
+         "scaleFactor": 1,
+         "ok": 1.0
+      },
+      {
+         "ns": "new.users",
+         "size": 1482,
+         "count": 1,
+         "avgObjSize": 1482,
+         "storageSize": 20480,
+         "capped": false,
+         "nindexes": 1,
+         "indexBuilds": [],
+         "totalIndexSize": 20480,
+         "totalSize": 40960,
+         "indexSizes": {
+            "_id_": 20480
+         },
+         "scaleFactor": 1,
+         "ok": 1.0
+      },
+      {
+         "ns": "new.sellers",
+         "size": 1935,
+         "count": 23,
+         "avgObjSize": 84,
+         "storageSize": 20480,
+         "capped": false,
+         "nindexes": 1,
+         "indexBuilds": [],
+         "totalIndexSize": 20480,
+         "totalSize": 40960,
          "indexSizes": {
             "_id_": 20480
          },
@@ -50,72 +102,37 @@
          "ok": 1.0
       },
       {
-         "ns": "new.users",
-         "size": 1482,
-         "count": 1,
-         "avgObjSize": 1482,
-         "storageSize": 20480,
+         "ns": "new.stores",
+         "size": 110539,
+         "count": 104,
+         "avgObjSize": 1062,
+         "storageSize": 61440,
+         "freeStorageSize": 16384,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 20480,
-         "totalSize": 40960,
+         "totalIndexSize": 36864,
+         "totalSize": 98304,
          "indexSizes": {
-            "_id_": 20480
-         },
-         "scaleFactor": 1,
-         "ok": 1.0
-      },
-      {
-         "ns": "new.items",
-         "size": 147493214,
-         "count": 61575,
-         "avgObjSize": 2395,
-         "storageSize": 35753984,
-         "freeStorageSize": 61440,
-         "capped": false,
-         "nindexes": 1,
-         "indexBuilds": [],
-         "totalIndexSize": 589824,
-         "totalSize": 36343808,
-         "indexSizes": {
-            "_id_": 589824
+            "_id_": 36864
          },
          "scaleFactor": 1,
          "ok": 1.0
       },
       {
          "ns": "new.inventories",
-         "size": 148882654,
-         "count": 968695,
+         "size": 157281979,
+         "count": 1024790,
          "avgObjSize": 153,
-         "storageSize": 21897216,
-         "freeStorageSize": 32768,
-         "capped": false,
-         "nindexes": 1,
-         "indexBuilds": [],
-         "totalIndexSize": 9555968,
-         "totalSize": 31453184,
-         "indexSizes": {
-            "_id_": 9555968
-         },
-         "scaleFactor": 1,
-         "ok": 1.0
-      },
-      {
-         "ns": "new.stores",
-         "size": 212331,
-         "count": 205,
-         "avgObjSize": 1035,
-         "storageSize": 114688,
+         "storageSize": 23502848,
          "freeStorageSize": 45056,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 36864,
-         "totalSize": 151552,
+         "totalIndexSize": 10133504,
+         "totalSize": 33636352,
          "indexSizes": {
-            "_id_": 36864
+            "_id_": 10133504
          },
          "scaleFactor": 1,
          "ok": 1.0
@@ -138,36 +155,19 @@
          "ok": 1.0
       },
       {
-         "ns": "new.promotions",
-         "size": 16566852,
-         "count": 10654,
-         "avgObjSize": 1554,
-         "storageSize": 5406720,
-         "freeStorageSize": 49152,
+         "ns": "new.prices",
+         "size": 294520268,
+         "count": 1229172,
+         "avgObjSize": 239,
+         "storageSize": 47378432,
+         "freeStorageSize": 45056,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 139264,
-         "totalSize": 5545984,
+         "totalIndexSize": 12210176,
+         "totalSize": 59588608,
          "indexSizes": {
-            "_id_": 139264
-         },
-         "scaleFactor": 1,
-         "ok": 1.0
-      },
-      {
-         "ns": "new.sellers",
-         "size": 1935,
-         "count": 23,
-         "avgObjSize": 84,
-         "storageSize": 20480,
-         "capped": false,
-         "nindexes": 1,
-         "indexBuilds": [],
-         "totalIndexSize": 20480,
-         "totalSize": 40960,
-         "indexSizes": {
-            "_id_": 20480
+            "_id_": 12210176
          },
          "scaleFactor": 1,
          "ok": 1.0
@@ -190,19 +190,19 @@
          "ok": 1.0
       },
       {
-         "ns": "new.prices",
-         "size": 254080445,
-         "count": 976700,
-         "avgObjSize": 260,
-         "storageSize": 36343808,
-         "freeStorageSize": 53248,
+         "ns": "new.promotions",
+         "size": 16574805,
+         "count": 10655,
+         "avgObjSize": 1555,
+         "storageSize": 5513216,
+         "freeStorageSize": 49152,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 9658368,
-         "totalSize": 46002176,
+         "totalIndexSize": 139264,
+         "totalSize": 5652480,
          "indexSizes": {
-            "_id_": 9658368
+            "_id_": 139264
          },
          "scaleFactor": 1,
          "ok": 1.0

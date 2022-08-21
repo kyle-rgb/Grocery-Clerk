@@ -574,11 +574,13 @@ def simulateUser(link):
                 # page level activities
                 issuesAfterRequest = requests.get("http://127.0.0.1:5000/issues").json().get('issues')
                 while issuesCount!=issuesAfterRequest:
-                    pag.keyDown('ctrlleft')
-                    pag.keyDown('r')
+                    pag.moveTo(105, 613)
+                    pag.click()
                     time.sleep(1)
-                    pag.keyUp('ctrlleft')
-                    pag.keyDown('r')
+                    pag.click()
+                    time.sleep(1)
+                    pag.moveTo(89, 61, duration=1)
+                    pag.click()
                     time.sleep(12)
                     prevIssueCt = issuesAfterRequest
                     issuesAfterRequest = requests.get("http://127.0.0.1:5000/issues").json().get('issues')
@@ -2121,7 +2123,7 @@ def getStores():
 
 
 
-#queryDB()
+#queryDB() https://www.dollargeneral.com/bin/omni/pickup/product/detail?_=1661033822868&upc=37000860280&store=13141&deviceId=50567468275945662280529367524484101730&clientOriginStoreNumber=
 # aggregate()
 # getCollectionFeatureCounts(collection='prices')
 # getCollectionFeatureCounts(collection='stores')
@@ -2141,8 +2143,8 @@ def getStores():
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerCashbackCouponsAndItems', 'flushData'],
 # kwargs=[{"url": "https://www.kroger.com/savings/cbk/cashback/", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "cashback"}, {'reset': True}])
 
-# runAndDocument([setUpBrowser, simulateUser, eatThisPage], ['setUpBrowser', 'getDollarGeneralCouponsAndItems', 'flushData'],
-# kwargs=[{"n": 'dollar-general-coupons', 'initialSetup': True},{"link": "dollarGeneral"}, {'reset': False}])
+runAndDocument([setUpBrowser, simulateUser, eatThisPage], ['setUpBrowser', 'getDollarGeneralCouponsAndItems', 'flushData'],
+kwargs=[{"n": 'dollar-general-coupons', 'initialSetup': True},{"link": "dollarGeneral"}, {'reset': False}])
 
 # runAndDocument([simulateUser, eatThisPage], ['getDollarGeneralCouponsAndItems', 'flushData'],
 # kwargs=[{"link": "dollarGeneral"}, {'reset': False}])
@@ -2157,7 +2159,7 @@ def getStores():
 # ['setup', 'getFoodDepotItems', 'flushData'],
 # [{'n': 'food-depot-items', 'initialSetup': True}, {'chain': 'fooddepot'}, {'reset': False}])
 # runAndDocument([setUpBrowser, getStoreData, eatThisPage], ['setup', 'getStores', 'flushData'], [{'n': None, 'initialSetup': True}, {'chain': 'aldi'}, {'reset':False}])
-createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1', 'buy3save6', 'buy2save10'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
+# createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1', 'buy3save6', 'buy2save10'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=['buy2save10'], additionalPaths=[])
 # normalizeStoreData()
 # backupDatabase()
