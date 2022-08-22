@@ -13,7 +13,7 @@ var scrapingUrls = [
   "*://*.dollargeneral.com/bin/omni/coupons/recommended*", // Dollar General: Products, Coupons 
   "*://*.noq-servers.net/api/v1/application/stores/*/products?*",
   "*://*.appcard.com/baseapi/1.0/token/*/offers/unclipped_recommendation_flag*", 
-  "*://production-us-1.noq-servers.net/api/v1/application/coupons*",// Food Depot : Products, 3rd Party Coupons, 1st Party Coupons
+  "*://production-us-1.noq-servers.net/api/v1/application/coupon*",// Food Depot : Products, 3rd Party Coupons, 1st Party Coupons
   "*://services.publix.com/api*", 
   "*://delivery.publix.com/*/view/item_attributes*",
   "*://delivery.publix.com/graphql?operationName=Items*",

@@ -2125,7 +2125,7 @@ def getStores():
 
 #queryDB() https://www.dollargeneral.com/bin/omni/pickup/product/detail?_=1661033822868&upc=37000860280&store=13141&deviceId=50567468275945662280529367524484101730&clientOriginStoreNumber=
 # aggregate()
-# getCollectionFeatureCounts(collection='prices')
+# getCollectionFeatureCounts(collection='promotions')
 # getCollectionFeatureCounts(collection='stores')
 
 
@@ -2143,8 +2143,8 @@ def getStores():
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerCashbackCouponsAndItems', 'flushData'],
 # kwargs=[{"url": "https://www.kroger.com/savings/cbk/cashback/", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "cashback"}, {'reset': True}])
 
-runAndDocument([setUpBrowser, simulateUser, eatThisPage], ['setUpBrowser', 'getDollarGeneralCouponsAndItems', 'flushData'],
-kwargs=[{"n": 'dollar-general-coupons', 'initialSetup': True},{"link": "dollarGeneral"}, {'reset': False}])
+# runAndDocument([setUpBrowser, simulateUser, eatThisPage], ['setUpBrowser', 'getDollarGeneralCouponsAndItems', 'flushData'],
+# kwargs=[{"n": 'dollar-general-coupons', 'initialSetup': True},{"link": "dollarGeneral"}, {'reset': False}])
 
 # runAndDocument([simulateUser, eatThisPage], ['getDollarGeneralCouponsAndItems', 'flushData'],
 # kwargs=[{"link": "dollarGeneral"}, {'reset': False}])
@@ -2162,5 +2162,5 @@ kwargs=[{"n": 'dollar-general-coupons', 'initialSetup': True},{"link": "dollarGe
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1', 'buy3save6', 'buy2save10'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=['buy2save10'], additionalPaths=[])
 # normalizeStoreData()
-# backupDatabase()
-# createDBSummaries('new')
+backupDatabase()
+createDBSummaries('new')

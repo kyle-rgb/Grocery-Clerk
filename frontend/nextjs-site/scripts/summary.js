@@ -350,7 +350,7 @@ function summarizeFoodDepot(target){
     return null
 }
 
-function summarizeNewCoupons(target){
+function summarizeNewCoupons(target, parser){
     // let files = fs.readdirSync(target, {encoding: 'utf-8', withFileTypes: true})
     // files = files.filter((d)=>d.isFile())
     // for (let file of files){
@@ -365,7 +365,7 @@ function summarizeNewCoupons(target){
     ---store data leaks--
     Stores, HolidaySummary, StatusCode, StatusMessage
     Savings { [
-        "id": "hexString",
+        "id": "hexString", 
         "dcId": 2880318,
         "?baseProductId": "RIO-PCI-207605",
         "waId": -2025301544,
@@ -460,12 +460,17 @@ function summarizeNewCoupons(target){
     }
     
     */ 
+    if (!parser){
+        throw new Error('You Must Pass in a Parser to Parse!');
+    }
+
     let files = fs.readdirSync(target, {encoding: 'utf-8', withFileTypes: true})
     files = files.filter((d)=>d.isFile())
     allCoupons = []
     let storesRegex = /fooddepot|publix/
+    var parserKeys = Object.keys(parser)
     for (let file of files){
-        console.log(target+"/"+file.name)
+        console.log(target+"/"+file.name, files.length)
         data = fs.readFileSync(target+'/'+file.name, {encoding: 'utf-8'})
         let chunk = JSON.parse(data)
         if (!Array.isArray(chunk)){
@@ -473,21 +478,60 @@ function summarizeNewCoupons(target){
         }
         chunk = chunk.filter((d)=> d.url.includes('savings') || d.url.includes('coupons') || d.url.includes('offers'))
         chunk.map((d)=> cleanup(d))
-        console.log(chunk.map((d)=>{
-            //'Result' in d ? console.log("\n", d.Result.map((dx)=>dx), "\n") : undefined;
-            'Savings' in d ? console.log("\n", d.Savings.slice(0, 5), "\n") : undefined;
-        }))
-        allCoupons = allCoupons.concat(chunk)
+        if (target.includes('fooddepot')){
+            chunk = chunk.filter((d)=>d.url.includes('appcard'))
+            chunk = chunk.map((d)=>{return d.offers})
+            chunk = chunk.flat()
+        } else {
+            chunk = chunk.map((c)=>{return c.Savings}).flat()
+        }
+        
+        chunk.map((d)=> {
+            let newPromo = {}
+            let relKeys = parserKeys.filter((pk)=> pk in d)
+            for (let key of relKeys){
+                let actions = parser[key]
+                actions.convert ? d[key] = actions.convert(d[key]) : 0;
+                actions.to ? newPromo[actions.to] = d[key] : 0;
+                actions.keep ? newPromo[key] = d[key] : 0;
+            }
+            allCoupons.push(newPromo)
+        })
     }
-    let summary = JSON.stringify(js_summary.summarize(allCoupons, {arraySampleCount: allCoupons.length}), null, 3)
-    let endName=target.split(/\//).map((d)=>d.match(storesRegex)).filter((d)=>d!==null)[0][0]
     
-    // fs.writeFileSync(`./${endName}-summary.json`, summary)
+    insertData(allCoupons, 'promotions')
+
     return null
 }
-// summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons")
-// summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons")
-readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659")
-readAndMove('../../../scripts/requests/server/collections/aldi/', "23150")
-summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items')
-zipUp()
+summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons", {
+    "id": {keep: true},
+    "dcId": {keep: true},
+    "waId": {keep: true},
+    "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
+    "description": {to: "shortDescription"},
+    "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
+    "minimumPurchase": {to: "requirementQuantity"},
+    "categories": {keep: true},
+    "imageUrl": {keep: true},
+    "brand": {to: "brandName"},
+    "savingType": {to: "type"},
+    "dc_popularity": {to: "popularity"}
+})
+
+summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons", {
+    "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
+    "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
+    "effectiveDate": {to: "endDate", convert: function (x) {return new Date(x)}},
+    "offerId": {keep: true},
+    "targetOfferId": {keep: true},
+    "category": {to: "categories", convert: function(x) {return [x]}},
+    "image": {to: "imageUrl", convert: function (x){return x.links.lg}},
+    "brand": {to: "brandName"},
+    "details": {to: "terms"},
+    "offerType": {to: "type" }
+})
+
+// readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659")
+// readAndMove('../../../scripts/requests/server/collections/aldi/', "23150")
+// summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items')
+// zipUp()
