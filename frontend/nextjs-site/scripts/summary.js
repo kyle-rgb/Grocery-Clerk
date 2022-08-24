@@ -45,7 +45,31 @@ function insertData(listOfObjects, collectionName){
         .finally(()=> client.close())
 }
 
-function readAndMove(target, defaultLocation=null){
+async function insertFilteredData(id, collectionName, newData = undefined, dbName = 'new'){
+    const client = new MongoClient(process.env.MONGO_CONN_URL)
+    await client.connect();
+    console.log('Connected successfully to server')
+    const db = client.db(dbName)
+    const collection = db.collection(collectionName);
+    var projection = {}
+    projection[id] = 1
+    var filters = {}
+    filters[id] = {"$exists": true}
+    let cursor = collection.find({...filters}, {'project': {...projection}})
+    const results = await cursor.toArray()
+    const currentSet = new Set(results.map((d)=> d[id]))
+    newData = newData.filter((d)=> !currentSet.has(d[id]))
+    if (newData.length===0){
+        console.log('no new data to enter')
+    } else {
+        let ct = await collection.insertMany(newData)
+        console.log('inserted ', ct.insertedCount, ' into ', collectionName)
+    }
+    client.close()
+    return results
+}
+
+function readAndMove(target, defaultLocation=null, uuid){
     let storeRegex = /publix|aldi|kroger|dollargeneral|familydollar|fooddepot/
     let targetHeirarchy = target.match(storeRegex)
     targetHeirarchy = target.slice(targetHeirarchy.index)
@@ -157,7 +181,8 @@ function readAndMove(target, defaultLocation=null){
 
     
     // console.log(util.inspect(toCollectionItems.slice(10, 14), false, null, true))
-    insertData(toCollectionItems, 'items')
+    
+    insertFilteredData(uuid, "items", toCollectionItems)
     insertData(fullPrices, 'prices')
     insertData(fullInventories, 'inventories')
     fs.mkdirSync('../../../data/collections/'+targetHeirarchy, {recursive: true})
@@ -172,6 +197,8 @@ function readAndMove(target, defaultLocation=null){
 const zipUp = () => {
     exec(`7z a ../../../data/archive.7z ../../../data/collections -p${process.env.EXTENSION_ARCHIVE_KEY} -mhe -sdel`, (err, stdout, stderr)=>{
         console.log(`stdout: ${stdout}`)
+        console.log(err)
+        console.log(stderr)
     })
     return null
 }
@@ -341,16 +368,13 @@ function summarizeFoodDepot(target){
             })
         }
     }
-    
-    // console.log(allItems.length, ' items')
-    // console.log(allPrices.length, ' prices')
-    insertData(allItems, 'items')
+    insertFilteredData("Id", 'items', allItems)
     insertData(allPrices, 'prices')
 
     return null
 }
 
-function summarizeNewCoupons(target, parser){
+function summarizeNewCoupons(target, parser, uuid){
     // let files = fs.readdirSync(target, {encoding: 'utf-8', withFileTypes: true})
     // files = files.filter((d)=>d.isFile())
     // for (let file of files){
@@ -499,10 +523,13 @@ function summarizeNewCoupons(target, parser){
         })
     }
     
-    insertData(allCoupons, 'promotions')
+    insertFilteredData(uuid, 'promotions', allCoupons)
 
     return null
 }
+readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
+readAndMove('../../../scripts/requests/server/collections/aldi/', "23150", uuid="legacyId")
+summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items')
 summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons", {
     "id": {keep: true},
     "dcId": {keep: true},
@@ -516,7 +543,7 @@ summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons
     "brand": {to: "brandName"},
     "savingType": {to: "type"},
     "dc_popularity": {to: "popularity"}
-})
+}, uuid="id")
 
 summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons", {
     "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
@@ -529,9 +556,6 @@ summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coup
     "brand": {to: "brandName"},
     "details": {to: "terms"},
     "offerType": {to: "type" }
-})
+}, uuid="targetOfferId")
 
-// readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659")
-// readAndMove('../../../scripts/requests/server/collections/aldi/', "23150")
-// summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items')
-// zipUp()
+zipUp()

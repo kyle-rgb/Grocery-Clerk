@@ -2052,11 +2052,10 @@ def queryDB(db="new"):
     #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': True}}}, {'$project':  {"socials": {'clips': '$clippedCount', 'popInt': {'$divide': ['$popularity', 1000]}}, 'newValue': {'$convert': {'input': '$value', 'to':'int'}}}}, {'$sort': {'newValue': 1}}])
     #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': False}, 'krogerCouponNumber': {'$exists':False}, 'productUpcs': {'$exists': True}}}])
     #res = cursor['promotions'].find_all({'shortDescription': {'$regex': '/^Buy 5.+/'}})
-    res = cursor['recipes'].find()
+    res = cursor['items'].find({"upc": {"$exists": True}, "soldInStore": {"$exists": True}, "snapEligible": {"$exists": False}})
     #res = cursor['inventories'].aggregate(pipeline=[{'$group': {'_id': '$stockLevel', 'count': {'$sum': 1}}}])
-    res = [' '.join(x['description'].split(' ')[-2:]) for x in res]
-    res = set(x for x in res)
-    pprint(res)
+    res = [x for x in res]
+    pprint(res[:5])
 
     return None
 
@@ -2123,9 +2122,9 @@ def getStores():
 
 
 
-#queryDB() https://www.dollargeneral.com/bin/omni/pickup/product/detail?_=1661033822868&upc=37000860280&store=13141&deviceId=50567468275945662280529367524484101730&clientOriginStoreNumber=
+# queryDB() 
 # aggregate()
-# getCollectionFeatureCounts(collection='promotions')
+# getCollectionFeatureCounts(collection='items')
 # getCollectionFeatureCounts(collection='stores')
 
 
@@ -2139,6 +2138,8 @@ def getStores():
 
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerDigitalCouponsAndItems', 'flushData'],
 # kwargs=[{"url": "https://www.kroger.com/savings/cl/coupons", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "digital"}, {'reset': True}])
+# runAndDocument([simulateUser, eatThisPage], ['getKrogerDigitalCouponsAndItems', 'flushData'],
+# kwargs=[{"link": "digital"}, {'reset': True}])
 
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerCashbackCouponsAndItems', 'flushData'],
 # kwargs=[{"url": "https://www.kroger.com/savings/cbk/cashback/", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "cashback"}, {'reset': True}])
