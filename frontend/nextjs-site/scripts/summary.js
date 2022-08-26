@@ -195,7 +195,7 @@ function readAndMove(target, defaultLocation=null, uuid){
 }
 
 const zipUp = () => {
-    exec(`7z a ../../../data/archive.7z ../../../data/collections -p${process.env.EXTENSION_ARCHIVE_KEY} -mhe -sdel`, (err, stdout, stderr)=>{
+    exec(`7z a ../../../data/archive.7z ../../../data/collections -p ${process.env.EXTENSION_ARCHIVE_KEY} -mhe -sdel`, (err, stdout, stderr)=>{
         console.log(`stdout: ${stdout}`)
         console.log(err)
         console.log(stderr)
@@ -268,6 +268,10 @@ function summarizeFoodDepot(target){
     // WeightPerUnit 840 :: Prices
     let files = fs.readdirSync(target, {encoding: 'utf-8', withFileTypes: true})
     files = files.filter((d)=>d.isFile())
+    var storeRegex = /fooddepot/
+    let targetHeirarchy = target.match(storeRegex)
+    targetHeirarchy = target.slice(targetHeirarchy.index)
+    targetHeirarchy.endsWith("/") ? targetHeirarchy : targetHeirarchy+="/"; 
     var totalData = []
     var allPrices = []
     var allItems = []
@@ -370,6 +374,10 @@ function summarizeFoodDepot(target){
     }
     insertFilteredData("Id", 'items', allItems)
     insertData(allPrices, 'prices')
+    fs.mkdirSync('../../../data/collections/'+targetHeirarchy, {recursive: true})
+    for (let file of files){
+        fs.renameSync(target+file.name, `../../../data/collections/${targetHeirarchy}`+file.name)
+    }
 
     return null
 }
@@ -493,6 +501,9 @@ function summarizeNewCoupons(target, parser, uuid){
     allCoupons = []
     let storesRegex = /fooddepot|publix/
     var parserKeys = Object.keys(parser)
+    let targetHeirarchy = target.match(storesRegex)
+    targetHeirarchy = target.slice(targetHeirarchy.index)
+    targetHeirarchy.endsWith("/") ? targetHeirarchy : targetHeirarchy+="/"; 
     for (let file of files){
         console.log(target+"/"+file.name, files.length)
         data = fs.readFileSync(target+'/'+file.name, {encoding: 'utf-8'})
@@ -524,38 +535,42 @@ function summarizeNewCoupons(target, parser, uuid){
     }
     
     insertFilteredData(uuid, 'promotions', allCoupons)
+    fs.mkdirSync('../../../data/collections/'+targetHeirarchy, {recursive: true})
+    for (let file of files){
+        fs.renameSync(target+file.name, `../../../data/collections/${targetHeirarchy}`+file.name)
+    }
 
     return null
 }
-readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
-readAndMove('../../../scripts/requests/server/collections/aldi/', "23150", uuid="legacyId")
-summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items')
-summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons", {
-    "id": {keep: true},
-    "dcId": {keep: true},
-    "waId": {keep: true},
-    "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
-    "description": {to: "shortDescription"},
-    "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
-    "minimumPurchase": {to: "requirementQuantity"},
-    "categories": {keep: true},
-    "imageUrl": {keep: true},
-    "brand": {to: "brandName"},
-    "savingType": {to: "type"},
-    "dc_popularity": {to: "popularity"}
-}, uuid="id")
+// readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
+// readAndMove('../../../scripts/requests/server/collections/aldi/', "23150", uuid="legacyId")
+// summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items')
+// summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons", {
+//     "id": {keep: true},
+//     "dcId": {keep: true},
+//     "waId": {keep: true},
+//     "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
+//     "description": {to: "shortDescription"},
+//     "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
+//     "minimumPurchase": {to: "requirementQuantity"},
+//     "categories": {keep: true},
+//     "imageUrl": {keep: true},
+//     "brand": {to: "brandName"},
+//     "savingType": {to: "type"},
+//     "dc_popularity": {to: "popularity"}
+// }, uuid="id")
 
-summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons", {
-    "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
-    "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
-    "effectiveDate": {to: "endDate", convert: function (x) {return new Date(x)}},
-    "offerId": {keep: true},
-    "targetOfferId": {keep: true},
-    "category": {to: "categories", convert: function(x) {return [x]}},
-    "image": {to: "imageUrl", convert: function (x){return x.links.lg}},
-    "brand": {to: "brandName"},
-    "details": {to: "terms"},
-    "offerType": {to: "type" }
-}, uuid="targetOfferId")
+// summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons", {
+//     "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
+//     "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
+//     "effectiveDate": {to: "endDate", convert: function (x) {return new Date(x)}},
+//     "offerId": {keep: true},
+//     "targetOfferId": {keep: true},
+//     "category": {to: "categories", convert: function(x) {return [x]}},
+//     "image": {to: "imageUrl", convert: function (x){return x.links.lg}},
+//     "brand": {to: "brandName"},
+//     "details": {to: "terms"},
+//     "offerType": {to: "type" }
+// }, uuid="targetOfferId")
 
-zipUp()
+// zipUp()

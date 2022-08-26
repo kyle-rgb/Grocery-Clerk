@@ -425,7 +425,8 @@ def scrollDown(sleep=10):
 
 def insertFilteredData(entries, collection_name, db, uuid) -> None:
     # handles bulk inserts for collections that maintain singular entries for items
-    # i.e. : items, promotions, recipes, sellers, stores, trips, users 
+    # i.e. : items, promotions, recipes, sellers, stores, trips, users
+    print(len(entries), collection_name)
     start = time.perf_counter()
     try:
         getattr(entries, "__len__")
@@ -464,6 +465,7 @@ def insertData(entries, collection_name, db='new'):
     # Going to add Entries to Locally running DB w/ same structure as Container application
     # Then migrate them over to Container DB
     # Wrapper to always use insert many
+    print(len(entries), collection_name)
     try:
         getattr(entries, "__len__")
         if type(entries)!=list:
@@ -1213,7 +1215,7 @@ def deconstructExtensions(filename):
     specialPromoRegex = re.compile(r'https://www\.kroger\.com/products/api/products/details-basic',)
     productErrorsRegex = re.compile(r'\.gtin13s=(\d+)')
     storeDict = filename.split('/')[-2]
-    
+    print(filename)
     if os.path.exists(filename):
         with open(filename, 'r', encoding='utf-8') as file:
             startingArray = json.loads(file.read())
@@ -1614,7 +1616,7 @@ def deconstructExtensions(filename):
                         
     # entries, collection_name, dbName, uuid
     if promotionsCollection:
-        insertFilteredData(promotionsCollection, "promotions", "new", "krogerCouponId")
+        insertFilteredData(promotionsCollection, "promotions", "new", "krogerCouponNumber")
     if itemCollection:
         insertFilteredData(itemCollection, "items", "new", "upc")
     if tripCollection:
@@ -1631,7 +1633,7 @@ def deconstructExtensions(filename):
     if inventoryCollection:
         insertData(inventoryCollection, "inventories", "new")
     
-    print("decomposed {}".format(file))
+    print("decomposed {}".format(filename))
     return None
         
 
@@ -2010,7 +2012,7 @@ def normalizeStoreData():
     return None
 
 
-def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: dict):
+def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: dict, setStores: bool = False):
     # CATEGORY - Combine legacy files w/ current files to create full collections
     # calls decompose functions that handle database entry
 
@@ -2063,8 +2065,8 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
             folder = head.split('\\')[-1]
             os.makedirs(f'../data/collections/kroger/{folder}/', exist_ok=True)
             for file in files:
-                deconstructExtensions(head+"\\"+file)
-                print('processed {file}.')
+                    deconstructExtensions(head+"\\"+file)
+                    print(f'processed {file}.')
 
     if additionalPaths:
         for repo in additionalPaths:
@@ -2083,7 +2085,9 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
             folder = head.split('\\')[-1]
             for file in files:
                 os.rename(head+'\\'+file, f'../data/collections/kroger/{folder}/{file}')
-    normalizeStoreData()
+
+    if setStores:
+        normalizeStoreData()
     backupDatabase()
     createDBSummaries('new')
 
@@ -2199,8 +2203,8 @@ def getStores():
 # ['setup', 'getFoodDepotItems', 'flushData'],
 # [{'n': 'food-depot-items', 'initialSetup': True}, {'chain': 'fooddepot'}, {'reset': False}])
 # runAndDocument([setUpBrowser, getStoreData, eatThisPage], ['setup', 'getStores', 'flushData'], [{'n': None, 'initialSetup': True}, {'chain': 'aldi'}, {'reset':False}])
-# createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1', 'buy3save6', 'buy2save10'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
+createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1', 'buy3save6', 'buy2save10'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=['buy2save10'], additionalPaths=[])
 # normalizeStoreData()
-backupDatabase()
-createDBSummaries('new')
+# backupDatabase()
+# createDBSummaries('new')
