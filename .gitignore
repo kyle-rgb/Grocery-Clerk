@@ -105,12 +105,12 @@ venv.bak/
 
 #vscode
 .vscode/
-
+# my repo files
 report_unittest.xml
 api_keys.*
 config/
 scripts/requests/server/collections/
-
 collection.json
 scripts/data/
 archive.*
+*summary.json

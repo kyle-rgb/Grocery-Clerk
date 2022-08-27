@@ -3,7 +3,7 @@ const js_summary = require('json-summary')
 const {difference} = require('set-operations')
 const {MongoClient} = require('mongodb')
 const util = require('util')
-const { exec } = require('child_process')
+const { spawn } = require('child_process')
 
 let targetDirs = [ '../../../scripts/requests/server/collections/fooddepot/items', '../../../scripts/requests/server/collections/fooddepot/coupons',
 '../../../scripts/requests/server/collections/publix/items', '../../../scripts/requests/server/collections/publix/coupons',
@@ -195,11 +195,19 @@ function readAndMove(target, defaultLocation=null, uuid){
 }
 
 const zipUp = () => {
-    exec(`7z a ../../../data/archive.7z ../../../data/collections -p ${process.env.EXTENSION_ARCHIVE_KEY} -mhe -sdel`, (err, stdout, stderr)=>{
-        console.log(`stdout: ${stdout}`)
-        console.log(err)
-        console.log(stderr)
+    const cmd = spawn(["7z","a","../../../data/archive.7z", "../../../data/collections" , "-mhe", "-sdel"])
+    cmd.stdout.on("data", (data)=>{
+        console.log(data)
+        if (data.includes("password")){
+            cmd.stdin.write(process.env.EXTENSION_ARCHIVE_KEY+"\n", (err)=>{
+                if (err){console.error(err)}
+            })
+        }
     })
+    cmd.stderr.on("data", (data)=> {
+        console.error("ERROR: ", data)
+    })
+    cmd.on("close", (code)=> console.log(`child process exited with a code of ${code}`))
     return null
 }
 
@@ -542,6 +550,216 @@ function summarizeNewCoupons(target, parser, uuid){
 
     return null
 }
+function processFamilyDollarItems(target){
+    // need new for family dollar items => prices, items, promotions<-items 
+    parser = {
+            "id": "870e9eea-83dd-dfb7-fef7-0d9e9460f1ba",
+            "area": "productionFamilyTree",
+            "records": [{
+                collection: "productionFDProducts", 
+                allMeta: {
+                    new: "N", 
+                    display_price: "$5.50", // <prices> 
+                    active_flag: true||false, 
+                    canonical: "https://www.familydollar.com/aleve-pm-12-hours-pain-reliever-caplets/FD9000442", // <web link >
+                    title: "Aleve PM 12 Hour Pain Reliever Caplets", // <item description>
+                    show_web_store_flag: "Y", // item selling qualities <Boolean>, item's modalities (i.e. online)
+                    visualVariant: {
+                        nonvisualVariant: [{
+                            available_in_store_only: "Y", // item's modalities 
+                            split_case_available: "Y", // item's size options (quantity ranges)
+                            meta_description: "Aleve PM 12 Hour Pain Reliever Caplets", // item's description 
+                            height_dimension: "2 in.", // item's dimensions
+                            width_dimension: "3.75 in.", // item's dimensions
+                            depth_dimension: "1.5 in.", // items's dimensions
+                            clearance: "N", // item's selling qualities <Boolean> 
+                            sku_id: "900442", // item's id 
+                            UPCs: "000000025866591882", // item's id <???>check to see if for individual item or pack / case of items>  
+                            meta_keywords: "Aleve PM 12 Hour Pain Reliever Caplets", // item's web keywords 
+                            minimum_quantity: 3, // item's minimumQuantity
+                            DTDINDICATOR: "Y", // 42_251
+                            volume_dimension: "4 oz.", // item's size
+                            flavor: ["Honey"], // item categorization 
+                            assortment_details: "10-ct Packs of Carepak? Clear Medium Nasal Strips", // pack assortment details ~item's categorization
+                            length_dimension: "2.25 in.", //item's dimensions
+                            weight_dimension: "7 oz.", // item's weight 10_280
+                            scent: "Berry", // 5067 item's categorization 
+                            gbi_features_and_benefits: ["Made in USA"], // item's categorization
+                            diameter_dimension: "1.75 in.", // item's dimensions 
+                            microwave_safe: "N", // item's qualities <Boolean> 
+                            bedding_size: "T", // item's size qualities 
+                            bpa_free: "Y",  // item's size qualities <Boolean> 
+                            fit: "Infant/Toddler", // item's size qualities 
+                            sock_size: "2T-4T", // item's size qualities 
+                            wine_type: "Pink Wine", // item's categorization 
+                            wine_varietal: "Pink Moscato", // item's categorization 
+                            beverage_pack_size: "Single", // item's size (pack)
+                            burn_time: "2 Hours", // item's category specific quantity
+                            shoe_size:  "7", // item's size
+                            gbi_nutritional_info: ["Gluten Free"], // item's nutritional info
+                            gluten_free: "Y", // item's nutritional qualities <Boolean> 
+                            sugar_free: "Y", // item's nutritional qualities <Boolean> 
+                            window_treatment: "Curtain", // item's specific categorization 
+                            curtain_type: "Rod Pocket Curtain", // item's specific categorization
+                            valance_type: "Rod", // item's specific categorization 
+                            gbi_care_and_cleaning: ["Microwave Safe"], // item's qualities 
+                            dishwasher_safe: "Y", // item's qualities <Boolean> 
+                            food_safe: "Y", // item's plastic qualities <Boolean> 
+                            page_count: "13" // item's size (Books)
+                        }],
+                        image_file: "https://www.familydollar.com/ccstore/v1/images/?source=/file/v4531726475687999671/products/FD900442.jpg&height=940&width=940", // item's ImageUrl
+                        colors: "Clear", // item's qualities 
+                        material: "Elastic", // item's qualities 
+                        pattern: "Striped", // item's qualities 
+                        finnish: "Metallic", // item's qualities 
+                        assortment_by_style_color: "Event Assortment"
+                    },
+                    shop_by: "In Store Only", // item's modalities 
+                    price: 99.99, // prices
+                    product_id: "900442", // item id 
+                    name: "Aleve PM 12 Hours", // item name / description 
+                    split_case_multiple: "3", // item's sellBy multiple 
+                    attributes: [{
+                        split_case_available: "Y", // item selling quantities <Boolean>
+                        call_center_only: "N", // item selling qualties <Boolean>
+                        average_rating_rounded: 3, // item's ratings
+                        average_rating_andup: [1, 2, 3, 4], // item's ratings
+                        case_price: 198, // prices :: item bulk quantities
+                        casepack: "36", // prices quantity :: item's soldBy the { n } case 
+                        num_reviews: 375, // item's ratings
+                        average_rating: 4.8827, // item's ratings
+                        combustible: "Y", // item qualities <Boolean> 
+                        display_type: "Peggable", // item web qualities 
+                        requires_batteries: "Y", // item's qualities <Boolean>
+                        battery_size: "AA", // item's qualities <Boolean>
+                        licensed_product: ["Dreamworks&reg; Trolls&trade"], // item's Brand Names (need to be decoded of HTML text)
+                        comes_with_batteries: "Y", // item's qualities <Boolean> 
+                        flammable: "Y", // item's qualities <Boolean> 
+                        arrival_date:  "20211019", // item's modalities specific data 
+                        contains_wheat: "Y", // item's nutritional tags <Boolean>
+                        contains_dairy: "Y", // item's nutritional tags  <Boolean>
+                        contains_nuts: "Y", // item's nutritional tags  <Boolean>
+                        contains_soy: "Y", // item's nutritional tags  <Boolean>
+                        contains_egg: "Y", // item's nutritional tags  <Boolean>
+                        collection:  "Birthday", // further categorical data for item
+                        pet: "Cat" , // <category> 
+                        travel_size: "Y" // item's packaging info <Boolean> 
+
+                    }],
+                    id: "9004422", // product <id>
+                    categories: [{ // item's familyTree, item's categories
+                        "1": "Department", 
+                        "2": "Health & Wellness",
+                        "3": "Medicines & Treatments",
+                        "4": "Pain Relievers",
+                        "leaf": "Pain Relievers"
+                    }],
+                    brand: ["Aleve&reg;"],  // brandName
+                    categoryId: ["fs-pain-relievers"], // <item category>
+                    description: "As a parent, you know how tough it is when your child is sick. You can help them recover faster with Children's Triaminic® Multi-Symptom Fever&Cold Medicine.\
+                    Tiraminic® provides relief from fever, runny and stuffy nose, aches and pains, sore throat, and cough. Plus, the grape flavor helps it go down easily.\
+                    You'll feel better when they feel better. For children ages 6-11. A full case includes 24 bottles of medicine.", // static item descriptor == romanceDescrition
+                    badges: [{  // boolean categories
+                        made_in_usa: "Y",
+                        wow: "Y",
+                        limited_quantities: "Y",
+                        bonus_buy: "Y", 
+                    }],
+                    dry_clean_only: "N", // boolean categories
+                    _groupbyinc: {clickBoost: 21},
+                    sale_price: "0.00", // prices
+                    clearence: "N", // boolean categories
+                    promo_price: "Sale", // promotional price type
+                    apparel_size: "Unisex One Size Fits Most" , // item sizes 
+
+                },
+                _id: "adf49fdc76689a5a5d6b629743492fa7", // <id> 
+                _u: "https://dollartree1productionFDProducts.com/900442", // <web::id>
+                _t: "Aleve PM 12 Hour Pain Reliever Caplets" // <item description>
+            }],
+            "totalRecordCount": 5184,
+            "biasingProfile": "DefaultBiasing",
+            "template": {name: "default"},
+            "pageInfo": {recordStart: 1, recordEnd: 4992},
+            "matchStrategy": { // sdel
+                "name": "Strong Match",
+                "rules": [{
+                    terms: 3,
+                    mustMatch: 80,
+                    percentage: false,
+                    termsGreaterThan: 4
+                }]
+            },
+            "warnings": ["selected sort field 'shop_by_sort' does not exist in any record"],
+            "availableNavigation": [{ // <sdel>
+                name: "visualVariant.nonvisualVariant.available_in_store_only",
+                displayName: "Product Availability",
+                type: "Value",
+                refinements: {type: "Value", count: 4058, value: "N"},
+                range: false||true,
+                or: true||false,
+                modeRefinements: true||false,
+            }],
+            "selectedNavigation": [{ // <sdel>
+                name: "categories.1",
+                displayName: "Categories L1",
+                refinements: [{
+                    type: "Value", value: "Department"
+                }],
+                _id: "4641bce57677ced52b4483c82c959dc0",
+                range: true||false,
+                or: true||false,
+            }],
+            "originalRequest": { // <sdel>
+                collection: "productionFDProducts",
+                area: "productionFamilyDollar",
+                skip: 5280,
+                pageSize: 96,
+                disableAutocorrection: false||true,
+                sort: [{
+                    type: "Field",
+                    field: "new",
+                    order: "Descending",
+                }],
+                fields: ["*"],
+                refinements: [{
+                    type: "Value",
+                    navigationName: "categories.1",
+                    value: "Department"
+                }], 
+                pruneRefinements: true||false, 
+            },
+            "metadata": { //<for prices>
+                cached: true||false,
+                recordLimitReach: true||false,
+                totalTime: 126,
+                experiment: {experimentId: "gbi-wisdom-also-bought", experimentVariant: "ab-v-1"}
+            },
+            "empty": "N", // <sdel> 
+            "url": {}, // <sdel> 
+            "acquisition_timestamp": Number // <for prices>
+        }
+    
+    
+    var allItems = []
+    var allRecords = []
+    let files = fs.readdirSync(target).map((d) => {
+        let data = JSON.parse(fs.readFileSync(target+d))
+        allItems= allItems.concat(data)
+        console.log(`loaded ${d}`)
+    })
+    allItems.map((d)=>cleanup(d))
+    allItems.map((d)=> {
+        allRecords = allRecords.concat(d.records)
+    })
+    console.log(allRecords.length)
+    // console.log(allItems.slice(0, 2).map((d)=>d.records))
+    // console.log(util.inspect(allItems.filter((y)=>'records' in y).map((d)=>d.records.filter((e)=>'burn_time' in e.allMeta.visualVariant[0].nonvisualVariant[0])), true, 7, null))
+    return null
+}
+
+
+processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/")
 // readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
 // readAndMove('../../../scripts/requests/server/collections/aldi/', "23150", uuid="legacyId")
 // summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items')
