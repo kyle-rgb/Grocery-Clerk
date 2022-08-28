@@ -4,6 +4,7 @@ import time, re, random, datetime as dt, os, json, urllib, pytz, sys, math
 import subprocess, shutil, requests
 
 import pyautogui as pag
+import win32gui
 
 
 from pymongo import MongoClient
@@ -250,26 +251,24 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         pag.moveRel(0, 70, duration=2.4)
         pag.click()
     elif n=='dollar-general-coupons': # Dollar General Coupons and Items
-        # time.sleep(2)
-        # pag.keyDown('ctrlleft')
-        # pag.keyDown('-')
-        # time.sleep(2)
-        # pag.keyUp('ctrlleft')
-        # pag.keyUp('-')
         time.sleep(2)
         # create setup for dollar general
         switchUrl(url="https://www.dollargeneral.com/dgpickup/deals/coupons")
-        # change store
         loadExtension()
+        # change store
+        # access stores dropdown
         pag.moveTo(73, 222, duration=2)
         pag.click()
         time.sleep(2)
+        # Access Store Near Filter
         pag.moveTo(32, 302, duration=2)
         pag.click()
         time.sleep(3)
+        # Click Use My Location
         pag.moveTo(82, 410, duration=2)
         pag.click()
         time.sleep(3)
+        # Select Closest Store from Resulting Dropdown
         pag.moveTo(239, 440, duration=2)
         pag.click()
         # wait for set iterations
@@ -291,6 +290,31 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
             time.sleep(4)
         pag.press('home')
         time.sleep(2)
+    elif n=="dollar-general-items":
+        time.sleep(2)
+        # create setup for dollar general
+        switchUrl(url="https://www.dollargeneral.com/dgpickup/deals/coupons")
+        loadExtension()
+        # change store
+        # access stores dropdown
+        pag.moveTo(73, 222, duration=2)
+        pag.click()
+        time.sleep(2)
+        # Access Store Near Filter
+        pag.moveTo(32, 302, duration=2)
+        pag.click()
+        time.sleep(3)
+        # Click Use My Location
+        pag.moveTo(82, 410, duration=2)
+        pag.click()
+        time.sleep(3)
+        # Select Closest Store from Resulting Dropdown
+        pag.moveTo(239, 440, duration=2)
+        pag.click()
+        # iterations will be set via subsequent function
+        switchUrl(url="https://www.dollargenera./com/c/on-sale")
+        time.sleep(9)
+
     elif n=='family-dollar-coupons': # family-dollar smart coupons
     # create setup for family dollar coupons
         loadExtension()
@@ -791,6 +815,65 @@ def getPublixCouponData(deals=673):
 
     return None
 
+# Amendment to Dollar General Items Procedure: 
+def getDGItems():
+    # make sure set up handles extensionLoading, urlLoading, and store handling
+    # wait for iterations set by extension to happen
+    # make sure browser navigates to sale items with store and extension handling complete
+    i = requests.get("http://localhost:5000/i").json()["i"]
+    iterations = (i // 12) + 1
+    makeUps = 0
+    print(iterations, " number of iterations")
+    pag.press('end')
+    time.sleep(3)
+    sleeper = 12
+    for n in range(iterations):
+        time.sleep(sleeper)
+        pag.press('end')
+        # two pronged approach to ensure it cursor provides access to next page 
+        initialButtonPosition = (1041, 409)
+        buttonActiveColor = (64, 64, 64)
+        cursorIconCode = 65569
+        pag.moveTo(*initialButtonPosition, duration=2)
+        color = pag.pixel(*initialButtonPosition)
+        cursorCode = win32gui.GetCursorInfo()[1]
+        if color==buttonActiveColor and cursorCode==cursorIconCode:
+            pag.click()
+            sleeper = random.randint(10, 16)
+            print(f"finished with {n}. {iterations-(n+1)} left. sleeping for {sleeper}...")
+        else:
+            time.sleep(40)
+            pag.keyDown('ctrlleft')
+            pag.keyDown('r')
+            time.sleep(2)
+            pag.keyUp('ctrlleft')
+            pag.keyUp('r')
+            makeUps+=1
+            sleeper = 10
+            print(f"finished with {n}. {iterations-(n+1)} left. sleeping for {sleeper}...")
+
+    if makeUps:
+        for n in range(makeUps):
+            time.sleep(sleeper)
+            pag.press('end')
+            # two pronged approach to ensure it cursor provides access to next page 
+            initialButtonPosition = (1041, 409)
+            buttonActiveColor = (64, 64, 64)
+            cursorIconCode = 65569
+            pag.moveTo(*initialButtonPosition, duration=2)
+            color = pag.pixel(*initialButtonPosition)
+            cursorCode = win32gui.GetCursorInfo()[1]
+            if color==buttonActiveColor and cursorCode==cursorIconCode:
+                pag.click()
+            sleeper = random.randint(10, 16)
+            print(f"finished with {n}. {iterations-(n+1)} left. sleeping for {sleeper}...")
+    
+
+        
+        
+
+
+    return None
 
 # Summarize Collections
 def extract_nested_values(it):
@@ -2190,11 +2273,17 @@ def getStores():
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ['setUpBrowser', 'getDollarGeneralCouponsAndItems', 'flushData'],
 # kwargs=[{"n": 'dollar-general-coupons', 'initialSetup': True},{"link": "dollarGeneral"}, {'reset': False}])
 
+# runAndDocument([setUpBrowser, getDGItems, eatThisPage], ['setUpBrowserForDG', 'getSaleItemsFromDG','flushData'],
+# kwargs=[{"n": 'dollar-general-items', 'initialSetup': True}, {}, {'reset': False}])
+
+# runAndDocument([getDGItems, eatThisPage], ['getSaleItemsFromDG','flushData'],
+# kwargs=[ {}, {'reset': False}])
+# getDGItems()
 # runAndDocument([simulateUser, eatThisPage], ['getDollarGeneralCouponsAndItems', 'flushData'],
 # kwargs=[{"link": "dollarGeneral"}, {'reset': False}])
 
 # runAndDocument([setUpBrowser, getFamilyDollarItems, eatThisPage],
-# ['initialSetup', 'getFamilyDollarItems', 'flushData'] ,[{'n': 'family-dollar-items', 'initialSetup': True}, {}, {'reset': False}])
+# ['initialSetup', 'getFamilyDollarItems', 'flushData'] ,[{'n': 'family-dollar-items', 'initialSetup': True}, {}, {'reset': True}])
 
 # runAndDocument([setUpBrowser, eatThisPage], ['setup', 'getFamilyDollarCoupons'], [{'n': 'family-dollar-coupons', 'initialSetup': True}, {'reset': False}])
 
@@ -2203,8 +2292,8 @@ def getStores():
 # ['setup', 'getFoodDepotItems', 'flushData'],
 # [{'n': 'food-depot-items', 'initialSetup': True}, {'chain': 'fooddepot'}, {'reset': False}])
 # runAndDocument([setUpBrowser, getStoreData, eatThisPage], ['setup', 'getStores', 'flushData'], [{'n': None, 'initialSetup': True}, {'chain': 'aldi'}, {'reset':False}])
-createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1', 'buy3save6', 'buy2save10'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
-# createDecompositions('./requests/server/collections/kroger', wantedPaths=['buy2save10'], additionalPaths=[])
+# createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1', 'buy3save6', 'buy2save10'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
+createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips'], additionalPaths=['dollargeneral/oldItems', 'familydollar/coupons'])
 # normalizeStoreData()
 # backupDatabase()
 # createDBSummaries('new')
