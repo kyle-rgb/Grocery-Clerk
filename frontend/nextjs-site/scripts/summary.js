@@ -195,7 +195,7 @@ function readAndMove(target, defaultLocation=null, uuid){
 }
 
 const zipUp = () => {
-    const cmd = spawn(["7z","a","../../../data/archive.7z", "../../../data/collections" , "-mhe", "-sdel"])
+    const cmd = spawn("7z",["a","../../../data/archive.7z", "../../../data/collections" , "-mhe", "-sdel"])
     cmd.stdout.on("data", (data)=>{
         console.log(data)
         if (data.includes("password")){
@@ -274,6 +274,7 @@ function summarizeFoodDepot(target){
     // UnitOfMeasureText? average weight per = $8.75 per lb. Approx 1.75 lb each :: Prices
     // UnitPrice 840 :: Prices
     // WeightPerUnit 840 :: Prices
+    target.endsWith('/') ? target : target+="/";
     let files = fs.readdirSync(target, {encoding: 'utf-8', withFileTypes: true})
     files = files.filter((d)=>d.isFile())
     var storeRegex = /fooddepot/
@@ -738,28 +739,80 @@ function processFamilyDollarItems(target){
             "empty": "N", // <sdel> 
             "url": {}, // <sdel> 
             "acquisition_timestamp": Number // <for prices>
+    }
+    
+    var newParser = {
+        items: {
+            booleansY: ["new", "show_web_store_flag", "dry_clean_only",
+            "available_in_store_only", "split_case_available", "DTDINDICATOR",
+            "microwave_safe", "bpa_free", "gluen_free", "sugar_free", "food_sage", "dishwasher_safe",
+            "call_center_only", "combustible", "requires_batteries", "flammable",
+            "travel_size", "contains_wheat", "contains_dairy", "contains_nuts", "contains_soy",
+            "contains_egg"],
+            booleans: ["active_flag"],
+            web: ["canonical"],
+            categories: {
+                description: "title",
+                modalities: "shop_by",
+                product_id: "product_id",
+                name: "name",
+                sellBy: "split_case_multiple",
+                id: "id",
+                romanceDescription: "description", 
+                familyTree: {name: "categories", index: 0},
+                brandName: {name: "brand", index: 0},
+                categorySlug: {name: "categoryId", index:0},
+                badges: {name: "badges", index: 0 , process: (badges)=> {Object.entries(([k,v])=>{v==="Y" ? badges[k] = true: badges[k]=false;}); return badges}},
+                additionalId: "_id",
+                dimensions: {
+                    height: "height_dimension",
+                    width: "width_dimension",
+                    depth: "depth_dimension",
+                    length: "length_dimension",
+                    diameter: "diameter_dimension",
+                    volume: "volume_dimension"
+                },
+                sku: "sku_id",
+                upc: "UPCs",
+                weight: "weight_dimension",
+                customerFacingSize: "volume_dimension",
+                specificAttributes: ["wine_type", "wine_varietal", "beverage_pack_size"],
+                imageUrl: "image_file",
+                popularity: {
+                    rating: "average_rating",
+
+                },
+            },
+            
+        },
+        prices: {
+            display_price: String(),
+            price: Number(),
+            sale_price: String(),
+            promotionTypes: {
+                clearence: String(),
+                promo_price: String(),
+            },
+            case_price: Number(),
+            quantity: "casepack"
+
         }
-    
-    
+    }
     var allItems = []
-    var allRecords = []
+    var allPrices = []
     let files = fs.readdirSync(target).map((d) => {
-        let data = JSON.parse(fs.readFileSync(target+d))
-        allItems= allItems.concat(data)
+        let data = JSON.parse(fs.readFileSync(target+d)).map((x)=>cleanup(x))
+        allItems= allItems.concat(data.map((e)=>e.records).flat())
         console.log(`loaded ${d}`)
     })
-    allItems.map((d)=>cleanup(d))
-    allItems.map((d)=> {
-        allRecords = allRecords.concat(d.records)
-    })
-    console.log(allRecords.length)
+    console.log(allItems.slice(0, 3))
     // console.log(allItems.slice(0, 2).map((d)=>d.records))
     // console.log(util.inspect(allItems.filter((y)=>'records' in y).map((d)=>d.records.filter((e)=>'burn_time' in e.allMeta.visualVariant[0].nonvisualVariant[0])), true, 7, null))
     return null
 }
 
 
-processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/")
+// processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/")
 // readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
 // readAndMove('../../../scripts/requests/server/collections/aldi/', "23150", uuid="legacyId")
 // summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items')
@@ -777,8 +830,8 @@ processFamilyDollarItems("../../../scripts/requests/server/collections/familydol
 //     "savingType": {to: "type"},
 //     "dc_popularity": {to: "popularity"}
 // }, uuid="id")
-
-// summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons", {
+// summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
+// summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
 //     "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
 //     "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
 //     "effectiveDate": {to: "endDate", convert: function (x) {return new Date(x)}},
@@ -791,4 +844,4 @@ processFamilyDollarItems("../../../scripts/requests/server/collections/familydol
 //     "offerType": {to: "type" }
 // }, uuid="targetOfferId")
 
-// zipUp()
+zipUp()
