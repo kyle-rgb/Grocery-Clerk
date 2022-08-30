@@ -2250,7 +2250,7 @@ def getStores():
 
 # queryDB() 
 # aggregate()
-# getCollectionFeatureCounts(collection='items')
+getCollectionFeatureCounts(collection='prices')
 # getCollectionFeatureCounts(collection='priceModifiers')
 
 
@@ -2297,5 +2297,5 @@ def getStores():
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1', 'buy3save6', 'buy2save10'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips'], additionalPaths=['dollargeneral/oldItems', 'familydollar/coupons'])
 # normalizeStoreData()
-backupDatabase()
-createDBSummaries('new')
+# backupDatabase()
+# createDBSummaries('new')

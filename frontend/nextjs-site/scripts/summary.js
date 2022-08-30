@@ -742,106 +742,99 @@ function processFamilyDollarItems(target){
     }
     
     var newParser = {
-        items: {
-            booleansY: ["new", "show_web_store_flag", "dry_clean_only",
-            "available_in_store_only", "split_case_available", "DTDINDICATOR",
-            "microwave_safe", "bpa_free", "gluen_free", "sugar_free", "food_sage", "dishwasher_safe",
-            "call_center_only", "combustible", "requires_batteries", "flammable",
-            "travel_size", "contains_wheat", "contains_dairy", "contains_nuts", "contains_soy",
-            "contains_egg"],
-            booleans: ["active_flag"],
-            web: ["canonical"],
-            categories: {
-                description: "title",
-                modalities: "shop_by",
-                product_id: "product_id",
-                name: "name",
-                sellBy: "split_case_multiple",
-                id: "id",
-                romanceDescription: "description", 
-                familyTree: {name: "categories", index: 0},
-                brandName: {name: "brand", index: 0},
-                categorySlug: {name: "categoryId", index:0},
-                badges: {name: "badges", index: 0 , process: (badges)=> {Object.entries(([k,v])=>{v==="Y" ? badges[k] = true: badges[k]=false;}); return badges}},
-                additionalId: "_id",
-                dimensions: {
-                    height: "height_dimension",
-                    width: "width_dimension",
-                    depth: "depth_dimension",
-                    length: "length_dimension",
-                    diameter: "diameter_dimension",
-                    volume: "volume_dimension"
-                },
-                sku: "sku_id",
-                upc: "UPCs",
-                weight: "weight_dimension",
-                customerFacingSize: "volume_dimension",
-                specificAttributes: ["wine_type", "wine_varietal", "beverage_pack_size"],
-                imageUrl: "image_file",
-                popularity: {
-                    rating: "average_rating",
-
-                },
-            },
-            
-        },
-        prices: {
-            display_price: String(),
-            price: Number(),
-            sale_price: String(),
-            promotionTypes: {
-                clearence: String(),
-                promo_price: String(),
-            },
-            case_price: Number(),
-            quantity: "casepack"
-
-        }
+        booleans: ["new", "active_flag", "shop_web_store_flag", "available_in_store_only", "split_case_available", "clearance",
+        "call_center_only", "combustible", "requires_batteries", "made_in_usa", "wow", "limited_quantities", "bonus_buy",
+        "comes_with_batteries", "flammable", "microwave_safe", "contains_wheat", "contains_dairy", "contains_nuts", "contains_soy",
+        "bpa_free", "dry_clean_only", "gluten_free", "contains_eggs", "sugar_free", "dishwasher_safe", "travel_size", "food_safe",
+        "DTDINDICATOR"],
+        dimensions: ["height_dimension", "width_dimension", "depth_dimension", "length_dimension", "diameter_dimension", "volume_dimension"],
+        weight: "weight_dimension", 
+        popularity: {ct: "num_reviews", avg: "average_rating", min: 1},
+        romanceDescription: "description",
+        minimumOrderQuantity: "minimum_quantity",
+        categories: "categories",
+        upc: "UPCs",
+        name: "description",
+        brand: "brand",
+        url: "canonical",
+        sku_id: "sku_id"
     }
+
     var allItems = []
     var allPrices = []
+    let least = 0
     let files = fs.readdirSync(target).map((d) => {
         let data = JSON.parse(fs.readFileSync(target+d)).map((x)=>cleanup(x))
         allItems= allItems.concat(data.map((e)=>e.records).flat())
-        console.log(`loaded ${d}`)
+        console.log(`loaded ${d}. ${allItems.length}`)
     })
-    console.log(allItems.slice(0, 3))
+    console.log(allItems.length)
+    allItems=allItems.filter((d)=>d)
+    console.log(allItems.length)
+    allItems.map((d)=>{
+        allPrices.push({
+            "title": d.allMeta.title,
+            "id": d.allMeta.id,
+            "price": d.allMeta.price,
+        })
+        'sale_price' in d.allMeta && d.allMeta.sale_price!=="0.00" ? allPrices.slice(-1)[0].sale_price = Number(d.allMeta.sale_price) : 1;
+        'case_price' in d.allMeta.attributes[0] ? allPrices.slice(-1)[0].case_price = d.allMeta.attributes[0].case_price : 1;
+        'casepack' in d.allMeta.attributes[0] ? allPrices.slice(-1)[0].casepack = Number(d.allMeta.attributes[0].casepack) : 1;
+    })
+
+    allItems = allItems.map((x)=> {
+        let am =  x['allMeta']
+        if ("badges" in am){
+            let badges = am["badges"][0]
+            delete am["badges"]
+            am = {...am, ...badges}
+        }
+        delete x["allMeta"]
+        let vv = am['visualVariant'][0]['nonvisualVariant'][0]
+        delete am['visualVariant'];
+        let attr = am['attributes'][0]
+        delete am['attributes']
+        x = {...am, ...vv, ...attr, ...x}
+        Object.entries(x).map(([k, v])=> {if (v==="Y"){x[k]=true} else if (v==="N") {x[k]=false}})
+        return x
+    })
+
     // console.log(allItems.slice(0, 2).map((d)=>d.records))
     // console.log(util.inspect(allItems.filter((y)=>'records' in y).map((d)=>d.records.filter((e)=>'burn_time' in e.allMeta.visualVariant[0].nonvisualVariant[0])), true, 7, null))
     return null
 }
 
 
-// processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/")
-// readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
-// readAndMove('../../../scripts/requests/server/collections/aldi/', "23150", uuid="legacyId")
-// summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items')
-// summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons", {
-//     "id": {keep: true},
-//     "dcId": {keep: true},
-//     "waId": {keep: true},
-//     "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
-//     "description": {to: "shortDescription"},
-//     "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
-//     "minimumPurchase": {to: "requirementQuantity"},
-//     "categories": {keep: true},
-//     "imageUrl": {keep: true},
-//     "brand": {to: "brandName"},
-//     "savingType": {to: "type"},
-//     "dc_popularity": {to: "popularity"}
-// }, uuid="id")
-// summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
-// summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
-//     "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
-//     "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
-//     "effectiveDate": {to: "endDate", convert: function (x) {return new Date(x)}},
-//     "offerId": {keep: true},
-//     "targetOfferId": {keep: true},
-//     "category": {to: "categories", convert: function(x) {return [x]}},
-//     "image": {to: "imageUrl", convert: function (x){return x.links.lg}},
-//     "brand": {to: "brandName"},
-//     "details": {to: "terms"},
-//     "offerType": {to: "type" }
-// }, uuid="targetOfferId")
+processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/")
+readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
+readAndMove('../../../scripts/requests/server/collections/aldi/', "23150", uuid="legacyId")
+summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items')
+summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons", {
+    "id": {keep: true},
+    "dcId": {keep: true},
+    "waId": {keep: true},
+    "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
+    "description": {to: "shortDescription"},
+    "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
+    "minimumPurchase": {to: "requirementQuantity"},
+    "categories": {keep: true},
+    "imageUrl": {keep: true},
+    "brand": {to: "brandName"},
+    "savingType": {to: "type"},
+    "dc_popularity": {to: "popularity"}
+}, uuid="id")
+summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
+summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
+    "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
+    "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
+    "effectiveDate": {to: "endDate", convert: function (x) {return new Date(x)}},
+    "offerId": {keep: true},
+    "targetOfferId": {keep: true},
+    "category": {to: "categories", convert: function(x) {return [x]}},
+    "image": {to: "imageUrl", convert: function (x){return x.links.lg}},
+    "brand": {to: "brandName"},
+    "details": {to: "terms"},
+    "offerType": {to: "type" }
+}, uuid="targetOfferId")
 
 zipUp()
