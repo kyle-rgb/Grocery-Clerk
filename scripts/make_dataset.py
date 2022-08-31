@@ -2264,6 +2264,10 @@ getCollectionFeatureCounts(collection='prices')
 
 # runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerDigitalCouponsAndItems', 'flushData'],
 # kwargs=[{"url": "https://www.kroger.com/savings/cl/coupons", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "digital"}, {'reset': True}])
+
+# runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerCashbackCouponsAndItems', 'flushData'],
+# kwargs=[{"url": "https://www.kroger.com/savings/cbk/cashback/", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "cashback"}, {'reset': True}])
+
 # runAndDocument([simulateUser, eatThisPage], ['getKrogerDigitalCouponsAndItems', 'flushData'],
 # kwargs=[{"link": "digital"}, {'reset': True}])
 
@@ -2297,5 +2301,5 @@ getCollectionFeatureCounts(collection='prices')
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1', 'buy3save6', 'buy2save10'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips'], additionalPaths=['dollargeneral/oldItems', 'familydollar/coupons'])
 # normalizeStoreData()
-# backupDatabase()
-# createDBSummaries('new')
+backupDatabase()
+createDBSummaries('new')

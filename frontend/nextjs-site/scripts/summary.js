@@ -551,9 +551,9 @@ function summarizeNewCoupons(target, parser, uuid){
 
     return null
 }
-function processFamilyDollarItems(target){
+function processFamilyDollarItems(target, defaultLocation="2394"){
     // need new for family dollar items => prices, items, promotions<-items 
-    parser = {
+    /* parser = {
             "id": "870e9eea-83dd-dfb7-fef7-0d9e9460f1ba",
             "area": "productionFamilyTree",
             "records": [{
@@ -739,49 +739,55 @@ function processFamilyDollarItems(target){
             "empty": "N", // <sdel> 
             "url": {}, // <sdel> 
             "acquisition_timestamp": Number // <for prices>
-    }
+    }*/
     
     var newParser = {
-        booleans: ["new", "active_flag", "shop_web_store_flag", "available_in_store_only", "split_case_available", "clearance",
-        "call_center_only", "combustible", "requires_batteries", "made_in_usa", "wow", "limited_quantities", "bonus_buy",
-        "comes_with_batteries", "flammable", "microwave_safe", "contains_wheat", "contains_dairy", "contains_nuts", "contains_soy",
-        "bpa_free", "dry_clean_only", "gluten_free", "contains_eggs", "sugar_free", "dishwasher_safe", "travel_size", "food_safe",
-        "DTDINDICATOR"],
-        dimensions: ["height_dimension", "width_dimension", "depth_dimension", "length_dimension", "diameter_dimension", "volume_dimension"],
-        weight: "weight_dimension", 
-        popularity: {ct: "num_reviews", avg: "average_rating", min: 1},
-        romanceDescription: "description",
-        minimumOrderQuantity: "minimum_quantity",
-        categories: "categories",
-        upc: "UPCs",
-        name: "description",
-        brand: "brand",
-        url: "canonical",
-        sku_id: "sku_id"
+        combustible: {keep: true},
+        made_in_usa: {keep: true},
+        flammable: {keep: true},
+        microwave_safe: {keep: true},
+        bpa_free: {keep: true},
+        dry_clean_only: {keep:true},
+        dishwasher_safe: {keep: true},
+        travel_size: {keep: true},
+        food_safe: {keep: true},
+        scent: {keep: true},
+        flavor: {keep: true},
+        wine_type: {keep:true},
+        wine_varietal: {keep: true},
+        id: {keep: "true"},
+        description: {to: "romanceDescription", convert: function(x){return `<p>${x}</p>`}},
+        minimum_quantity: {to: "minimumOrderQuantity"},
+        categories: {to: "taxonomies", convert: function(x){
+            let cats = x[0]
+            let cparse = {"2": "department", "3": "commodity", "4": "subCommodity"}
+            Object.keys(cats).map((k)=> {
+            if (Object.keys(cparse).includes(k)){
+                cats[cparse[k]] = cats[k]
+                delete cats[k];
+            } else {
+                delete cats[k];
+            }})
+            return cats;
+        }},
+        UPCS: {to: "upc"},
+        canonical: {to: "link"}
     }
-
+    let storeRegex = /publix|aldi|kroger|dollargeneral|familydollar|fooddepot/
+    let targetHeirarchy = target.match(storeRegex)
+    targetHeirarchy = target.slice(targetHeirarchy.index)
     var allItems = []
     var allPrices = []
-    let least = 0
     let files = fs.readdirSync(target).map((d) => {
         let data = JSON.parse(fs.readFileSync(target+d)).map((x)=>cleanup(x))
+        data=data.filter((d)=>"records" in d)
+        data.map((z)=> z.records.map((r)=> r["utcTimestamp"]=z.acquisition_timestamp))
         allItems= allItems.concat(data.map((e)=>e.records).flat())
-        console.log(`loaded ${d}. ${allItems.length}`)
-    })
-    console.log(allItems.length)
-    allItems=allItems.filter((d)=>d)
-    console.log(allItems.length)
-    allItems.map((d)=>{
-        allPrices.push({
-            "title": d.allMeta.title,
-            "id": d.allMeta.id,
-            "price": d.allMeta.price,
-        })
-        'sale_price' in d.allMeta && d.allMeta.sale_price!=="0.00" ? allPrices.slice(-1)[0].sale_price = Number(d.allMeta.sale_price) : 1;
-        'case_price' in d.allMeta.attributes[0] ? allPrices.slice(-1)[0].case_price = d.allMeta.attributes[0].case_price : 1;
-        'casepack' in d.allMeta.attributes[0] ? allPrices.slice(-1)[0].casepack = Number(d.allMeta.attributes[0].casepack) : 1;
-    })
+        allItems=allItems.filter((d)=>d)
+        console.log(`parsed ${d}. ${allItems.length}`)
 
+    })
+    
     allItems = allItems.map((x)=> {
         let am =  x['allMeta']
         if ("badges" in am){
@@ -797,44 +803,169 @@ function processFamilyDollarItems(target){
         x = {...am, ...vv, ...attr, ...x}
         Object.entries(x).map(([k, v])=> {if (v==="Y"){x[k]=true} else if (v==="N") {x[k]=false}})
         return x
+    }).filter((d)=>"minimum_quantity" in d)
+    
+    allItems.map((d)=>{
+        // minimumQuantity, Case, Sale if Exists
+        allPrices.push({
+            "quantity": d.minimum_quantity,
+            locationId: defaultLocation, 
+            isPurchase: false,
+            utcTimestamp: new Date(d.utcTimestamp), 
+            value: d.price
+        })
+        d.upc ? allPrices.slice(-1)[0]['upc'] = d.upc : allPrices.slice(-1)[0]['id'] = d.id ;
+        // for Case
+        if (d.minimum_quantity != d.casepack){
+            allPrices.push({
+                "quantity": +d.casepack,
+                locationId: defaultLocation, 
+                isPurchase: false,
+                utcTimestamp: new Date(d.utcTimestamp), 
+                value: d.price
+            })
+            d.upc ? allPrices.slice(-1)[0]['upc'] = d.upc : allPrices.slice(-1)[0]['id'] = d.id ;
+        }
+
+        if (d.sale_price && d.sale_price!=="0.00"){
+            allPrices.push({
+                "quantity": d.minimum_quantity,
+                locationId: defaultLocation, 
+                isPurchase: false,
+                utcTimestamp: new Date(d.utcTimestamp), 
+                value: d.sale_price
+            })
+            d.upc ? allPrices.slice(-1)[0]['upc'] = d.upc : allPrices.slice(-1)[0]['id'] = d.id ;
+            d.promo_price ? allPrices.slice(-1)[0]['type'] = d.promo_price : null ; 
+            if (d.minimum_quantity!=d.casepack){
+                allPrices.push({
+                    "quantity": +d.casepack,
+                    locationId: defaultLocation, 
+                    isPurchase: false,
+                    utcTimestamp: new Date(d.utcTimestamp), 
+                    value: d.sale_price
+                })
+                d.upc ? allPrices.slice(-1)[0]['upc'] = d.upc : allPrices.slice(-1)[0]['id'] = d.id ;
+                d.promo_price ? allPrices.slice(-1)[0]['type'] = d.promo_price : null ; 
+            }
+            
+        }
     })
 
-    // console.log(allItems.slice(0, 2).map((d)=>d.records))
-    // console.log(util.inspect(allItems.filter((y)=>'records' in y).map((d)=>d.records.filter((e)=>'burn_time' in e.allMeta.visualVariant[0].nonvisualVariant[0])), true, 7, null))
+    allItems.map((x)=> {
+        Object.keys(x).map((nk)=>{
+            if (nk.startsWith("contains") || nk.startsWith("sugar") || nk.startsWith("gluten")){
+                nk.endsWith("free") ? nk=nk.slice(0, -1): nk;
+                let nutObj = {}
+                if (nk.endsWith("free")){
+                    let newKey = nk.split("_").map((str)=> str[0].toUpperCase() +str.slice(1))
+                    nutObj[newKey] = x[nk]
+                } else if (nk.startsWith("contains")){
+                    let newKey = nk.split("_").slice(-1).map((str)=> str[0].toUpperCase() +str.slice(1) + "Free").join("")
+                    nutObj[newKey] = !x[nk]
+                }
+                "nutrition" in x ? x["nutrition"] = {...x["nutrition"], ...nutObj}: x["nutrition"] = nutObj;
+                delete x[nk]; 
+            } else if (nk.startsWith("weight")){
+                x["weight"] = x[nk]
+                delete x[nk];
+            } else if (nk.endsWith("_dimension")){ 
+                let dimObj = {}
+                dimObj[nk.replace("_dimension", "")] = x[nk]
+                "dimensions" in x ? x["dimensions"] = {...x.dimensions, ...dimObj} : x["dimensions"] = dimObj;
+                delete x[nk];
+            } else if (nk === "available_in_store_only" && x[nk]){
+                x["modalities"] = ["IN_STORE"]
+                delete x[nk];
+            } else if (nk === "call_center_only" && x[nk]){
+                x["modalities"] = ["CALL_CENTER"]
+                delete x[nk];
+            } else if (nk==="brand"){
+                brands = x[nk]
+                x[nk] = brands.map((brand)=>{return{name:  brand.replaceAll(/&.+;/g, '')}})
+            } else if (nk==="num_reviews" && x[nk]){
+                x["ratings"] = {ct: x[nk], avg: x["average_rating"]}
+                delete x[nk];
+                delete x["average_rating"]
+            } else if (nk==="name"){
+                let name = x[nk]
+                name = name.replace("?", "")
+                let customerFacingSize = name.split(",").slice(1).filter((s)=>s.match(/\d+/g)!==null).map((match)=>{return match.trim()})
+                x[nk] = name.split(",")[0]
+                if (!customerFacingSize===""){
+                    x["customerFacingSize"] = customerFacingSize.reverse().join(" / ")
+                }
+                x["description"] = x[nk]
+                delete x[nk];
+                
+            } else if (Object.keys(newParser).includes(nk)){
+                let actions = newParser[nk]
+                if (newParser[nk].convert){
+                    x[nk] = actions.convert(x[nk])
+                }
+                if (actions.to){
+                    x[actions.to] = x[nk];
+                }
+                if (actions.keep===undefined){
+                    delete x[nk]
+                }
+
+            } else {
+                delete x[nk]
+            }
+            
+        })
+    })
+    let idSet = new Set()
+    allItems = allItems.filter((i)=>{
+        if (idSet.has(i.id)){
+            return false;
+        } else {
+            idSet.add(i.id)
+            return true
+        }
+    })
+    //insertData(allPrices, "prices")
+    // insertData(allItems, "items")
+    fs.mkdirSync('../../../data/collections/'+targetHeirarchy, {recursive: true})
+    files = fs.readdirSync(target)
+    for (let file of files){
+       fs.renameSync(target+file, `../../../data/collections/${targetHeirarchy}`+file)
+    }
     return null
 }
 
 
-processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/")
-readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
-readAndMove('../../../scripts/requests/server/collections/aldi/', "23150", uuid="legacyId")
-summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items')
-summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons", {
-    "id": {keep: true},
-    "dcId": {keep: true},
-    "waId": {keep: true},
-    "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
-    "description": {to: "shortDescription"},
-    "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
-    "minimumPurchase": {to: "requirementQuantity"},
-    "categories": {keep: true},
-    "imageUrl": {keep: true},
-    "brand": {to: "brandName"},
-    "savingType": {to: "type"},
-    "dc_popularity": {to: "popularity"}
-}, uuid="id")
-summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
-summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
-    "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
-    "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
-    "effectiveDate": {to: "endDate", convert: function (x) {return new Date(x)}},
-    "offerId": {keep: true},
-    "targetOfferId": {keep: true},
-    "category": {to: "categories", convert: function(x) {return [x]}},
-    "image": {to: "imageUrl", convert: function (x){return x.links.lg}},
-    "brand": {to: "brandName"},
-    "details": {to: "terms"},
-    "offerType": {to: "type" }
-}, uuid="targetOfferId")
-
+processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
 zipUp()
+// readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
+// readAndMove('../../../scripts/requests/server/collections/aldi/', "23150", uuid="legacyId")
+// summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons", {
+//     "id": {keep: true},
+//     "dcId": {keep: true},
+//     "waId": {keep: true},
+//     "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
+//     "description": {to: "shortDescription"},
+//     "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
+//     "minimumPurchase": {to: "requirementQuantity"},
+//     "categories": {keep: true},
+//     "imageUrl": {keep: true},
+//     "brand": {to: "brandName"},
+//     "savingType": {to: "type"},
+//     "dc_popularity": {to: "popularity"}
+// }, uuid="id")
+// summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
+// summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
+//     "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
+//     "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
+//     "effectiveDate": {to: "endDate", convert: function (x) {return new Date(x)}},
+//     "offerId": {keep: true},
+//     "targetOfferId": {keep: true},
+//     "category": {to: "categories", convert: function(x) {return [x]}},
+//     "image": {to: "imageUrl", convert: function (x){return x.links.lg}},
+//     "brand": {to: "brandName"},
+//     "details": {to: "terms"},
+//     "offerType": {to: "type" }
+// }, uuid="targetOfferId")
+
+// zipUp()
