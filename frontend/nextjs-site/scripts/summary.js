@@ -181,7 +181,7 @@ function readAndMove(target, defaultLocation=null, uuid){
 
     
     // console.log(util.inspect(toCollectionItems.slice(10, 14), false, null, true))
-    
+    console.log(toCollectionItems.length, fullPrices.length, fullInventories.length)
     insertFilteredData(uuid, "items", toCollectionItems)
     insertData(fullPrices, 'prices')
     insertData(fullInventories, 'inventories')
@@ -197,7 +197,7 @@ function readAndMove(target, defaultLocation=null, uuid){
 const zipUp = () => {
     const cmd = spawn("7z",["a","../../../data/archive.7z", "../../../data/collections" , "-mhe", "-sdel"])
     cmd.stdout.on("data", (data)=>{
-        console.log(data)
+        console.log(data.toString())
         if (data.includes("password")){
             cmd.stdin.write(process.env.EXTENSION_ARCHIVE_KEY+"\n", (err)=>{
                 if (err){console.error(err)}
@@ -925,8 +925,8 @@ function processFamilyDollarItems(target, defaultLocation="2394"){
             return true
         }
     })
-    //insertData(allPrices, "prices")
-    // insertData(allItems, "items")
+    insertData(allPrices, "prices")
+    insertData(allItems, "items")
     fs.mkdirSync('../../../data/collections/'+targetHeirarchy, {recursive: true})
     files = fs.readdirSync(target)
     for (let file of files){
@@ -936,24 +936,23 @@ function processFamilyDollarItems(target, defaultLocation="2394"){
 }
 
 
-processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
-zipUp()
-// readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
-// readAndMove('../../../scripts/requests/server/collections/aldi/', "23150", uuid="legacyId")
-// summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons", {
-//     "id": {keep: true},
-//     "dcId": {keep: true},
-//     "waId": {keep: true},
-//     "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
-//     "description": {to: "shortDescription"},
-//     "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
-//     "minimumPurchase": {to: "requirementQuantity"},
-//     "categories": {keep: true},
-//     "imageUrl": {keep: true},
-//     "brand": {to: "brandName"},
-//     "savingType": {to: "type"},
-//     "dc_popularity": {to: "popularity"}
-// }, uuid="id")
+readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
+readAndMove('../../../scripts/requests/server/collections/aldi/', "23150", uuid="legacyId")
+readAndMove('../../../scripts/requests/server/collections/familydollar/instacartItems/', "2394", uuid="legacyId")
+summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons/", {
+    "id": {keep: true},
+    "dcId": {keep: true},
+    "waId": {keep: true},
+    "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
+    "description": {to: "shortDescription"},
+    "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
+    "minimumPurchase": {to: "requirementQuantity"},
+    "categories": {keep: true},
+    "imageUrl": {keep: true},
+    "brand": {to: "brandName"},
+    "savingType": {to: "type"},
+    "dc_popularity": {to: "popularity"}
+}, uuid="id")
 // summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
 // summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
 //     "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
@@ -967,5 +966,5 @@ zipUp()
 //     "details": {to: "terms"},
 //     "offerType": {to: "type" }
 // }, uuid="targetOfferId")
-
-// zipUp()
+// processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
+zipUp()

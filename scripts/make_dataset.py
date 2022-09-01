@@ -698,16 +698,19 @@ def updateGasoline(data):
     # Kroger Fuel Points (previously in price modifiers) now show up as duplicate entry of gasoline with a quantity of zero and a negative price paid to correspond to savings
     # Must be run before deconstructions.
     # Raises ZeroDivisionError on Calucations that use Quantity 
-    indices = ''
     for trip_index, trip in enumerate(data):
         for item_index, item in enumerate(trip.get('items')):
             if item.get('quantity')==0:
-                indices = trip_index, item_index
-    if indices:
-        data[indices[0]]['items'][indices[1]-1]['pricePaid'] = round(data[indices[0]]['items'][indices[1]-1]['pricePaid']+data[indices[0]]['items'][indices[1]]['pricePaid'], 2)
-        data[indices[0]]['items'][indices[1]-1]['totalSavings'] = round(data[indices[0]]['items'][indices[1]-1]['totalSavings']+data[indices[0]]['items'][indices[1]]['totalSavings'], 2)
-        data[indices[0]]['items'][indices[1]-1]['priceModifiers'].extend(data[indices[0]]['items'][indices[1]]['priceModifiers'])
-        data[indices[0]]['items'].pop(indices[1])
+                if item_index==0:
+                    data[trip_index]['items'][item_index+1]['pricePaid'] = round(data[trip_index]['items'][item_index]['pricePaid']+data[trip_index]['items'][item_index]['pricePaid'], 2)
+                    data[trip_index]['items'][item_index+1]['totalSavings'] = round(data[trip_index]['items'][item_index]['totalSavings']+data[trip_index]['items'][item_index]['totalSavings'], 2)
+                    data[trip_index]['items'][item_index+1]['priceModifiers'].extend(data[trip_index]['items'][item_index]['priceModifiers'])
+                else:
+                    data[trip_index]['items'][item_index-1]['pricePaid'] = round(data[trip_index]['items'][item_index]['pricePaid']+data[trip_index]['items'][item_index-1]['pricePaid'], 2)
+                    data[trip_index]['items'][item_index-1]['totalSavings'] = round(data[trip_index]['items'][item_index]['totalSavings']+data[trip_index]['items'][item_index-1]['totalSavings'], 2)
+                    data[trip_index]['items'][item_index-1]['priceModifiers'].extend(data[trip_index]['items'][item_index]['priceModifiers'])
+                data[trip_index]['items'].pop(item_index)
+
     return data
 
 def getFamilyDollarItems():
@@ -765,10 +768,16 @@ def getScrollingData(chain: str):
         "d13031-gluten-free", "d26015-seasonal", "dynamic_collection-sales"]
     },
     {'chain': 'publix', 'base_url': 'https://delivery.publix.com/store/publix/collections/', 'urls': [
-        'd1102-produce', 'd1090-dairy-eggs', 'd1106-frozen','d1089-beverages', 'd1099-snacks', 'd1095-pantry', 'dynamic_collection-sales','d1094-meat-seafood', 'd1088-bakery', 'd1091-deli', 'd1092-household', 'd1104-canned-goods',
+        'd1102-produce', 'd1090-dairy-eggs', 'd1106-frozen','d1089-beverages', 'd1099-snacks', 'd1095-pantry', 'dynamic_collection-sales',
+        'd1094-meat-seafood', 'd1088-bakery', 'd1091-deli', 'd1092-household', 'd1104-canned-goods',
         'd1100-dry-goods-pasta', 'd1097-personal-care', 'd1103-breakfast', 'd1093-international', 'd1101-babies', 'd1098-pets', 'd5626-greeting-cards',
         'd21232-wine', 'd21231-beer', 'd3152-popular', 'd5625-floral', 'd5630-platters', 'd50450-ready-to-eat-ready-to-cook', 'd1105-new-and-interesting',
         'd41671-storm-prep','d41622-tailgating', 'd51523-deli-grab-and-go']
+    },
+    {'chain': 'family dollar', 'base_url': "https://sameday.familydollar.com/store/family-dollar/collections/", 'urls':[
+        'd34605-grocery', 'd34606-household-essentials', 'd34603-personal-care', 'd34602-beauty', 'd34598-kitchen-dining',
+        'd34604-pets', 'd34599-home', 'd36226-baby-care', 'd34596-bath', 'dynamic_collection-sales'
+    ]
     }]
     base_url, urls = list(map(lambda x: (x.get('base_url'), x.get('urls')), list(filter(lambda x: x['chain']==chain, scrollVars))))[0]
 
@@ -1696,7 +1705,6 @@ def deconstructExtensions(filename):
                         isProcessed = bool(list(filter(lambda x: x.get('upc')==itemDoc.get('upc'), itemCollection)))
                         if isProcessed==False:
                             itemCollection.append(itemDoc)
-                        
     # entries, collection_name, dbName, uuid
     if promotionsCollection:
         insertFilteredData(promotionsCollection, "promotions", "new", "krogerCouponNumber")
@@ -2095,7 +2103,7 @@ def normalizeStoreData():
     return None
 
 
-def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: dict, setStores: bool = False):
+def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: dict = None, setStores: bool = False):
     # CATEGORY - Combine legacy files w/ current files to create full collections
     # calls decompose functions that handle database entry
 
@@ -2250,7 +2258,7 @@ def getStores():
 
 # queryDB() 
 # aggregate()
-getCollectionFeatureCounts(collection='prices')
+# getCollectionFeatureCounts(collection='prices')
 # getCollectionFeatureCounts(collection='priceModifiers')
 
 
@@ -2299,7 +2307,7 @@ getCollectionFeatureCounts(collection='prices')
 
 # runAndDocument([setUpBrowser, getStoreData, eatThisPage], ['setup', 'getStores', 'flushData'], [{'n': None, 'initialSetup': True}, {'chain': 'aldi'}, {'reset':False}])
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1', 'buy3save6', 'buy2save10'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
-# createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips'], additionalPaths=['dollargeneral/oldItems', 'familydollar/coupons'])
+createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips', 'digital', 'cashback'])
 # normalizeStoreData()
-backupDatabase()
-createDBSummaries('new')
+# backupDatabase()
+# createDBSummaries('new')

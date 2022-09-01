@@ -19,9 +19,12 @@ var scrapingUrls = [
   "*://delivery.publix.com/*/view/item_attributes*",
   "*://delivery.publix.com/graphql?operationName=Items*",
   "*://delivery.publix.com/graphql?operationName=CollectionProductsWithFeaturedProducts*", // // Publix 1st Party Coupons and Instacart Price and Items
-  "*://shop.aldi.us/graphql?operationName=CollectionProductsWithFeaturedProducts*",
-  "*://shop.aldi.us/graphql?operationName=Items*",
   "*://shop.aldi.us/*/view/item_attributes*", // Aldi Instacart Prices and Items
+  "*://shop.aldi.us/graphql?operationName=Items*",
+  "*://shop.aldi.us/graphql?operationName=CollectionProductsWithFeaturedProducts*",
+  "*://sameday.familydollar.com/*/view/item_attributes*",
+  "*://sameday.familydollar.com/graphql?operationName=Items*", 
+  "*://sameday.familydollar.com/graphql?operationName=CollectionProductsWithFeaturedProducts*"
 ]
 
 if (settingStores){
@@ -49,12 +52,12 @@ async function createType(){
     let t2 =''
     let reg = /kroger|aldi|publix|dollargeneral|familydollar|fooddepot/
     let regKroger = /mypurchases|cashback|coupons|Buy5Save1|Buy3Save6|Buy2Save10|\?N=/
-    let regFamilyDollar = /\?N=|smart-coupons/
+    let regFamilyDollar = /\?N=|smart-coupons|sameday/
     let regPublix = /savings/
     let regFoodDepot = /coupons/
     var fileTypes = {'mypurchases': 'trips', 'cashback': 'cashback', "coupons": "digital",
     "Buy5Save1": "buy5save1", "Buy3Save6": "buy3save6", '?N=': 'items', 'smart-coupons': 'coupons',
-    "Buy2Save10": "buy2save10"}
+    "Buy2Save10": "buy2save10", 'sameday': 'instacartItems'}
     var fileTypePub = {'savings': 'coupons'}
     for (let tab of tabs){
       if (tab.url.match(reg)!=null){

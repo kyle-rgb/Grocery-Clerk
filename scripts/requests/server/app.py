@@ -1,7 +1,6 @@
 from flask import Flask, request, render_template
 
 import time, json, re, os, datetime as dt
-from werkzeug.exceptions import HTTPException
 
 app = Flask(__name__)
 i = None
