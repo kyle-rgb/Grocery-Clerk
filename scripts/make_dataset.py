@@ -1,4 +1,3 @@
-
 from pprint import pprint
 import time, re, random, datetime as dt, os, json, urllib, pytz, sys, math
 import subprocess, shutil, requests
@@ -29,10 +28,10 @@ from tzwhere import tzwhere
 
 # Use API to get prices of past purchases and estimate future trips
 # Use API to create same carts for Pickup
-startTime = time.perf_counter()
 
+# helper for normalizeStore function
 def normalizeDay(string):
-    string = string
+    # REQ : datetime 
     today= dt.datetime.now()
     abbv = today.strftime('%a')
     if len(string)>3:
@@ -42,11 +41,11 @@ def normalizeDay(string):
         abbv = today.strftime('%a')
     return today.strftime('%A').lower()
 
-
-
+# helper for browswer based data scraping 
 def switchUrl(x=468, y=63, url="https://www.dollargeneral.com/dgpickup/deals/coupons?"):
     # CATEGORY = HELPER Web Interaction Function
-    # automate browser request change in switching relevant pages or to new collections  
+    # automate browser request change in switching relevant pages or to new collections
+    # REQ : pyperclip, pyautogui, time
     pag.moveTo(x, y, duration=2.2)
     pag.click(clicks=1)
     clip.copy(url)
@@ -59,8 +58,10 @@ def switchUrl(x=468, y=63, url="https://www.dollargeneral.com/dgpickup/deals/cou
     time.sleep(5)
     return None    
 
+# helper for browser based scraping to flush remaining results
 def eatThisPage(reset=False):
     # flush remaining results after main data call to server using browser context menu
+    # REQ : pyautogui, time, subprocess
     pag.moveTo(1410, 1004)
     time.sleep(2)
     pag.click(button='right')
@@ -74,14 +75,16 @@ def eatThisPage(reset=False):
         subprocess.Popen(['taskkill', '/IM', 'firefox.exe', '/F'])
     return None
 
-def loadExtension(fromTab=True):
+# helper for web scraping setup
+def loadExtension():
     # load extension via tab
+    # REQ : time, switchUrl(), time
     pag.keyDown('ctrlleft')
     pag.keyDown('t')
     pag.keyUp('ctrlleft')
     pag.keyUp('t')
     time.sleep(3)
-    switchUrl(url='about:debugging#/runtime/this-firefox')
+    switchUrl(url='about:debugging/runtime/this-firefox')
     time.sleep(2)
     pag.moveTo(x=895, y=300, duration=2)
     pag.click()
@@ -97,9 +100,10 @@ def loadExtension(fromTab=True):
 
     return None
 
-
+# helper to set up browser scraping 
 def setUpBrowser(n=0, initialSetup=True, url=None):
     # create setup for Kroger coupons (digital and cashback)
+    # REQ : pyautogui, time, subprocess, loadExtension(), switchUrl()
     if initialSetup:
         p1 = subprocess.Popen(['C:\Program Files\Mozilla Firefox\\firefox.exe'])
         p1.wait(2)
@@ -321,6 +325,7 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         time.sleep(1)
         switchUrl(url="https://www.familydollar.com/smart-coupons")
         time.sleep(5)
+        eatThisPage()
         # eat
     elif n=='family-dollar-items': # familydollar items
         switchUrl(url="https://www.familydollar.com/categories?N=categories.1%3ADepartment&No=0&Nr=product.active:1")
@@ -340,10 +345,11 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
 
     return None
 
-
+# 
 def getStoreData(chain):
-    # TODO: a function that automates processes to gather store data from the following sites API:
-    # aldi, publix
+    # TODO: a function that automates processes to gather store data from the following sites API: aldi, publix, familydollar, fooddepot, dollar general
+    # TODO: Amend background.js File to set settingStore variable to 1 
+    # REQ: pyautogui, time, switchUrl(), loadExtension()
     if chain=='publix':
         # on publix site :
         # action click: current store icon on head
@@ -413,9 +419,11 @@ def getStoreData(chain):
 
     return None
 
+# web scraping helper specific for dollar general
 def loadMoreAppears(png='./requests/server/images/moreContent.png'):
     # Evaluate if Dollar General's Promotional Page of Associated Items Has More Items
-    # Returns location of button in y [419, 559] band of standard 1920 by 1080 screen 
+    # Returns location of button in y [419, 559] band of standard 1920 x 1080 screen 
+    # REQ: pyautogui, OpenCV (sliently), server/images
     locations = list(pag.locateAllOnScreen(png, confidence=.6, grayscale=False))
     locations = list(map(lambda x: pag.center(x), locations))
     i = 0
@@ -431,9 +439,11 @@ def loadMoreAppears(png='./requests/server/images/moreContent.png'):
 
     return None
 
+# web scraping helper specific for family dollar iternal item catalog
 def getArrow(sleep=2):
     # CATEGORY = Helper Web Interaction Function
     # Pagination Helper For Family Dollar Items / Prices Collection
+    # REQ : pyautogui, time
     time.sleep(sleep)
     pag.moveTo(1559, 346)
     time.sleep(sleep)
@@ -443,13 +453,16 @@ def getArrow(sleep=2):
 def scrollDown(sleep=10):
     # CATEGORY = Helper Web Interaction Function
     # Helper for scrolling data with api calls linked to pagination (food depot, aldi, publix)
+    # pyautogui, sleep
     time.sleep(sleep)
     pag.press('end')
     return None
 
 def insertFilteredData(entries, collection_name, db, uuid) -> None:
+    # Database Aggregation Then Entry Function 
     # handles bulk inserts for collections that maintain singular entries for items
     # i.e. : items, promotions, recipes, sellers, stores, trips, users
+    # REQ : pymongo, os, 
     print(len(entries), collection_name)
     start = time.perf_counter()
     try:
@@ -486,9 +499,11 @@ def insertFilteredData(entries, collection_name, db, uuid) -> None:
 
 
 def insertData(entries, collection_name, db='new'):
-    # Going to add Entries to Locally running DB w/ same structure as Container application
+    # Database helper for Largest Collections in Database (prices, inventories)
+    # Going to add Entries to Locally running DB w/ same structure as Container Application
     # Then migrate them over to Container DB
     # Wrapper to always use insert many
+    # REQ : os, pymongo 
     print(len(entries), collection_name)
     try:
         getattr(entries, "__len__")
@@ -507,9 +522,8 @@ def insertData(entries, collection_name, db='new'):
     return None
 
 def retrieveData(collection_name, db='new'):
-    # Going to add Entries to Locally running DB w/ same structure as Container application
-    # Then migrate them over to Container DB
-    # Wrapper to always use insert many
+    # Database Read Function Helper
+    # REQ : os, pymongo 
     uri = os.environ.get("MONGO_CONN_URL")
     client = MongoClient(uri)
     db = client[db]
@@ -522,6 +536,7 @@ def retrieveData(collection_name, db='new'):
     return data
 
 def createDBSummaries(db='new'):
+    # Helper to Create MetaData File for DB In Order Track Database and Collection Evolution Overtime
     uri = os.environ.get("MONGO_CONN_URL")
     client = MongoClient(uri)
     db = client[db]
@@ -533,16 +548,15 @@ def createDBSummaries(db='new'):
         file.write(json.dumps(dbStats, indent=3))
 
     print('updated stats')
+    client.close()
 
     return None
 
-
-
-# document scraping functions via a description and function calls
-# Place into Runs Collections
-# Admin DB to Track and Monitor the Execution of Scraping Functions that Work on Different Schedules BAased on Store's Internal Promotion Schedule
-# TODO: Add CPU/resource usage for processes related to the functions (browser/Python Application, Mongo Create Operations) 
 def runAndDocument(funcs:list, callNames:list, kwargs: list, callback=None):
+    # document scraping functions via a description and function calls
+    # Place into Runs Collections
+    # Admin DB to Track and Monitor the Execution of Scraping Functions that Work on Different Schedules Based on Store's Internal Promotion Schedule
+    # TODO: Add CPU/resource usage for processes related to the functions (browser/Python Application, Mongo Create Operations) 
     functions = []
     startDateTime = dt.datetime.now(tz=pytz.UTC)
     for name, func, args in zip(callNames, funcs, kwargs):
@@ -568,6 +582,9 @@ def runAndDocument(funcs:list, callNames:list, kwargs: list, callback=None):
 
 
 def simulateUser(link):
+    # Scraping Operation
+    # Handles Websites with more involved UI elements that Control API requests
+    # needLinks contain default args for respective site
     neededLinks = {'cashback': {"no": 12, "button": "./requests/server/images/cashback.png", "confidenceInterval": .66, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -1640, 'initialScroll': -800},\
         'digital': {"no":12, "button": "./requests/server/images/signIn.png", "confidenceInterval": .6, 'maxCarousel': 4, 'buttonColor': (56, 83, 151), 'scrollAmount': -1640, 'initialScroll': -740},\
             'dollarGeneral': {'no': 12, "button": "./requests/server/images/addToWallet.png", "confidenceInterval": .7, 'maxCarousel': 3, 'buttonColor': (0, 0, 0), 'scrollAmount': -1750 ,"moreContent": "./requests/server/images/loadMore.png",\
@@ -576,14 +593,14 @@ def simulateUser(link):
     # from here: the code will commence
     # start at top of the screen 
     # align all items https://www.kroger.com/savings/cl/coupons/
-    #iterations = neededLinks[link]["no"] // 12
-    #iterations = iterations + 1
     response = requests.get("http://127.0.0.1:5000/i").json()
     j = 0
     while response.get('i')==None:
         print(f"waiting for i from server for {j} seconds")
         j+=1
         time.sleep(1)
+        if j > 50: 
+            raise ValueError("I was not defined on the server for {}".format(link))
         response = requests.get("http://127.0.0.1:5000/i").json()
 
     iterations = (response.get('i') // neededLinks[link]['no'])+2
@@ -694,10 +711,12 @@ def simulateUser(link):
     return None
 
 def updateGasoline(data):
+    # Kroger Deconstruction Helper
     # cleaner function for Kroger trip data
     # Kroger Fuel Points (previously in price modifiers) now show up as duplicate entry of gasoline with a quantity of zero and a negative price paid to correspond to savings
     # Must be run before deconstructions.
     # Raises ZeroDivisionError on Calucations that use Quantity 
+
     for trip_index, trip in enumerate(data):
         for item_index, item in enumerate(trip.get('items')):
             if item.get('quantity')==0:
@@ -718,6 +737,10 @@ def getFamilyDollarItems():
     # dependencies: scrollDown and getArrow
     # a function that retrieves all the items and prices from the local family dollars
     # CATEGORY = Larger Web Function
+    # Site Specific Interaction for More Involved User Site
+    
+    # Dependices : Server Setting Iterations at Setup,
+    # Graph: setupBrower >> getFamilyDollarItems >> eatThisPage
     tries=0
     results = requests.get('http://127.0.0.1:5000/i').json()
     while results.get('i')==None:
@@ -751,6 +774,10 @@ def getFamilyDollarItems():
     return None
 
 def getScrollingData(chain: str):
+    # Browser Scraping Function that Handles Pages with Simple Pagination (only need to scroll to execute further API calls) and Handles Url Changes
+    # Performs keyboard actions / browser navigation by referencing the scroll bar's position
+    # Handles Instacart Sites (publix, aldi, family dollar) and Food Depot Site
+    # graph : setupBrowser >> getScrollingData >> eatThisPage
     scrollVars = [
     {'chain': 'fooddepot', 'base_url': 'https://shop.fooddepot.com/online/fooddepot40-douglasvillehwy5/shop/', 'urls': [
         "produce", "meatseafood", "bakery", "deli", "dairyeggs", "beverages",
@@ -806,6 +833,7 @@ def getScrollingData(chain: str):
 def getPublixCouponData(deals=673):
     # Category = Larger Web Task
     # TODO: Full coupon data can be receieve w/ right url in one step
+    # Scrapes Publix 1st Party Coupon Data in Single Step
     loadMoreColor = (171, 205, 159)
     loadMorePosition = (1091, 344)
     iterations = 673 // 36
@@ -884,23 +912,12 @@ def getDGItems():
 
     return None
 
-# Summarize Collections
-def extract_nested_values(it):
-    if isinstance(it, list):
-        for sub_it in it:
-            yield from extract_nested_values(sub_it)
-    elif isinstance(it, dict):
-        for key, value in it.items():
-            if isinstance(value, list) and bool(value)==True:
-                yield {"keyName":key, "values": list(extract_nested_values(value)), "count":1, 'type': type(value)}
-            elif isinstance(value, list) and bool(value)==False:
-                yield {"keyName":key, "count":0, 'type': type(value)}
-            else:
-                yield {"keyName": key, "count":1, 'type': type(value)}
-    else:
-        yield {'count':1, 'type': type(it)}
-
 def deconstructDollars(file='./requests/server/collections/familydollar/digital052122FD.json'):
+    # Deconstructs Dollar General Items and Promotions into Items, Promotions, Prices, and Inventories
+    # Deconstructs Family Dollar Promotions to Promotions with Normalized Features 
+    # Applied to Successfully Generated Dollar Store Scrape Files 
+    # Handles Insertion
+
     # retrieve store selection api for stores: DollarGeneral, FamilyDollar, Publix, Aldi, FoodDepot 
     # existing coupon schema:
         # uuid: id, krogerCouponNumber
@@ -1240,6 +1257,9 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
     return None
 
 def backupDatabase():
+    # more raw to archive and compress,
+    # dump database and compress
+    # clean up files 
     # move and compressed extension files to separate archive 
     subprocess.Popen(['7z', "a", "../data/archive.7z", "../data/collections", f"-p{EXTENSION_ARCHIVE_KEY}", "-mhe", "-sdel"])
     # helper to dump bsons and zip files for archive
@@ -1254,15 +1274,17 @@ def backupDatabase():
         shutil.rmtree('../data/data')
     return None
 
-# Deconstruct Extension Created Files into Final Collections
+
 def deconstructExtensions(filename):
+    # Deconstruct Extension Created Kroger Files into Final Collections
     # CATEGORY = Wash Data (file=> append to madeCollections to make fullCollections). Handles Kroger's promotions and trips
     # breaks down promotion jsons generated by the extension into the promotions, items and prices collections
-    # 1.) Trips -> Prices, Items, Stores?/Trips?, Promotions
+    # 1.) Trips -> Prices, Items, Trips, Promotions
     # 2.) Coupons (digital/cashback) -> Promotions, Items, Prices
     # Add item UPCs that correspond to their appropiate promotion
     # Aggregate couponDetails separate calls into promotions collections
     # Break down item api calls into both price and item collections
+    # REQ: datetime, re, pytz, 
 
     # Decomposing Product Calls into Separate Collections that Cover the Static and nonStatic properties of individual products:
             # (n.b.) calls to api w/ full projection filters gives several valuable properties regarding products:
@@ -1315,6 +1337,7 @@ def deconstructExtensions(filename):
         cDict={}
         try:
             if 'trips' in filename:
+                startingArray = list(filter(lambda x: type(x)==dict and "data" in x, startingArray))
                 startingArray = sorted(startingArray, key=lambda x: x['url'], reverse=True)
             else:
                 startingArray = sorted(startingArray, key=lambda x: x['url'], reverse=False)
@@ -1341,7 +1364,6 @@ def deconstructExtensions(filename):
             url = apiCall.pop('url')
             acquistionTimestamp = mytz.localize(dt.datetime.fromtimestamp(apiCall.pop('acquisition_timestamp')/1000))
             data = apiCall.get('data')
-
             # match promotions to product upcs
             if re.match(upcsRegex, url):
                 couponId = re.match(upcsRegex, url).group(1)
@@ -1729,6 +1751,8 @@ def deconstructExtensions(filename):
         
 
 def normalizeStoreData():
+    # create normalized stores and insert them into collection
+    # REQ : datetime, os, 
     storeDirectories = ['/aldi/stores/', '/dollargeneral/stores/', '/familydollar/stores/', '/fooddepot/stores/', '/publix/stores/'] 
     head= './requests/server/collections/'
     newStores = []
@@ -2105,16 +2129,12 @@ def normalizeStoreData():
 
 def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: dict = None, setStores: bool = False):
     # CATEGORY - Combine legacy files w/ current files to create full collections
-    # calls decompose functions that handle database entry
-
-    # TODO: Currently only handles decomposition for legacy files and process would try to entered in all the data at once.
-    # Want to have a legacy version for files (run once, then garabage collect files), then handle newly created cleaned data w/ care to only enter in new information to the database.
-    # Where Best in the cleaning/processsing/insertion chain to apply that is most efficent will be key.    
-    # add stores via api and previously scraped prices to new price collection schema
-    mytz = pytz.timezone('America/New_York')
+    # calls decompose functions that handle database entry for different file types
+    # pytz, os, backUpDatabase(), createDBSummaries()
     walkResults = sorted([x for x in os.walk(dataRepoPath)], key=lambda x: x[0], reverse=True)
     # initial setup if data folders do not exist in repo
     if os.path.exists('./requests/server/collections/kroger/API/myStores.json'):
+        mytz = pytz.timezone('America/New_York')
         # setup archive for preprocessed data
         with open('./requests/server/collections/kroger/API/myStores.json', 'r', encoding='utf-8') as storeFile:
             stores = json.loads(storeFile.read())
@@ -2184,22 +2204,33 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
 
     return None
 
-def queryDB(db="new"):
+def queryDB(db="new", collection="prices", pipeline=None, filterObject=None, stop=0):
+    # wrapper for db aggregation and filter calls
+    # REQ : os, pprint, pymongo
+
     uri = os.environ.get("MONGO_CONN_URL")
     client = MongoClient(uri)
     cursor = client[db]
-    #res = cursor['promotions'].aggregate(pipeline=[{"$sort": {"redemptions": -1}}, {"$unwind": "$redemptionKeys"}, {"$group": {"_id": {"x": "$redemptionKeys.upc" }, "count": {"$sum": 1}}}])
-    #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': True}}}, {'$project':  {"socials": {'clips': '$clippedCount', 'popInt': {'$divide': ['$popularity', 1000]}}, 'newValue': {'$convert': {'input': '$value', 'to':'int'}}}}, {'$sort': {'newValue': 1}}])
-    #res = cursor['promotions'].aggregate(pipeline=[{'$match': {'popularity': {'$exists': False}, 'krogerCouponNumber': {'$exists':False}, 'productUpcs': {'$exists': True}}}])
-    #res = cursor['promotions'].find_all({'shortDescription': {'$regex': '/^Buy 5.+/'}})
-    res = cursor['items'].find({"upc": {"$exists": True}, "soldInStore": {"$exists": True}, "snapEligible": {"$exists": False}})
-    #res = cursor['inventories'].aggregate(pipeline=[{'$group': {'_id': '$stockLevel', 'count': {'$sum': 1}}}])
+    if pipeline:
+        res = cursor[collection].aggregate(pipeline=pipeline)
+    elif filterObject:
+        res = cursor[collection].find(filterObject)
+    else:
+        res = cursor[collection].find({}).limit(1)
+  
     res = [x for x in res]
-    pprint(res[:5])
+    if not stop:
+        pprint(res[:stop])
+    else:
+        pprint(res)
+
+    client.close()
 
     return None
 
 def getCollectionFeatureCounts(db='new', collection='prices'):
+    # Helper for Counting Features in Documetn Collection
+    # REQ : os, pprint, pymongo
     uri = os.environ.get("MONGO_CONN_URL")
     client = MongoClient(uri)
     cursor = client[db]
@@ -2212,10 +2243,12 @@ def getCollectionFeatureCounts(db='new', collection='prices'):
     ])
     res = [x for x in res]
     pprint(res)
-
+    client.close()
     return None
 
 def getCollectionFeatureTypes(db='new', collection='items', feature='upc'):
+    # DB helper for getting feature types from command line
+    # REQ : os, pprint, pymongo
     uri = os.environ.get("MONGO_CONN_URL")
     client = MongoClient(uri)
     cursor = client[db]
@@ -2225,89 +2258,17 @@ def getCollectionFeatureTypes(db='new', collection='items', feature='upc'):
         {'$sort': {'_id': -1}}
     ])
     res = [x for x in res]
-    
-    pprint(res[:55])
-    return None
-
-def aggregate(db="new", collection="items"):
-    uri = os.environ.get("MONGO_CONN_URL")
-    client = MongoClient(uri)
-    cursor = client[db]
-    res = cursor[collection].aggregate(pipeline=[
-        {'$match': {'nutrition': {"$exists": True}}},
-        {"$project": {'pairs': {'$objectToArray': "$$ROOT.nutrition"}}},
-        {"$unwind": {'path': '$pairs', 'preserveNullAndEmptyArrays': False}},
-        {"$match": {'pairs.v': {"$type": "bool"}}},
-        {"$group": {"_id": "$pairs.k", "count": {"$sum": 1}}},
-        {"$sort": {"count": 1}}
-    ])
-    pprint([x for x in res])
-
+    client.close()
+    pprint(res)
     return None
 
 def getStores():
+    # REQ : os, pprint, pymongo
     uri = os.environ.get("MONGO_CONN_URL")
     client = MongoClient(uri)
     cursor = client['new']
     res = cursor['stores'].find({})
     res = [r for r in res]
     pprint(res[0])
+    client.close()
     return None
-
-
-
-# queryDB() 
-# aggregate()
-# getCollectionFeatureCounts(collection='prices')
-# getCollectionFeatureCounts(collection='priceModifiers')
-
-
-# getCollectionFeatureTypes(collection='inventories', feature='availableToSell')
-# setUpBrowser()
-# runAndDocument([getScrollingData], ['getFoodDepotItems'], chain='fooddepot')
-# retrieveData('runs')
-
-# runAndDocument([setUpBrowser, getScrollingData, eatThisPage], ["setUpBrowserForAldi", 'getAldiItems', 'flushData'],
-# kwargs=[{"n": 'aldi-items', 'initialSetup': True}, {"chain": "aldi"}, {'reset': False}])
-
-# runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerDigitalCouponsAndItems', 'flushData'],
-# kwargs=[{"url": "https://www.kroger.com/savings/cl/coupons", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "digital"}, {'reset': True}])
-
-# runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerCashbackCouponsAndItems', 'flushData'],
-# kwargs=[{"url": "https://www.kroger.com/savings/cbk/cashback/", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "cashback"}, {'reset': True}])
-
-# runAndDocument([simulateUser, eatThisPage], ['getKrogerDigitalCouponsAndItems', 'flushData'],
-# kwargs=[{"link": "digital"}, {'reset': True}])
-
-# runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerCashbackCouponsAndItems', 'flushData'],
-# kwargs=[{"url": "https://www.kroger.com/savings/cbk/cashback/", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "cashback"}, {'reset': True}])
-
-# runAndDocument([setUpBrowser, simulateUser, eatThisPage], ['setUpBrowser', 'getDollarGeneralCouponsAndItems', 'flushData'],
-# kwargs=[{"n": 'dollar-general-coupons', 'initialSetup': True},{"link": "dollarGeneral"}, {'reset': False}])
-
-# runAndDocument([setUpBrowser, getDGItems, eatThisPage], ['setUpBrowserForDG', 'getSaleItemsFromDG','flushData'],
-# kwargs=[{"n": 'dollar-general-items', 'initialSetup': True}, {}, {'reset': False}])
-
-# runAndDocument([getDGItems, eatThisPage], ['getSaleItemsFromDG','flushData'],
-# kwargs=[ {}, {'reset': False}])
-# getDGItems()
-# runAndDocument([simulateUser, eatThisPage], ['getDollarGeneralCouponsAndItems', 'flushData'],
-# kwargs=[{"link": "dollarGeneral"}, {'reset': False}])
-
-# runAndDocument([setUpBrowser, getFamilyDollarItems, eatThisPage],
-# ['initialSetup', 'getFamilyDollarItems', 'flushData'] ,[{'n': 'family-dollar-items', 'initialSetup': True}, {}, {'reset': True}])
-
-# runAndDocument([setUpBrowser, eatThisPage], ['setup', 'getFamilyDollarCoupons'], [{'n': 'family-dollar-coupons', 'initialSetup': True}, {'reset': False}])
-
-# deconstructExtensions('./requests/server/collections/digital/digital050322.json', sample)
-
-# runAndDocument([setUpBrowser, getScrollingData, eatThisPage],
-# ['setup', 'getFoodDepotItems', 'flushData'],
-# [{'n': 'food-depot-items', 'initialSetup': True}, {'chain': 'fooddepot'}, {'reset': True}])
-
-# runAndDocument([setUpBrowser, getStoreData, eatThisPage], ['setup', 'getStores', 'flushData'], [{'n': None, 'initialSetup': True}, {'chain': 'aldi'}, {'reset':False}])
-# createDecompositions('./requests/server/collections/kroger', wantedPaths=['digital', 'trips', 'cashback', 'buy5save1', 'buy3save6', 'buy2save10'], additionalPaths=['dollargeneral', 'familydollar/coupons'])
-createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips', 'digital', 'cashback'])
-# normalizeStoreData()
-# backupDatabase()
-# createDBSummaries('new')
