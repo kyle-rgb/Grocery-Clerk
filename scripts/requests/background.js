@@ -87,7 +87,7 @@ async function setIterations(count){
 
 function verifyURLIntegrity(responseDetails) {
     if (responseDetails.statusCode >= 205){
-      fetch(`http://127.0.0.1:5000/issues`, {method: 'POST', body: responseDetails.url}) 
+      fetch(`http://127.0.0.1:5000/issues`, {method: 'POST', body: responseDetails.url + `${responseDetails.statusCode}`}) 
     } 
     return null
 }

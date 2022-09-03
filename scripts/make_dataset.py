@@ -84,7 +84,12 @@ def loadExtension():
     pag.keyUp('ctrlleft')
     pag.keyUp('t')
     time.sleep(3)
-    switchUrl(url='about:debugging/runtime/this-firefox')
+    clip.copy('about:debugging#/runtime/this-firefox')
+    pag.keyDown('ctrlleft')
+    pag.keyDown('v')
+    pag.keyUp('ctrlleft')
+    pag.keyUp('v')
+    pag.press('enter')
     time.sleep(2)
     pag.moveTo(x=895, y=300, duration=2)
     pag.click()
@@ -106,7 +111,7 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
     # REQ : pyautogui, time, subprocess, loadExtension(), switchUrl()
     if initialSetup:
         p1 = subprocess.Popen(['C:\Program Files\Mozilla Firefox\\firefox.exe'])
-        p1.wait(2)
+        p1.wait(10)
     if n=='kroger-trips':
         # for trips
         switchUrl(url="https://www.kroger.com/")
@@ -200,18 +205,17 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         loadExtension()
         time.sleep(2)
     elif n=="publix-coupons": # publix Coupons
-        # nav to https://www.publix.com/savings/all-deals
-        switchUrl(url="https://www.publix.com/savings/all-deals")
-        # load extension
+        # location access now occurs automatically
+        # load extension then wait for location to be set by site and then send to server
         time.sleep(3)
         loadExtension()
         time.sleep(3)
-        # allow to access location
-        pag.moveTo(570, 191, duration=3)
-        pag.click()
-        time.sleep(7)
-        # eat page
-        eatThisPage()
+        # nav to https://www.publix.com/savings/all-deals
+        switchUrl(url="https://www.publix.com/savings/all-deals")
+        # wait for page to load
+        time.sleep(15)
+        # send to server
+        eatThisPage(reset=True)
     elif n=='publix-items': # publix / instacart site
         switchUrl(url="https://delivery.publix.com/store/publix/collections/")
         time.sleep(7)
@@ -316,7 +320,7 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         pag.moveTo(239, 440, duration=2)
         pag.click()
         # iterations will be set via subsequent function
-        switchUrl(url="https://www.dollargenera./com/c/on-sale")
+        switchUrl(url="https://www.dollargeneral./com/c/on-sale")
         time.sleep(9)
 
     elif n=='family-dollar-coupons': # family-dollar smart coupons
@@ -339,7 +343,19 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         pag.click()
         pag.press(['down', 'down', 'enter'], interval=1)
         time.sleep(7)
-
+    elif n=='family-dollar-items-new':
+        switchUrl(url="https://sameday.familydollar.com/store/family-dollar/storefront")
+        time.sleep(10)
+        pag.moveTo(x=1440, y=198, duration=2)
+        pag.click()
+        time.sleep(2)
+        pag.moveTo(x=770, y=341, duration=2)
+        pag.click()
+        time.sleep(4)
+        pag.press((["tab"]*5)+["enter"], interval=.4)
+        time.sleep(5)
+        loadExtension()
+        time.sleep(4)
     else:
         print('skipping setup')
 
@@ -2272,3 +2288,6 @@ def getStores():
     pprint(res[0])
     client.close()
     return None
+
+backupDatabase()
+createDBSummaries('new')

@@ -50,8 +50,9 @@ def setPost():
 
 @app.route('/issues', methods=['GET', 'POST'])
 def tackleIssue():
+    global issues
+    print(issues)
     if request.method=="POST":
-        global issues
         issues.append(request.get_data(as_text=True))
         return {'set': True}
     else:
