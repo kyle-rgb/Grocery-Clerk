@@ -259,6 +259,14 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         pag.moveRel(0, 70, duration=2.4)
         pag.click()
     elif n=='dollar-general-coupons': # Dollar General Coupons and Items
+        pag.moveTo(1785, 66)
+        pag.click()
+        time.sleep(2)
+        pag.moveTo(1753, 154)
+        pag.click()
+        time.sleep(2)
+        pag.moveTo(1704, 468)
+        pag.click()
         time.sleep(2)
         # create setup for dollar general
         switchUrl(url="https://www.dollargeneral.com/dgpickup/deals/coupons")
@@ -299,6 +307,14 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         pag.press('home')
         time.sleep(2)
     elif n=="dollar-general-items":
+        pag.moveTo(1785, 66)
+        pag.click()
+        time.sleep(2)
+        pag.moveTo(1753, 154)
+        pag.click()
+        time.sleep(2)
+        pag.moveTo(1704, 468)
+        pag.click()
         time.sleep(2)
         # create setup for dollar general
         switchUrl(url="https://www.dollargeneral.com/dgpickup/deals/coupons")
@@ -329,7 +345,7 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         time.sleep(1)
         switchUrl(url="https://www.familydollar.com/smart-coupons")
         time.sleep(5)
-        eatThisPage()
+        eatThisPage(reset=True)
         # eat
     elif n=='family-dollar-items': # familydollar items
         switchUrl(url="https://www.familydollar.com/categories?N=categories.1%3ADepartment&No=0&Nr=product.active:1")
@@ -343,6 +359,7 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         pag.click()
         pag.press(['down', 'down', 'enter'], interval=1)
         time.sleep(7)
+        eatThisPage(reset=True)
     elif n=='family-dollar-items-new':
         switchUrl(url="https://sameday.familydollar.com/store/family-dollar/storefront")
         time.sleep(10)
@@ -440,10 +457,12 @@ def loadMoreAppears(png='./requests/server/images/moreContent.png'):
     # Evaluate if Dollar General's Promotional Page of Associated Items Has More Items
     # Returns location of button in y [419, 559] band of standard 1920 x 1080 screen 
     # REQ: pyautogui, OpenCV (sliently), server/images
+    pag.scroll(800)
+    time.sleep(2.5)
     locations = list(pag.locateAllOnScreen(png, confidence=.6, grayscale=False))
     locations = list(map(lambda x: pag.center(x), locations))
     i = 0
-    locations = list(filter(lambda x: x.y>318 and x.y<400, locations))
+    locations = list(filter(lambda x: x.y>395 and x.y<440, locations))
     if locations:
         loc = locations[i]
         x, y = loc
@@ -2289,5 +2308,4 @@ def getStores():
     client.close()
     return None
 
-backupDatabase()
-createDBSummaries('new')
+createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips'], additionalPaths=['dollargeneral/oldItems', 'familydollar/coupons'])

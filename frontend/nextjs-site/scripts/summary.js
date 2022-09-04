@@ -926,7 +926,7 @@ function processFamilyDollarItems(target, defaultLocation="2394"){
         }
     })
     insertData(allPrices, "prices")
-    insertData(allItems, "items")
+    insertFilteredData("id", "items", allItems)
     fs.mkdirSync('../../../data/collections/'+targetHeirarchy, {recursive: true})
     files = fs.readdirSync(target)
     for (let file of files){
@@ -936,23 +936,23 @@ function processFamilyDollarItems(target, defaultLocation="2394"){
 }
 
 
-readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
-readAndMove('../../../scripts/requests/server/collections/aldi/', "23150", uuid="legacyId")
-readAndMove('../../../scripts/requests/server/collections/familydollar/instacartItems/', "2394", uuid="legacyId")
-summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons/", {
-    "id": {keep: true},
-    "dcId": {keep: true},
-    "waId": {keep: true},
-    "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
-    "description": {to: "shortDescription"},
-    "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
-    "minimumPurchase": {to: "requirementQuantity"},
-    "categories": {keep: true},
-    "imageUrl": {keep: true},
-    "brand": {to: "brandName"},
-    "savingType": {to: "type"},
-    "dc_popularity": {to: "popularity"}
-}, uuid="id")
+// readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
+// readAndMove('../../../scripts/requests/server/collections/aldi/', "23150", uuid="legacyId")
+// readAndMove('../../../scripts/requests/server/collections/familydollar/instacartItems/', "2394", uuid="legacyId")
+// summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons/", {
+//     "id": {keep: true},
+//     "dcId": {keep: true},
+//     "waId": {keep: true},
+//     "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
+//     "description": {to: "shortDescription"},
+//     "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
+//     "minimumPurchase": {to: "requirementQuantity"},
+//     "categories": {keep: true},
+//     "imageUrl": {keep: true},
+//     "brand": {to: "brandName"},
+//     "savingType": {to: "type"},
+//     "dc_popularity": {to: "popularity"}
+// }, uuid="id")
 // summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
 // summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
 //     "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
@@ -966,5 +966,5 @@ summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons
 //     "details": {to: "terms"},
 //     "offerType": {to: "type" }
 // }, uuid="targetOfferId")
-// processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
+processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
 zipUp()
