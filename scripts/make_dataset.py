@@ -116,25 +116,24 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         # for trips
         switchUrl(url="https://www.kroger.com/")
         time.sleep(3)
-        # Click SignIN Select
-        pag.moveTo(1705, 465)
+        # Nav to Account Button
+        pag.moveTo(1785, 153)
+        # Nav to My Purchases
+        pag.moveRel(0, 195)
+        time.sleep(1)
         pag.click()
-        time.sleep(2)
-        # Click SignIn Button
-        pag.moveTo(1797, 169)
-        time.sleep(2)
-        pag.moveRel(0, 50)
-        pag.click()
+        time.sleep(8)
+        # Load Extension 
+        loadExtension()
         time.sleep(2)
         # Unselect SignIn 
         pag.moveTo(736, 625, duration=1)
         pag.click()
         time.sleep(2)
+        # move to sign In button with credentials
         pag.moveRel(50, 50)
+        # 786, 675
         pag.click()
-        time.sleep(2)
-        # Load Extension 
-        loadExtension()
         time.sleep(2)
     elif n=='kroger-coupons': # @ Kroger Coupons
         # start browser
@@ -767,6 +766,25 @@ def updateGasoline(data):
 
     return data
 
+def getKrogerTrips():
+    iterations = requests.get("http://localhost:5000/i")["i"]
+    iterations = ( iterations // 5 ) + 1
+    for i in range(iterations):
+        # Nav to End of Page
+        pag.press(["pagedown"]*3)
+        # Move to Arrow
+        pag.moveTo(1192, 323)
+        time.sleep(1)
+        # click arrow
+        p.click()
+        # request with timeout after 5 seconds and not refire until page reload
+        salt = random.randint(400, 1300)
+        salt /= 100
+        time.sleep(8+salt)
+    # Proceed Func call with final Call to Eat this Page 
+    return None
+
+
 def getFamilyDollarItems():
     # example url : https://www.familydollar.com/categories?N=categories.1%3ADepartment%2Bcategories.2%3AHousehold&No=0&Nr=product.active:1
     # dependencies: scrollDown and getArrow
@@ -849,6 +867,7 @@ def getScrollingData(chain: str):
     continueColor = (240, 240, 240)
     noScrollColor = (255, 255, 255)
     noScrollColor2 = (248, 248, 248)
+    startTime = time.perf_counter()
     # switch to first url
     for url in urls:
         switchUrl(url=base_url+url)
@@ -2308,4 +2327,6 @@ def getStores():
     client.close()
     return None
 
-createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips'], additionalPaths=['dollargeneral/oldItems', 'familydollar/coupons'])
+# runAndDocument([setUpBrowser, getKrogerTrips, eatThisPage],
+# ['setUpKrogerTrips', 'getKrogerTrips', 'flushData'] ,[{'n': 'kroger-trips', 'initialSetup': True}, {}, {'reset': True}])
+createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips'], additionalPaths=[])

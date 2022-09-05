@@ -63,11 +63,12 @@ async function createType(){
       if (tab.url.match(reg)!=null){
         let match = tab.url.match(reg)[0]
         t = match
-        match=='kroger'? t2=fileTypes[tab.url.match(regKroger)[0]]: t2='';
+        match=='aldi' ? t2="items" : t2;
+        match=='kroger'? t2=fileTypes[tab.url.match(regKroger)[0]]: t2;
         match=='familydollar'? t2=fileTypes[tab.url.match(regFamilyDollar)[0]] : t2;
         match=='publix' ? tab.url.match(regPublix)!==[] & tab.url.match(regPublix)!==null ? t2=fileTypePub[tab.url.match(regPublix)[0]] : t2='items' : t2;
         match=='fooddepot' ? tab.url.match(regFoodDepot)!==[] & tab.url.match(regFoodDepot)!==null ? t2=tab.url.match(regFoodDepot)[0] : t2='items' : t2;
-        match=='dollargeneral' ? isDGNewScrape ? t2='newItems' : 'oldItems' : t2;
+        match=='dollargeneral' ? isDGNewScrape ? t2='items' : t2='promotions' : t2;
         settingStores ? t2='stores' : t2;
       }
     }
@@ -121,7 +122,10 @@ function listener(details) {
           new_obj.url = details.url
           if (details.url.match(/https\:\/\/www\.kroger\.com\/cl\/api\/coupons\?couponsCountPerLoad/)!==null & iWasSet==false){
             setIterations(new_obj.data.count).then((bool) => {iWasSet=bool})
-          } else if (details.url.match(/https\:\/\/www\.dollargeneral\.com\/bin\/omni\/coupons\/recommended\?/)!==null & iWasSet==false){
+          } else if (details.url.match(/https\:\/\/www.kroger.com\/mypurchases\/api\/v1\/receipt\/summary\/by\-user\-id/)) {
+            setIterations(new_obj.data.count).then((bool) => {iWasSet=bool})
+          }
+          else if (details.url.match(/https\:\/\/www\.dollargeneral\.com\/bin\/omni\/coupons\/recommended\?/)!==null & iWasSet==false){
             setIterations(new_obj.PaginationInfo.TotalRecords).then((bool) => {iWasSet=bool})
           } else if (details.url.match(/https\:\/\/dollartree-cors\.groupbycloud\.com\/api\/v1\/search/)){
             setIterations(new_obj.totalRecordCount).then((bool) => {iWasSet=bool})

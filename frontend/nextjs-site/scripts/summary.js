@@ -26,6 +26,10 @@ function cleanup(object){
 }
 
 function insertData(listOfObjects, collectionName){
+    if (listOfObjects.length===0) {
+        throw new Error("bulkWrite Operations Cannot Write an Empty list!")
+        return
+    }
     const client = new MongoClient(process.env.MONGO_CONN_URL)
     const dbName = 'new'
 
@@ -953,18 +957,18 @@ function processFamilyDollarItems(target, defaultLocation="2394"){
 //     "savingType": {to: "type"},
 //     "dc_popularity": {to: "popularity"}
 // }, uuid="id")
-// summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
-// summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
-//     "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
-//     "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
-//     "effectiveDate": {to: "endDate", convert: function (x) {return new Date(x)}},
-//     "offerId": {keep: true},
-//     "targetOfferId": {keep: true},
-//     "category": {to: "categories", convert: function(x) {return [x]}},
-//     "image": {to: "imageUrl", convert: function (x){return x.links.lg}},
-//     "brand": {to: "brandName"},
-//     "details": {to: "terms"},
-//     "offerType": {to: "type" }
-// }, uuid="targetOfferId")
-processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
+summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
+summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
+    "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
+    "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
+    "effectiveDate": {to: "endDate", convert: function (x) {return new Date(x)}},
+    "offerId": {keep: true},
+    "targetOfferId": {keep: true},
+    "category": {to: "categories", convert: function(x) {return [x]}},
+    "image": {to: "imageUrl", convert: function (x){return x.links.lg}},
+    "brand": {to: "brandName"},
+    "details": {to: "terms"},
+    "offerType": {to: "type" }
+}, uuid="targetOfferId")
+// processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
 zipUp()
