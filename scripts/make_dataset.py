@@ -258,15 +258,8 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         pag.moveRel(0, 70, duration=2.4)
         pag.click()
     elif n=='dollar-general-coupons': # Dollar General Coupons and Items
-        pag.moveTo(1785, 66)
-        pag.click()
-        time.sleep(2)
-        pag.moveTo(1753, 154)
-        pag.click()
-        time.sleep(2)
-        pag.moveTo(1704, 468)
-        pag.click()
-        time.sleep(2)
+        # dollar general user tracking id has been whitelisted to prevent website from breaking 
+        # amending MalwareBytes for trackers for every session no longer necessary
         # create setup for dollar general
         switchUrl(url="https://www.dollargeneral.com/dgpickup/deals/coupons")
         loadExtension()
@@ -306,17 +299,15 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         pag.press('home')
         time.sleep(2)
     elif n=="dollar-general-items":
-        pag.moveTo(1785, 66)
-        pag.click()
-        time.sleep(2)
-        pag.moveTo(1753, 154)
-        pag.click()
-        time.sleep(2)
-        pag.moveTo(1704, 468)
-        pag.click()
-        time.sleep(2)
         # create setup for dollar general
-        switchUrl(url="https://www.dollargeneral.com/dgpickup/deals/coupons")
+        switchUrl(url="https://www.dollargeneral.com/c/on-sale")
+        # refresh to allow for previously filtered api calls to be allowed
+        pag.keyDown("ctrlleft")
+        pag.keyDown("r")
+        time.sleep(1)
+        pag.keyUp("r")
+        pag.keyUp("ctrlleft")
+        time.sleep(8)
         loadExtension()
         # change store
         # access stores dropdown
@@ -324,20 +315,17 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         pag.click()
         time.sleep(2)
         # Access Store Near Filter
-        pag.moveTo(32, 302, duration=2)
-        pag.click()
+        pag.press(["tab", "enter"], interval=1)
         time.sleep(3)
-        # Click Use My Location
-        pag.moveTo(82, 410, duration=2)
-        pag.click()
-        time.sleep(3)
+        # Change Zipcode
+        pag.press("tab", interval=1, presses=2)
+        pag.typewrite(list(ZIPCODE), interval=.35)
+        pag.press("enter")
+        time.sleep(5)
         # Select Closest Store from Resulting Dropdown
-        pag.moveTo(239, 440, duration=2)
-        pag.click()
+        pag.press(["tab"]*3+["enter"], interval=1)
         # iterations will be set via subsequent function
-        switchUrl(url="https://www.dollargeneral./com/c/on-sale")
-        time.sleep(9)
-
+        time.sleep(10)
     elif n=='family-dollar-coupons': # family-dollar smart coupons
     # create setup for family dollar coupons
         loadExtension()
@@ -359,7 +347,7 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         pag.press(['down', 'down', 'enter'], interval=1)
         time.sleep(7)
         eatThisPage(reset=True)
-    elif n=='family-dollar-items-new':
+    elif n=='family-dollar-items-instacart':
         switchUrl(url="https://sameday.familydollar.com/store/family-dollar/storefront")
         time.sleep(10)
         pag.moveTo(x=1440, y=198, duration=2)
@@ -911,18 +899,21 @@ def getDGItems():
     # make sure set up handles extensionLoading, urlLoading, and store handling
     # wait for iterations set by extension to happen
     # make sure browser navigates to sale items with store and extension handling complete
+    pag.click()
     i = requests.get("http://localhost:5000/i").json()["i"]
     iterations = (i // 12) + 1
-    makeUps = 0
+    badUrls = []
     print(iterations, " number of iterations")
     pag.press('end')
     time.sleep(3)
-    sleeper = 12
+    sleeper = 1
     for n in range(iterations):
         time.sleep(sleeper)
-        pag.press('end')
+        pag.press("end")
+        time.sleep(1)
+        pag.scroll(500)
         # two pronged approach to ensure it cursor provides access to next page 
-        initialButtonPosition = (1041, 409)
+        initialButtonPosition = (1036, 320)
         buttonActiveColor = (64, 64, 64)
         cursorIconCode = 65569
         pag.moveTo(*initialButtonPosition, duration=2)
@@ -933,32 +924,13 @@ def getDGItems():
             sleeper = random.randint(10, 16)
             print(f"finished with {n}. {iterations-(n+1)} left. sleeping for {sleeper}...")
         else:
-            time.sleep(40)
-            pag.keyDown('ctrlleft')
-            pag.keyDown('r')
-            time.sleep(2)
-            pag.keyUp('ctrlleft')
-            pag.keyUp('r')
-            makeUps+=1
-            sleeper = 10
-            print(f"finished with {n}. {iterations-(n+1)} left. sleeping for {sleeper}...")
-
-    if makeUps:
-        for n in range(makeUps):
-            time.sleep(sleeper)
-            pag.press('end')
-            # two pronged approach to ensure it cursor provides access to next page 
-            initialButtonPosition = (1041, 409)
-            buttonActiveColor = (64, 64, 64)
-            cursorIconCode = 65569
-            pag.moveTo(*initialButtonPosition, duration=2)
-            color = pag.pixel(*initialButtonPosition)
-            cursorCode = win32gui.GetCursorInfo()[1]
-            if color==buttonActiveColor and cursorCode==cursorIconCode:
-                pag.click()
-            sleeper = random.randint(10, 16)
-            print(f"finished with {n}. {iterations-(n+1)} left. sleeping for {sleeper}...")
-    
+            print("logged an error at {} iteration".format(n))
+            badUrls.append(f"https://www.dollargeneral.com/c/on-sale?page={n+1}")
+            
+    # tweaking blocked requests for this specific site has helped diminish request from returning 500, but still keep errors in mind if bug continues
+    if badUrls:
+        print("Loading Errors Occured At: ")
+        pprint(badUrls)
 
         
         
@@ -1320,7 +1292,7 @@ def backupDatabase():
     if os.path.exists("../data/archive/"):
         os.remove('../data/archive/')
     process1 = subprocess.Popen(['mongodump', "-d", "new", "-o", "../data/data"])
-    process1.wait(30)
+    process1.wait(90)
     # 7zip archive mongodumps w/ password
     process2 = subprocess.Popen(['7z', "a", "../data/data.7z", "../data/data", f"-p{DB_ARCHIVE_KEY}", "-mhe", "-sdel"])
     process2.wait(30)
@@ -2327,6 +2299,5 @@ def getStores():
     client.close()
     return None
 
-# runAndDocument([setUpBrowser, getKrogerTrips, eatThisPage],
-# ['setUpKrogerTrips', 'getKrogerTrips', 'flushData'] ,[{'n': 'kroger-trips', 'initialSetup': True}, {}, {'reset': True}])
-createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips'], additionalPaths=[])
+backupDatabase()
+createDBSummaries('new')

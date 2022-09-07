@@ -88,6 +88,7 @@ function readAndMove(target, defaultLocation=null, uuid){
     files = files.filter((d)=> d.isFile())
     for (let file of files){
         console.log(file.name)
+        file.name.slice(-9, -5) === "aldi" ? defaultLocation="23170": defaultLocation;
         data = fs.readFileSync(target+"/"+file.name, {encoding: 'utf8'})
         data = JSON.parse(data)
         let collections = data.filter((d)=>d.url.includes('CollectionProducts'))
@@ -940,35 +941,35 @@ function processFamilyDollarItems(target, defaultLocation="2394"){
 }
 
 
-// readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
-// readAndMove('../../../scripts/requests/server/collections/aldi/', "23150", uuid="legacyId")
-// readAndMove('../../../scripts/requests/server/collections/familydollar/instacartItems/', "2394", uuid="legacyId")
-// summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons/", {
-//     "id": {keep: true},
-//     "dcId": {keep: true},
-//     "waId": {keep: true},
-//     "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
-//     "description": {to: "shortDescription"},
-//     "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
-//     "minimumPurchase": {to: "requirementQuantity"},
-//     "categories": {keep: true},
-//     "imageUrl": {keep: true},
-//     "brand": {to: "brandName"},
-//     "savingType": {to: "type"},
-//     "dc_popularity": {to: "popularity"}
-// }, uuid="id")
-summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
-summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
-    "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
-    "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
-    "effectiveDate": {to: "endDate", convert: function (x) {return new Date(x)}},
-    "offerId": {keep: true},
-    "targetOfferId": {keep: true},
-    "category": {to: "categories", convert: function(x) {return [x]}},
-    "image": {to: "imageUrl", convert: function (x){return x.links.lg}},
+readAndMove('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
+readAndMove('../../../scripts/requests/server/collections/aldi/items/', "23150", uuid="legacyId")
+summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons/", {
+    "id": {keep: true},
+    "dcId": {keep: true},
+    "waId": {keep: true},
+    "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
+    "description": {to: "shortDescription"},
+    "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
+    "minimumPurchase": {to: "requirementQuantity"},
+    "categories": {keep: true},
+    "imageUrl": {keep: true},
     "brand": {to: "brandName"},
-    "details": {to: "terms"},
-    "offerType": {to: "type" }
-}, uuid="targetOfferId")
+    "savingType": {to: "type"},
+    "dc_popularity": {to: "popularity"}
+}, uuid="id")
+// summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
+// summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
+//     "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
+//     "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
+//     "effectiveDate": {to: "endDate", convert: function (x) {return new Date(x)}},
+//     "offerId": {keep: true},
+//     "targetOfferId": {keep: true},
+//     "category": {to: "categories", convert: function(x) {return [x]}},
+//     "image": {to: "imageUrl", convert: function (x){return x.links.lg}},
+//     "brand": {to: "brandName"},
+//     "details": {to: "terms"},
+//     "offerType": {to: "type" }
+// }, uuid="targetOfferId")
+// readAndMove('../../../scripts/requests/server/collections/familydollar/instacartItems/', "2394", uuid="legacyId")
 // processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
 zipUp()
