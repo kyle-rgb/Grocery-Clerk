@@ -768,6 +768,7 @@ def getKrogerTrips():
         # request with timeout after 5 seconds and not refire until page reload
         salt = random.randint(400, 1300)
         salt /= 100
+        print(f"sleeping for {8+salt}")
         time.sleep(8+salt)
     # Proceed Func call with final Call to Eat this Page 
     return None
