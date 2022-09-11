@@ -218,17 +218,17 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
     elif n=='publix-items': # publix / instacart site
         switchUrl(url="https://delivery.publix.com/store/publix/collections/")
         time.sleep(7)
+        # select input for zip
         pag.moveTo(858, 653, duration=2)
         pag.click()
         pag.typewrite(list(f"{ZIPCODE}"), interval=.35)
         pag.press('enter')
         time.sleep(1)
+        # select 1st Party login link @ bottom 
         pag.moveTo(969, 863, duration=2)
         pag.click()
+        # Have Browser Profile Save IC user/pass for automatic entry and Press Login 
         pag.moveTo(773, 515, duration=2)
-        pag.click()
-        time.sleep(1)
-        pag.moveTo(791, 512, duration=2)
         pag.click()
         time.sleep(10)
         loadExtension()
@@ -346,7 +346,6 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         pag.click()
         pag.press(['down', 'down', 'enter'], interval=1)
         time.sleep(7)
-        eatThisPage(reset=True)
     elif n=='family-dollar-items-instacart':
         switchUrl(url="https://sameday.familydollar.com/store/family-dollar/storefront")
         time.sleep(10)
@@ -900,6 +899,7 @@ def getDGItems():
     # make sure set up handles extensionLoading, urlLoading, and store handling
     # wait for iterations set by extension to happen
     # make sure browser navigates to sale items with store and extension handling complete
+    pag.moveTo(1520, 426, duration=.1)
     pag.click()
     i = requests.get("http://localhost:5000/i").json()["i"]
     iterations = (i // 12) + 1
@@ -1152,7 +1152,6 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
                     if bool(i[ky]):
                         itemDoc[ky] = i[ky]
                     if ky=='isShipToHome' and bool(i[ky]):
-                        print(i)
                         itemDoc['maximumOrderQuantity'] = i.get('shipToHomeQuantity')
                 
                 
@@ -1406,9 +1405,9 @@ def deconstructExtensions(filename):
                         allOffers.add(str(offer).replace("'", "\""))
 
                 if not allOffers:
-                    reqAmt, savings = re.findall(re.compile(r"buy(\d+)save(\d+)"), filename)[0]
-                    reqAmt = reqAmt
-                    savings = savings
+                    reqAmt, savings = re.findall(re.compile(r"[^\d]+(\d+)[^\d]+(\d+)"), filename)[0]
+                    reqAmt = int(reqAmt)
+                    savings = int(savings)
                     upcsQual = list(filter(lambda x: 'products' in x, startingArray))
                     upcsQual = [u['upc'] for sublist in upcsQual for u in sublist['products']]
                     hasNewPromotion = list(filter(lambda x: x.get('id')==f"buy{reqAmt}save{savings}", promotionsCollection))
@@ -1508,7 +1507,7 @@ def deconstructExtensions(filename):
                     transactionId = trip.get('receiptId').get('transactionId')
                     # filterBoolean is calculated
                     isProcessed = bool(list(filter(lambda x: x.get('transactionId')==transactionId, tripCollection)))
-                    if isProcessed==False:
+                    if isProcessed==False and trip.get("transactionTimeWithTimezone"):
                         purchaseTimestamp = pytz.utc.localize(dt.datetime.strptime(trip.get("transactionTimeWithTimezone"), "%Y-%m-%dT%H:%M:%SZ"))
                         for key, value in trip.items():
                             if key in tripKeep:
@@ -2203,8 +2202,8 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
             folder = head.split('\\')[-1]
             os.makedirs(f'../data/collections/kroger/{folder}/', exist_ok=True)
             for file in files:
-                    deconstructExtensions(head+"\\"+file)
-                    print(f'processed {file}.')
+                deconstructExtensions(head+"\\"+file)
+                print(f'processed {file}.')
 
     if additionalPaths:
         for repo in additionalPaths:
@@ -2300,5 +2299,6 @@ def getStores():
     client.close()
     return None
 
+# createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips', 'spend40save10'], additionalPaths=['dollargeneral/promotions', 'familydollar/coupons'])
 backupDatabase()
 createDBSummaries('new')

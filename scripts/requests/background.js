@@ -47,7 +47,7 @@ async function createType(){
     var t = ''
     let t2 =''
     let reg = /kroger|aldi|publix|dollargeneral|familydollar|fooddepot/
-    let regKroger = /mypurchases|cashback|coupons|Buy5Save1|Buy3Save6|Buy2Save10|\?N=/
+    let regKroger = /mypurchases|cashback|coupons|Buy5Save1|Buy3Save6|Buy2Save10|Spend\d+Save\d+/
     let regFamilyDollar = /\?N=|smart-coupons|sameday/
     let regPublix = /savings/
     let regFoodDepot = /coupons/
@@ -60,7 +60,7 @@ async function createType(){
         let match = tab.url.match(reg)[0]
         t = match
         match=='aldi' ? t2="items" : t2;
-        match=='kroger'? t2=fileTypes[tab.url.match(regKroger)[0]]: t2;
+        match=='kroger'? tab.url.match(regKroger)[0] in fileTypes ? t2=fileTypes[tab.url.match(regKroger)[0]] : t2=tab.url.match(regKroger)[0].toLowerCase() : t2;
         match=='familydollar'? t2=fileTypes[tab.url.match(regFamilyDollar)[0]] : t2;
         match=='publix' ? tab.url.match(regPublix)!==[] & tab.url.match(regPublix)!==null ? t2=fileTypePub[tab.url.match(regPublix)[0]] : t2='items' : t2;
         match=='fooddepot' ? tab.url.match(regFoodDepot)!==[] & tab.url.match(regFoodDepot)!==null ? t2=tab.url.match(regFoodDepot)[0] : t2='items' : t2;
@@ -183,17 +183,6 @@ chrome.contextMenus.onClicked.addListener(function(info, tab) {
     })
   })
 
-document.addEventListener("click", function(e){
-  if (!e.target.classList.contains('send-signal')){
-    return;
-  } else {
-    createType().then((t) => {
-      let type = t ;
-      response = fetch(`http://127.0.0.1:5000/docs?${type}`, {method: "POST", body: JSON.stringify(masterArray)})
-      return null
-    })  
-  }
-})
 // general listener for normal scraping events
 chrome.webRequest.onBeforeRequest.addListener(
   listener,

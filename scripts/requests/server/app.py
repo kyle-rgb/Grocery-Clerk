@@ -1,5 +1,5 @@
 from flask import Flask, request, render_template
-
+from flask import abort
 import time, json, re, os, datetime as dt
 
 app = Flask(__name__)
@@ -7,6 +7,7 @@ i = None
 issues = []
 @app.route('/docs', methods=['GET', 'POST'])
 def docs():
+    print(request.headers)
     d = dt.datetime.now()
     dateCode= dt.datetime.strftime(d, "%m%d%y")
     if request.method=="POST":
@@ -35,6 +36,7 @@ def docs():
 
 @app.route('/i', methods=['GET', 'POST'])
 def setPost():
+    print(request.headers)
     if request.method=="POST" and request.args.get("i"):
         global i
         i = int(request.args.get('i'))
@@ -63,7 +65,16 @@ def returnvars():
     global issues
     return {"issues": issues}
 
+@app.route("/validation", methods=["GET"])
+def y():
+    if request.method=="GET":
+        print(request.args.get("code"))
+        return {"success": True}
+    else:
+        return abort(403)
+
 
 if __name__ == "__main__":
     print("started @ = ", dt.datetime.now())
     app.run(debug = False)
+    # host = 0.0.0.0

@@ -970,6 +970,6 @@ function processFamilyDollarItems(target, defaultLocation="2394"){
 //     "details": {to: "terms"},
 //     "offerType": {to: "type" }
 // }, uuid="targetOfferId")
-processInstacartItems('../../../scripts/requests/server/collections/familydollar/instacartItems/', "2394", uuid="legacyId")
-// processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
+//processInstacartItems('../../../scripts/requests/server/collections/familydollar/instacartItems/', "2394", uuid="legacyId")
+processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
 zipUp()
