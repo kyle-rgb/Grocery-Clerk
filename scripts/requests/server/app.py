@@ -7,7 +7,6 @@ i = None
 issues = []
 @app.route('/docs', methods=['GET', 'POST'])
 def docs():
-    print(request.headers)
     d = dt.datetime.now()
     dateCode= dt.datetime.strftime(d, "%m%d%y")
     if request.method=="POST":
@@ -36,7 +35,6 @@ def docs():
 
 @app.route('/i', methods=['GET', 'POST'])
 def setPost():
-    print(request.headers)
     if request.method=="POST" and request.args.get("i"):
         global i
         i = int(request.args.get('i'))
