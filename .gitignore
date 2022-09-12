@@ -114,3 +114,4 @@ collection.json
 scripts/data/
 archive.*
 *summary.json
+node_modules/
