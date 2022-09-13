@@ -188,16 +188,20 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
         switchUrl(url="https://shop.aldi.us/store/aldi/storefront")
         # wait for free delivery modal to load
         time.sleep(12)
+        #
         pag.moveTo(1307, 194, duration=3)
         time.sleep(2)
         pag.click()
         time.sleep(6.5)
+        #
         pag.moveTo(93, 286, duration=3)
         pag.click()
         time.sleep(5)
+        #
         pag.moveRel(0, 50, duration=2)
         pag.click()
         time.sleep(5)
+        #
         pag.moveTo(371, 397, duration=3)
         pag.click()
         time.sleep(6.5)
