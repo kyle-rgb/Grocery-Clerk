@@ -5,6 +5,14 @@ import time, json, re, os, datetime as dt
 app = Flask(__name__)
 i = None
 issues = []
+verify = None
+
+def shutdown():
+    func = request.environ.get("werkzeud.server.shutdown")
+    if func is None:
+        raise RuntimeError("Not running with Werkzeud Server")
+    func()
+
 @app.route('/docs', methods=['GET', 'POST'])
 def docs():
     d = dt.datetime.now()
@@ -63,16 +71,28 @@ def returnvars():
     global issues
     return {"issues": issues}
 
-@app.route("/validation", methods=["GET"])
-def y():
+@app.route("/validate", methods=["GET"])
+def validate():
     if request.method=="GET":
-        print(request.args.get("code"))
-        return {"success": True}
+        global verify
+        verify = request.args.get("code")
+        return {"code": verify}
+
+@app.route("/getValidate", methods=["GET"])
+def getValidate():
+    if request.method=="GET" and verify:
+        global verify
+        return {"code": verify}
     else:
-        return abort(403)
+        return {"wait": True}
+
+@app.route("/shutdown", methods=["GET"])
+def shutdownServer():
+    shutdown()
+    return "Server shutting down..."
+    
 
 
 if __name__ == "__main__":
     print("started @ = ", dt.datetime.now())
-    app.run(debug = False)
-    # host = 0.0.0.0
+    app.run(debug = False, host="0.0.0.0")

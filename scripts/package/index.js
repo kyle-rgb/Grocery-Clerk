@@ -1,5 +1,6 @@
 // migrating extension, server intermediary and CV based browser scraping into single package 
 const puppeteer = require('puppeteer-extra')
+const { get } = require("http")
 // add stealth plugin and use defaults 
 const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 puppeteer.use(StealthPlugin())
@@ -126,10 +127,12 @@ function loadExtension() {
 async function setUpBrowser(task, url = null) {
   /**
    * @for starting browser task, loading extension and handling location based services on websites on new browser instance
+   * @note : request interception should occur only once page has setup been completed to prevent wrong location data.
    */
 
   const ZIPCODE = process.env.ZIPCODE;
-
+  const PHONE_NUMBER = process.env.PHONE_NUMBER;
+  var page ; 
   switch (task) {
     case "krogerCoupons":
       // * kroger coupons: exit out of promotional modals (usually 1||2), click change store button, click find store, remove default zipcode in input, write wanted zipcode to input, press enter, select wanted modalitiy button (In-Store),
@@ -185,17 +188,19 @@ async function setUpBrowser(task, url = null) {
           (by = 5)
         );
       }, 10000);
+      break;
     case "aldiItems":
       // * aldi items: wait for free delivery banner to load, select pickup button, wait for page reload, click location picker button,
       // select location by address text in locations list section and click wanted stores button, wait for page reload
       var wantedModality;
       var availableModalities = ["Pickup", "Delivery"];
       var wantedStore = "10955 Jones Bridge Road";
-      let modalitiyButton = await page.$$(
+      let modalityButton = await page.$$(
         "div[aria-label='service type'] > button",
         (els) => els.filter((el) => el.text == wantedModality)
       );
-      modalitiyButton.click();
+      modalityButton.click();
+      /** @todo : write helper for instacart location handling via MapBox API  */
       await page.$("div.css-1advtqp-PickupLocationPicker").click();
       await page
         .$(
@@ -223,6 +228,7 @@ async function setUpBrowser(task, url = null) {
       }
       await page.press("Enter");
       await page.press("Enter");
+      break;
     case "publixItems":
     // * publix items: enter in zipcode, press enter, select login button from new modal, enter in email+pass for publix or save in browser profile, press login,
     // wanted store and shopping modality should be saved, but refer to above aldi instructions to select a new store,
@@ -237,25 +243,192 @@ async function setUpBrowser(task, url = null) {
       let login =  elems.filter((el)=>el.textCotent==="Log in")[0];
       login.click();
     })
-    await page.$("form > div > button", (el)=> el.click()) // login credentials already in browser profile; store is saved to account for now, otherwise use same location / modality handling for instacart site as those above for aldi. 
-  }
-
+    // login credentials already in browser profile; store is saved to account for now, otherwise use same location / modality handling for instacart site as those above for aldi.
+    await page.$("form > div > button", (el)=> el.click());
+    break;  
+  
+  case "publixCoupons":
   // * publix coupons: navigate to all-deals, wait for api response, wait for copied response
-  // needs to be whitelisted for accessing location or (click choose a store button from navbar, enter in zipcode, press enter, click on store link element that matches wanted location's address)
+  // needs to be whitelisted for accessing location or (
+  // click choose a store button from navbar
+  //enter in zipcode
+  //press enter
+  //click on store link element that matches wanted location's address)
+  var wantedAddress; 
+  await page.goto("https://www.publix.com")
+  await page.$("div.store-search-toggle-wrapper button", (el)=>el.click())
+  await page.$("input[data-qa='store-search-input']", (el)=>{
+    el.hover();
+    el.click();
+  })
+  await page.keyboard.type(ZIPCODE);
+  await page.$("button[title='Store Search']", (el)=>{
+    el.click()
+  })
+  wantedStoreDiv = await page.$$("div.store-pod", (elems)=>{
+    return elems.filter((el)=> el.$("p.address", (address)=> address===wantedAddress))
+  })
+  await wantedStoreDiv.$("button.choose-store-button", (el)=>el.click())
+  // wait for reload
+  await page.waitForNavigation({waitUntil:"domcontentloaded"})
+  // navigate to https://www.publix.com/savings/all-deals
+  break;
+  case "foodDepotItems":
+    // * food depot items: navigate to store page, enter zipcode into input box, select store based on address, click start shopping button
+    // or started immediately at specific store website
+    break;
+  case "foodDepotCoupons":
+     /**
+      * food depot coupons: navigate to coupon site, enter phone number into input#phone, press enter, wait for automation on phone to send verification text,
+      * IPhone Automation will extract code and send a request to a temporary server with the code, once the request is recieved, the server will forward it to node and enter it in to
+      * modal's next input, shutdown server, press enter, wait for api request with authetication,
+      * @requires verification via mobile, needs to be coordinated with iPhone Automations. (10 min window on verfication, should be simple if automation of task (DAG) amd automation of phone shortcut occur at same time always).
+    */
+    await page.$("input#phone", (el)=>{
+      el.type(PHONE_NUMBER, {delay: 200})
+    })
+    await page.$("button.button-login.default", (el)=>{
+      el.click()
+    })
+    // wait for recieve text => screenshot => extractText => apply Regex => get Regex Match Group => send webrequest from phone with url-encoded code => request from same server for amount 
+    
+    
+    var parsedVerificationCode = get("http://"+SERVER_IP+":5000/getValidate", async (res, err)=>{
+      if (!res.statusCode===200) throw err;
+      let code = await res.json().code 
+      res.on("end", ()=> {
+        // async call shutdown on server once verify has been called
+        get("http://"+SERVER_IP+":5000/shutdown")
+      })
+      return res.json().code;
+    })
+    await page.$("code-input", (el)=>{
+      el.type(parsedVerificationCode, {delay: 200})
+    })
 
-  // * food depot items: navigate to store page, enter zipcode into input box, select store based on address, click start shopping button
-  // or started immediately at specific store website
-  // * food depot coupons: navigate to coupon site, enter phone number into input#phone, press enter, wait for automation on phone to send verification text,
-  // IPhone Automation will extract code and send a request to a temporary server with the code, once the request is recieved, the server will forward it to node and enter it in to
-  // modal's next input, shutdown server, press enter, wait for api request with authetication,
-  // @requires verification via mobile, needs to be coordinated with iPhone Automations. (10 min window on verfication, should be simple if automation of task (DAG) amd automation of phone shortcut occur at same time always).
-  // * dollar general items: navigate to page, force refresh, select store menu, select button.store-locator-menu__location-toggle, select input#store-locator-input, type zipcode, press enter, select li.store-list-item who's span-list-item__store-address-1 == wanted store address, wait for reload
-  // wait for iterations to be set, click button.splide__arrow.split__arrow--next
-  // * dollar general coupons: navigate to page, force refresh, select store menu, select button.store-locator-menu__location-toggle, select input#store-locator-input, type zipcode, press enter, select li.store-list-item who's span-list-item__store-address-1 == wanted store address, wait for reload,
-  // wait for iterations to be set and then press button.button coupons-results__load-more-button until all coupons are delivered to page;
-  // * family dollar items: go to specific url that shows all items, press end, click select drop down for maximum items (96), wait for page refresh
-  // * family dollar instacart items: navigate to store page, click on delivery button, input address location, click save address button, wait for reload
-  // * family dollar coupons: navigate to smart-coupons page, click your store link in nav bar, enter zip code into input, press enter, select store by address, wait for redirect, go to smart coupons, wait for api response
+    // will send code on completed 
+    await page.waitForNavigation({
+      waitUntil: "networkidle0"
+    })
+    
+    
+    
+    break;
+  case "dollarGeneralItems":
+    // * dollar general items: 
+    // navigate to page,
+    // force refresh,
+    // select store menu,
+    //select button.store-locator-menu__location-toggle,
+    // select input#store-locator-input,
+    // type zipcode,
+    // press enter,
+    // select li.store-list-item who's span-list-item__store-address-1 == wanted store address,
+    // wait for reload
+    // wait for iterations to be set, click button.splide__arrow.split__arrow--next
+    await page.goto("https://www.dollargeneral.com/c/on-sale")
+    iterations = setIterations(body, path=["categoriesResult", "ItemList", "PaginationInfo", "TotalRecords"], by=["categoriesResult", "ItemList", "PaginationInfo", "ExpectedRecordsPerPage"])
+    let saleItemClass = "li.pickup-search-results__result-item"
+    for (i=0; i<iterations; i++){
+      await page.$("button.splide__arrow--next", (el)=> {
+        el.click()
+      })
+      await page.waitForNavigation({
+        waitUntil: "networkidle0"
+      })
+    }
+    break;
+  case "dollarGeneralCoupons":
+    // * dollar general coupons:
+    var wantedAddress;
+    // navigate to page,
+    await page.goto("https://www.dollargeneral.com/dgpickup/deals/coupons")
+    // force refresh to allow access to drop down
+    await page.reload()
+    // select store menu,
+    await page.$("div.aem-header-store-locator > button", (el)=>el.click()) // Array.from(document.querySelectorAll())
+    // select button.store-locator-menu__location-toggle,
+    await page.$("button.store-locator-menu__location-toggle", (el)=>el.click())
+    // select input#store-locator-input,
+    await page.$("input#store-locator-input", (el)=>{
+      el.click();
+      // delete placeholder
+      for (i = 0 ; i<5 ; i++){
+        page.keyboard.press("Backspace")
+      }
+      // type zipcode,
+      page.keyboard.type(ZIPCODE);
+      // submit new location
+      page.$("button.location-form__apply-button", (el)=>el.click())
+    })
+    // select li.store-list-item who's span-list-item__store-address-1 == wanted store address,
+    let wantedStoreElem = await page.$$("li.store-list-item", (elems)=>{
+      return elems.filter((el)=> el.$("span.store-list-item__store-address-1"), (el)=>el.textContent===wantedAddress)[0]
+    })
+    await wantedStoreElem.$("button[data-selectable-store-text='Set as my store']")
+    // wait for reload,
+    // wait for iterations to be set
+    let iterations = setIterations(body={}, path=["PaginationInfo", "TotalRecords"], by=["PaginationInfo", "ExpectedRecordsPerPage"])
+    //then press button.button coupons-results__load-more-button until all coupons are delivered to page;
+    for (i=0 ; i<iterations-1; i++){
+      await page.$("button.button coupons-results__load-more-button", (el)=>{
+        el.click()
+      })
+    }
+    await page.press("Home")
+    break;
+  case "familyDollarItems":
+    // * family dollar items: go to specific url that shows all items, press end, click select drop down for maximum items (96), wait for page refresh
+    await page.goto("https://www.familydollar.com/categories?N=categories.1%3ADepartment%2Bcategories.2%3AHousehold&No=0&Nr=product.active:1")
+    await page.$("occ-select select", async (el)=>{
+      await el.hover()
+      await page.click();
+      await page.keyboard.press("ArrowDown")
+      await page.keyboard.press("ArrowDown")
+      await page.keyboard.press("Enter")
+    })
+    // wait for page reload
+    await page.$("a[aria-label='Next']", (el)=>el.click()) // this is for getFamilyDollarItems
+    
+    break;
+  case "familyDollarInstacartItems":
+    // * family dollar instacart items: differs from other instacart sites as it is delivery only 
+    // navigate to store page
+    await page.goto("https://sameday.familydollar.com/store/family-dollar/storefront")
+    // click on delivery button
+    await page.$$("button[type='button']", (elems)=>elems.slice(-1)[0].click())
+    //input address location
+    await page.$$("address", (el)=>{
+      el.parentElement.parentElement.click()
+    })
+    //click save address button
+    await page.$("div[aria-label='Choose address'] button[type='submit']", (el)=> el.click())
+    //wait for reload
+    break;
+  case "familyDollarCoupons":
+    // * family dollar coupons:
+    var wantedStore = "3201 Tucker Norcross Rd Ste B2, Tucker, GA 30084-2152";
+    // navigate to smart-coupons page,
+    await page.goto("https://www.familydollar.com")
+    // click your store link in nav bar,
+    await page.$("a[text='FIND A STORE']", (el)=> el.click())
+    // enter zip code into input,
+    await page.$("input#inputaddress", (el)=> {
+      el.click();
+      page.keyboard.type(ZIPCODE);
+      page.press("Enter")
+    })
+    // select store by address,
+    var targetStoreModal = await page.$$("li.poi-item", (elems)=>{
+      return elems.filter((el)=> {
+        el.$("div.address-wrapper", (address)=> {address.textContent===wantedStore})
+      })[0]
+    })
+    await targetStoreModal.$("div.mystoreIcon > span > a", (el)=>el.click())
+    // wait for redirect
+    // handle coupon navigation, request interception, and writing response to disk in separate func.  
+    break;
+  }
   return null;
 }
 
