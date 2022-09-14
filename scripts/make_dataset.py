@@ -149,6 +149,8 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
             time.sleep(2)
             # load extension: background.js
             loadExtension()
+            pag.moveTo(1878, 131)
+            pag.click()
             # click change store
             pag.moveTo(x=1682, y=160, duration=1.9)
             pag.click()
@@ -171,9 +173,11 @@ def setUpBrowser(n=0, initialSetup=True, url=None):
             # select wanted store {could be variable for different stores}
             pag.moveTo(x=1725, y=675, duration=1.9)
             pag.click()
-            time.sleep(2)
+            time.sleep(10)
+            pag.moveTo(1878, 131)
+            pag.click()
             # reset filter to get amount of available coupons
-            pag.moveTo(1768, 499, duration=2)
+            pag.moveTo(1800, 528, duration=2)
             pag.click()
             time.sleep(1)
             pag.press(['down', 'enter'], interval=1)
@@ -2303,6 +2307,17 @@ def getStores():
     client.close()
     return None
 
-# createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips', 'spend40save10'], additionalPaths=['dollargeneral/promotions', 'familydollar/coupons'])
+
+# createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips', 'digital', 'cashback'], additionalPaths=[])
 backupDatabase()
 createDBSummaries('new')
+
+# runAndDocument([setUpBrowser, getScrollingData, eatThisPage], ["setUpBrowserForAldi", 'getAldiItems', 'flushData'],
+#                kwargs=[{"n": 'aldi-items', 'initialSetup': True}, {"chain": "aldi"}, {'reset': True}])
+# time.sleep(210)
+# runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerDigitalCouponsAndItems', 'flushData'],
+#                kwargs=[{"url": "https://www.kroger.com/savings/cl/coupons", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "digital"}, {'reset': True}])
+# time.sleep(25)
+# runAndDocument([simulateUser, eatThisPage], ['getKrogerCashbackCouponsAndItems', 'flushData'],
+#                kwargs=[{"link": "cashback"}, {'reset': True}]) 
+
