@@ -1,19 +1,23 @@
 // migrating extension, server intermediary and CV based browser scraping into single package 
 const puppeteer = require('puppeteer-extra')
 const { get } = require("http")
+const fs = require("fs")
+const readline = require("readline");
+const EventEmitter = require('node:events');
 // add stealth plugin and use defaults 
 const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 puppeteer.use(StealthPlugin())
-const readline = require("readline");
 
 async function getTestWebsite() {
   // for testing request interception and loading elements from DOM
   const browser = await puppeteer.launch({
     headless: false,
+    slowmo: 500, 
     executablePath:
       "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
     dumpio: false,
-    args: ["--start-maximized"],
+    args: ["--start-maximized","--profile-directory=Profile 1"],
+    userDataDir: "C:\\c\\Profiles",
     devtools: false,
   });
   k = 0;
@@ -21,44 +25,47 @@ async function getTestWebsite() {
   await page.setViewport({ width: 1920, height: 1080 });
   await page.setRequestInterception(true);
   page
-    .on("console", (message) => {
-      //console.log(`${message.type().toUpperCase()} ${message.text()}`);
-    })
-    .on("pageerror", ({ message }) => console.log(message))
+    // .on("console", (message) => {
+    //   console.log(`${message.type().toUpperCase()} ${message.text()}`);
+    // })
+    .on("pageerror", ({ message }) => console.log("<MESSAGE>", message))
     .on("request", (intReq) => {
       if (intReq.isInterceptResolutionHandled()) return;
       intReq.continue();
     })
-    .on("response", async (response) => {
-      if (!response.url().endsWith("whoami")) {
+    .on("response", async (res) => {
+
+      try {
+      let wantedUrl = /experience\/v1\/games\?/
+      // if (res.isInterceptResolutionHandled()) return;
+      let url = await res.url();
+      if (!url.match(wantedUrl)) {
         return;
       } else {
-        console.log(`${response.status()} ${response.url()}`);
-        console.log(await response.text());
-      }
+        res = await res.text()
+        let json = JSON.parse(res)
+        //console.log("JSON + ", json.games["10"]);
+        return; 
+      }} catch (err){
+        console.log("error with ", res, "@ ", err)
+      } 
     })
-    .on(
-      "requestfailed",
-      (request) =>
-        console.log(`${request.failure().errorText} ${request.url()}`),
-      "\n"
-    );
+    .on("domcontentloaded", ()=>{
+      console.log("DOM CONTENT HAS LOADED @ ", new Date())
+    });
+    // .on(
+    //   "requestfailed",
+    //   (request) =>
+    //     console.log(`${request.failure().errorText} ${request.url()}`)
+    // );
   await page.goto(
-    "https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Your_first_WebExtension"
+    "https://www.nfl.com/"
   );
-  console.log("Done...");
-
-  const TextValue = await page.$$("a", (elems) => {
-    console.log(typeof elems);
-    return elems[42];
-  });
-  console.log("textValue = ", TextValue[42]);
-  setTimeout(async () => {
-    await TextValue[211].hover();
-    setTimeout(() => {
-      TextValue[211].click();
-    }, 5000);
-  }, 2000);
+  console.log("Went to NFL.com");
+  page.waitForSelector("ul.d3-o-tabs__wrap").then(()=>{console.log("found tabs")})
+  let els = await page.$$("ul.d3-o-tabs__wrap > li > button ")
+  el = els[1]
+  await el.click()
   return null;
 }
 
@@ -155,7 +162,7 @@ async function setUpBrowser(task, url = null) {
       let storeSelectDivs = await page.$$(
         "div.ModalitySelector--StoreSearchResult"
       ); // returns divs that holds button and address
-      let wantedStoreDiv = await storeSelectDivs.$$(
+      let wantedStoreDiv = await storeSelectDivs.$$eval(
         "div[data-testid='StoreSearchResultAddress'] > div",
         (elems) => elems.filter((el) => el.innerText === wantedAddress)[0]
       ); // innerText of inner div has street address, city, state
@@ -193,9 +200,9 @@ async function setUpBrowser(task, url = null) {
       // * aldi items: wait for free delivery banner to load, select pickup button, wait for page reload, click location picker button,
       // select location by address text in locations list section and click wanted stores button, wait for page reload
       var wantedModality;
-      var availableModalities = ["Pickup", "Delivery"];
+      availableModalities = ["Pickup", "Delivery"];
       var wantedStore = "10955 Jones Bridge Road";
-      let modalityButton = await page.$$(
+      let modalityButton = await page.$$eval(
         "div[aria-label='service type'] > button",
         (els) => els.filter((el) => el.text == wantedModality)
       );
@@ -210,7 +217,7 @@ async function setUpBrowser(task, url = null) {
       await page.$("address", (el) => el.parentElement.click());
       await page.$("button[type='submit']", (el) => el.click());
       let locationsList = await page.$("ul[aria-labelledby='locations-list']");
-      let wantedIndex = await locationsList.$$(
+      let wantedIndex = await locationsList.$$eval(
         "span > div > div > h3",
         (elems) =>
           elems
@@ -239,7 +246,7 @@ async function setUpBrowser(task, url = null) {
       page.press('Enter')
     })
     let authModal = await page.$("div.AuthModal__Content")
-    authModal.$$("button", (elems)=> {
+    authModal.$$eval("button", (elems)=> {
       let login =  elems.filter((el)=>el.textCotent==="Log in")[0];
       login.click();
     })
@@ -265,7 +272,7 @@ async function setUpBrowser(task, url = null) {
   await page.$("button[title='Store Search']", (el)=>{
     el.click()
   })
-  wantedStoreDiv = await page.$$("div.store-pod", (elems)=>{
+  wantedStoreDiv = await page.$$eval("div.store-pod", (elems)=>{
     return elems.filter((el)=> el.$("p.address", (address)=> address===wantedAddress))
   })
   await wantedStoreDiv.$("button.choose-store-button", (el)=>el.click())
@@ -362,7 +369,7 @@ async function setUpBrowser(task, url = null) {
       page.$("button.location-form__apply-button", (el)=>el.click())
     })
     // select li.store-list-item who's span-list-item__store-address-1 == wanted store address,
-    let wantedStoreElem = await page.$$("li.store-list-item", (elems)=>{
+    let wantedStoreElem = await page.$$eval("li.store-list-item", (elems)=>{
       return elems.filter((el)=> el.$("span.store-list-item__store-address-1"), (el)=>el.textContent===wantedAddress)[0]
     })
     await wantedStoreElem.$("button[data-selectable-store-text='Set as my store']")
@@ -396,9 +403,9 @@ async function setUpBrowser(task, url = null) {
     // navigate to store page
     await page.goto("https://sameday.familydollar.com/store/family-dollar/storefront")
     // click on delivery button
-    await page.$$("button[type='button']", (elems)=>elems.slice(-1)[0].click())
+    await page.$$eval("button[type='button']", (elems)=>elems.slice(-1)[0].click())
     //input address location
-    await page.$$("address", (el)=>{
+    await page.$$eval("address", (el)=>{
       el.parentElement.parentElement.click()
     })
     //click save address button
@@ -419,7 +426,7 @@ async function setUpBrowser(task, url = null) {
       page.press("Enter")
     })
     // select store by address,
-    var targetStoreModal = await page.$$("li.poi-item", (elems)=>{
+    var targetStoreModal = await page.$$eval("li.poi-item", (elems)=>{
       return elems.filter((el)=> {
         el.$("div.address-wrapper", (address)=> {address.textContent===wantedStore})
       })[0]
@@ -497,4 +504,95 @@ async function getKrogerCoupons(CSSSelector) {
     }, 8000);
   }
 }
+
+async function getKrogerTrips(){
+  /**
+   * @prerequisite : login was successful, setUpBrowser was successful 
+   * @steps : 
+   * 1 - can get iterations via DOM pagination elements now. Get Them
+   * 2 - Await Load of User Trips... Carousel Cards are Rendered and Requests are Complete.
+   * 3 - Press Arrow. Repeat Until Arrow is Unavailable via CSS class  
+  */
+
+  await page.setRequestInterception(true)
+  var wantedRequestRegex = /\/mypurchases\/api|\/atlas\/v1\/product\/v2\/products/
+  page.on("response", async (interceptedRequest)=>{
+    if (interceptedRequest.isInterceptResolutionHandled()) return;
+    if (interceptedRequest.url().match(wantedRequestRegex)){
+      let res = await interceptedRequest.response()
+      res = await res.json()
+    }
+    // write response to trips file 
+  })
+  
+  const nextButton = async () => {
+    await page.$eval("button.kds-Pagination-next", (el)=> {
+    if (el.hasAttribute("disabled")){
+      return false;
+    } else {
+      return el
+    }
+  })}
+  while( nextButton() ){
+    // click to next page
+    await nextButton().click();
+    // await product card render, images of items purchased to be rendered 
+    await page.waitForSelector("div.PH-PurchaseCard-iconRow.flex");     
+  }
+}
+
+async function getKrogerCoupons(){
+    /**
+   * @prerequisite : location setup was successful, setUpBrowser was successful 
+   * @steps : 
+   * 1 - can get iterations via DOM pagination elements now. Get Them
+   * 2 - Await Load of User Trips... Carousel Cards are Rendered and Requests are Complete.
+   * 3 - Press Arrow. Repeat Until Arrow is Unavailable via CSS class  
+  */
+    var wantedProductsRegex = /atlas\/v1\/product\/v2\/products\?/
+    var wantedCouponsRegex = /\/cl\/api\/coupons\?/
+    var apiEmitter = new EventEmitter(); 
+    var jsons = []
+    await page.setRequestInterception(true)
+    page.on("response", async (res)=>{
+      if (res.isInterceptResolutionHandled()) return;
+      try {
+        let url = await res.url();
+        if (!url.match(wantedCouponsRegex) && !url.match(wantedProductsRegex)) {
+          return;
+        } else {
+          res = await res.text()
+          jsons.push(JSON.parse(res))
+          if (url.match(wantedProductsRegex)){
+            apiEmitter.emit("productsLoaded");
+          } else {
+            apiEmitter.emit("couponsLoaded")
+          }
+          return; 
+        }} catch (err){
+          console.log("error with ", res, "@ ", err)
+        } 
+    })
+     // close out of intro modals
+     await page.$$eval("button.kds-DismissalButton.kds-Modal-closeButton", (elems)=>{
+      elems.map((el)=>el.click())
+     })
+     let currentCoupons = await page.$$eval("button.CouponCard-viewQualifyingProducts")
+     let startingLength = currentCoupons.length;
+     apiEmitter.on("couponsLoaded", async ()=>{
+      moreCoupons = await page.$$("button.CouponCard-viewQualifyingProducts")
+      currentCoupons.push(moreCoupons.slice(startingLength));
+      startingLength = currentCoupons.length;
+     })
+     currentCoupons.map(async (el)=>{
+      el.click();
+      apiEmitter.on("productsLoaded", async ()=> {
+        await page.waitForTimeout(8000);
+        page.keyboard.press("Escape")
+      })
+     })
+
+}
+
+
 getTestWebsite()
