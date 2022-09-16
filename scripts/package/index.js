@@ -1,15 +1,19 @@
 // migrating extension, server intermediary and CV based browser scraping into single package 
 const puppeteer = require('puppeteer-extra')
 const { get } = require("http")
+const {ReadableStream, WritableStream} = require("node:stream")
 const fs = require("fs")
 const readline = require("readline");
 const EventEmitter = require('node:events');
 // add stealth plugin and use defaults 
-const StealthPlugin = require('puppeteer-extra-plugin-stealth')
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const { isArrayLikeObject } = require('lodash');
+
 puppeteer.use(StealthPlugin())
 
 async function getTestWebsite() {
   // for testing request interception and loading elements from DOM
+  // sample request returns gzip encoded stream
   const browser = await puppeteer.launch({
     headless: false,
     slowmo: 500, 
@@ -19,8 +23,25 @@ async function getTestWebsite() {
     args: ["--start-maximized","--profile-directory=Profile 1"],
     userDataDir: "C:\\c\\Profiles",
     devtools: false,
+    timeout: 0
   });
-  k = 0;
+  // process.on("SIGTERM", ()=>{
+  
+  // })
+  if (process.platform === "win32") {
+    var rl = require("readline").createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+  
+    rl.on("SIGINT", function () {
+      process.emit("SIGINT");
+    });
+  }
+  
+  
+
+  offset = 0;
   let [page] = await browser.pages();
   await page.setViewport({ width: 1920, height: 1080 });
   await page.setRequestInterception(true);
@@ -34,17 +55,20 @@ async function getTestWebsite() {
       intReq.continue();
     })
     .on("response", async (res) => {
-
       try {
-      let wantedUrl = /experience\/v1\/games\?/
-      // if (res.isInterceptResolutionHandled()) return;
+      let wantedUrl = /experience\/v1\/games\?|\/v2\/standings\?|\/v2\/stats\/live\/game-summaries\?/
+      // if (res.isInterceptResolutionHandled()) return; // https://api.nfl.com/football/v2/stats/live/game-summaries?season=2022&seasonType=REG&week=2
+      // https://api.nfl.com/football/v2/standings?seasonType=REG&week=2&season=2022&limit=100
       let url = await res.url();
       if (!url.match(wantedUrl)) {
         return;
       } else {
-        res = await res.text()
-        let json = JSON.parse(res)
-        //console.log("JSON + ", json.games["10"]);
+        data = await res.json();
+        if (Array.isArray(data)){
+          data  = {data: data, acquisition_timestamp: Date().now(), url: url  }
+        }
+        console.log(offset, ">>>>", url)
+        offset = await writeJSONs("./games.json", data=data, offset);
         return; 
       }} catch (err){
         console.log("error with ", res, "@ ", err)
@@ -62,10 +86,21 @@ async function getTestWebsite() {
     "https://www.nfl.com/"
   );
   console.log("Went to NFL.com");
-  page.waitForSelector("ul.d3-o-tabs__wrap").then(()=>{console.log("found tabs")})
+  await page.waitForSelector("ul.d3-o-tabs__wrap").then(()=>{console.log("found tabs")})
   let els = await page.$$("ul.d3-o-tabs__wrap > li > button ")
-  el = els[1]
-  await el.click()
+  el = els[1];
+  await el.click();
+  await el.click();
+  console.log("click registered")
+  // page.$x("//a").then((a)=>{
+  //   a.map(async (z)=>{
+  //     href = await z.getProperty("href");
+  //     console.log(await href.jsonValue())
+  //   })
+  // })
+
+
+
   return null;
 }
 
@@ -394,9 +429,6 @@ async function setUpBrowser(task, url = null) {
       await page.keyboard.press("ArrowDown")
       await page.keyboard.press("Enter")
     })
-    // wait for page reload
-    await page.$("a[aria-label='Next']", (el)=>el.click()) // this is for getFamilyDollarItems
-    
     break;
   case "familyDollarInstacartItems":
     // * family dollar instacart items: differs from other instacart sites as it is delivery only 
@@ -476,6 +508,37 @@ function getArrow() {
   return null;
 }
 
+async function writeJSONs(path, data, offset){
+  /**
+   * @param path : path to new file
+   * @param dataToAdd: string represenation of newly acquired Response Jsons.
+   */
+  startChar = offset==0 ? "[": ",";
+
+  fs.open(path, "a", (err, fd)=> {
+    if (err?.code === "EEXIST"){
+      // data can be appended
+      console.log("File already Exists")
+    } else if (err){
+      throw err;
+    }
+    // write to file 
+    console.log("Writing to File...")
+    data = startChar + JSON.stringify(data)
+    buffer = new Buffer.from(data);
+    fs.write(fd, buffer, 0, buffer.length, positon=offset, (err)=>{
+      if (err) throw err ; 
+      fs.close(fd, ()=> {
+        console.log("file wrote successfully")
+        offset += buffer.length 
+      })
+    });
+  })
+ return offset; 
+
+}
+
+
 function scrollDown(sleep = 10) {
   /**
    * helper to wrap sleep and end press together, iterations can be intergrated into this
@@ -505,8 +568,9 @@ async function getKrogerCoupons(CSSSelector) {
   }
 }
 
-async function getKrogerTrips(){
+async function getKrogerTrips(page){
   /**
+   * @param page : PageElement from Successfully Launched Browser. 
    * @prerequisite : login was successful, setUpBrowser was successful 
    * @steps : 
    * 1 - can get iterations via DOM pagination elements now. Get Them
@@ -541,8 +605,9 @@ async function getKrogerTrips(){
   }
 }
 
-async function getKrogerCoupons(){
+async function getKrogerCoupons(page){
     /**
+   * @param page : PageElement from Successfully Launched Browser. 
    * @prerequisite : location setup was successful, setUpBrowser was successful 
    * @steps : 
    * 1 - can get iterations via DOM pagination elements now. Get Them
@@ -593,6 +658,137 @@ async function getKrogerCoupons(){
      })
 
 }
+
+
+async function getInstacartItems(page, unwantedPattern){
+  /**
+   * @param page : PageElement from Successfully Launched Browser. 
+   * @param unwantedPattern : list of available navigations to filter out.
+   * @prequisite setUpBrowser() successful. 
+   */
+  unwantedPattern = /(floral|shop-now)$/ // for aldi 
+  unwantedPatternPublix = /(greeting-cards|storm-prep|tailgating|popular)$/
+  unwantedPatternFamilyDollar = /(outdoor|toys|bed|electronics|clothing-shoes-accessories|office-crafts-party-supplies|)$/
+
+  storePatterns = /(aldi|familydollar|publix)/
+  let currentUrl = await page.url();
+  let store = currentUrl.match(storePatterns)[0]
+  let folder = store==="familydollar"? "instacartItems" : "items";
+  let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_");
+  let filePath = "../requests/server/collections/" + [store, folder, fileName].join("/") + ".json";
+  let offset = 0;
+
+  let wantedXPath = "//ul[contains(@class, 'StoreMenu')]/li/a" // XPath for custom CSS Classes Generated by Instacart
+  // set request interception on page
+  await page.setRequestInterception(true);
+  // handle associated events: Url Captures to Inform Iteration Times + File Creation
+  page
+  .on("request", async (interceptedRequest)=> {
+    if (interceptedRequest.isInterceptResolutionHandled()) return ;
+    interceptedRequest.continue(); 
+  })
+  .on("response", async(res)=> {
+    let url = await res.url();
+    // handle file writing
+    var wantedUrlsRegex = /item_attributes|operationName=Items|operationName=CollectionProductsWithFeaturedProducts/;
+    if (url.match(wantedUrlsRegex)){
+      var data = await res.json();
+      if (Array.isArray(data)){
+        data = {data: data}
+      }
+      data.url = await res.url();
+      data.acquisition_timestamp = Date.now()
+      offset = await writeJSONs(filePath, data=data, offset=offset)
+
+    }
+  })
+  let wantedCategoryLinks = await page.$$(wantedXPath)
+  wantedCategoryLinks=wantedCategoryLinks.map(async (link)=> {
+    href = await link.getProperty("href");
+    href = await link.jsonValue();
+    if (href.match(unwantedPattern)){
+      return href;
+    } else {
+      return null
+    }
+  }).filter((a)=>a); // perform filter on unwanted links ... 
+  for (let link of wantedLinks){
+    // navigate to page ;
+    // wait for request where (collections_all_items_grid) in wanted request
+    // once loaded responses have been copied, evalulate document.body.offsetHeight to see if more items are available. 
+    var pageHeight, newHeight; 
+    await page.goto(link);
+    await page.waitForNavigation({waitUntil: "networkidle0"});
+    var body = await page.$("body")
+    pageHeight = await body.getProperty("offsetHeight");
+    await page.keyboard.press("End");
+    await page.waitForNavigation({waitUntil: "networkidle0"});
+    newHeight = body.getProperty("offsetHeight")
+    while (pageHeight !== newHeight){
+      newHeight = pageHeight;
+      await page.keyboard.press("End");
+      await page.waitForNavigation({waitUntil: "networkidle0"});
+      await page.waitForTimeout(4000);
+      newHeight = await body.getProperty("offsetHeight");
+    }
+
+  }
+}
+
+process.on("SIGINT", function () {
+  //graceful shutdown
+  console.log("bye bye....");
+  fs.appendFileSync("./gamer.json", "]",)
+  console.log("successfully closed javascript objects....")
+  process.exit()
+});
+
+async function getFamilyDollarItems(page){
+/**
+  * 
+  * @param page : PageElement from Successfully Launched Browser. 
+  * @prequisite setUpBrowser() successful. Iterations Set to 96. 
+  */
+
+  // set request interception on page
+  await page.setRequestInterception(true);
+  // handle associated events: Url Captures to Inform Iteration Times + File Creation
+  page.on("response", async(res)=> {
+    let url = await res.url();
+    // handle file writing
+    if (url.match(responseRegex)){
+      var data = await res.json();
+      if (Array.isArray(data)){
+        data = {data: data}
+      }
+      data.url = await res.url();
+      data.acquisition_timestamp = Date.now()
+      offset = await writeJSONs(filePath, data=data, offset=offset)
+    }
+  })
+  await page.goto("https://www.familydollar.com/categories?N=categories.1%3ADepartment&No=0&Nr=product.active:1");
+  var offset = 0;
+  var responseRegex = /dollartree-cors\.groupbycloud\.com\/api/
+  let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
+  let filePath = "../requests/server/collections/familydollar/items/" + fileName; 
+  let iterations = await page.$eval("span.category-count", (el)=>{
+    return + el.textContent.replaceAll(/(\(|\))/g, "")
+  })
+  iterations = Math.floor(iterations/96) + 1;
+  // wait for page reload
+  
+  for (i=0; i<iterations; i++){
+    await page.waitForSelector("a.search-product-link");
+    await page.waitForTimeout(4000);
+    await page.keyboard.press("Enter");
+    await page.$("a[aria-label='Next']", (el)=>el.click()); // this is for getFamilyDollarItems
+  }
+  return null
+}
+
+
+
+
 
 
 getTestWebsite()
