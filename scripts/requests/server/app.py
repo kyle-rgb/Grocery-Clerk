@@ -81,7 +81,7 @@ def validate():
 @app.route("/getValidate", methods=["GET"])
 def getValidate():
     if request.method=="GET" and verify:
-        global verify
+        verify
         return {"code": verify}
     else:
         return {"wait": True}

@@ -6,7 +6,7 @@ const readline = require("readline");
 const EventEmitter = require('node:events');
 // add stealth plugin and use defaults 
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-const { url } = require('inspector');
+const { url, url } = require('inspector');
 const { ProtocolError } = require('puppeteer');
 
 puppeteer.use(StealthPlugin())
@@ -48,7 +48,7 @@ async function getTestWebsite() {
     // .on("console", (message) => {
     //   console.log(`${message.type().toUpperCase()} ${message.text()}`);
     // })
-    .on("pageerror", ({ message }) => console.log("<MESSAGE>", message))
+    //.on("pageerror", ({ message }) => console.log("<MESSAGE>", message))
     .on("request", (intReq) => {
       if (intReq.isInterceptResolutionHandled()) return;
       intReq.continue();
@@ -62,20 +62,11 @@ async function getTestWebsite() {
       if (!url.match(wantedUrl)) {
         return;
       } else {
-        data = await res.buffer();
-        let fileExists = fs.existsSync(fileName)
-        if (Array.isArray(data)){
-          data  = {data: data, acquisition_timestamp: Date.now(), url: url  }
-        } else {
-          data.acquisition_timestamp = Date.now();
-          data.url =  url 
-        }
-        let startChar = fileExists ? "," : "[";
-        offset += await writeJSONs("./games.json", data=data, offset, startChar=startChar);
-        
+        offset+=await writeResponse(fileName=fileName, response=res, url=url, offset=offset)
         return; 
-      }} catch (err){
-        if (err !== ProtocolError) console.log("error with ", res, "@ ", err); 
+      }} catch (e) {
+        if (e instanceof ProtocolError) return;
+        console.log("error with ", res, "@ ", e) 
       } 
     })
     .on("domcontentloaded", ()=>{
@@ -100,16 +91,16 @@ async function getTestWebsite() {
   y = 5  
   setTimeout(async ()=> {
     await browser.close();
-    console.log("have fun");
-    id = setInterval((a=y)=>{
+    console.log("closing browser session. <o.0> ");
+    id = setInterval(async (a=y)=>{
       console.log("exiting in ", a); 
       y--
       if(y<1){
-        fs.appendFileSync("./games.json", "]",)
+        await wrapFile(fileName)
         process.exit(); 
       }
     }, 1000);
-  }, 250000)
+  }, 120000)
   page.$x("//a").then((a)=>{
     a.map(async (z)=>{
       href = await z.getProperty("href");
@@ -136,6 +127,33 @@ const getNestedObject = (nestedObj, pathArr) => {
     nestedObj
   );
 };
+
+async function writeResponse(fileName, response, url, offset) { 
+  // check file existence to set character. 
+  let fileExists = fs.existsSync(fileName);
+  if (!fileExists){
+    fs.appendFile(fileName, "[", (err)=>{
+      if (err) throw err; 
+    })
+  }
+  let data = await response.buffer();
+  let metaData = `{"url": "${url}", "acquisition_timestamp": ${Date.now()},`
+  let close = new Buffer.from("},")
+  // handle lists
+  if (data.at(0)===91){
+    metaData+=`"data":`;
+    metaData = new Buffer.from(metaData);
+    data = Buffer.concat([metaData, data, close]);
+  } else {
+    // else add as attributes to object
+    close = new Buffer.from(','); 
+    metaData = new Buffer.from(metaData); 
+    data = Buffer.concat([metaData, data.subarray(1), close]);
+  }
+  let len = data.length;  
+  await writeJSONs(fileName, data=data, offset);
+  return len
+}
 
 function setIterations(body, path, by) {
   /**
@@ -165,33 +183,6 @@ function getScrollingData(page, wait) {
   }, wait);
   return null;
 }
-
-function normalizeDay(string) {
-  /**
-   * @for use in normalizing store data
-   */
-  return null;
-}
-
-function switchUrl(x, y, url) {
-  /**
-   * @for use in web navigation in web scraping
-   */
-}
-
-function eatThisPage(reset = false) {
-  /**
-   * @for sending signal remaining data in the extension to server and closing browser.
-   */
-}
-
-function loadExtension() {
-  /**
-   * @for managing request parsing, interception and communicaton to flask server for writing copied api calls
-   */
-  return null;
-}
-
 async function setUpBrowser(task, url = null) {
   /**
    * @for starting browser task, loading extension and handling location based services on websites on new browser instance
@@ -200,7 +191,7 @@ async function setUpBrowser(task, url = null) {
 
   const ZIPCODE = process.env.ZIPCODE;
   const PHONE_NUMBER = process.env.PHONE_NUMBER;
-  var page ; 
+  var page = await browser.launch(); 
   switch (task) {
     case "krogerCoupons":
       // * kroger coupons: exit out of promotional modals (usually 1||2), click change store button, click find store, remove default zipcode in input, write wanted zipcode to input, press enter, select wanted modalitiy button (In-Store),
@@ -324,21 +315,22 @@ async function setUpBrowser(task, url = null) {
   //click on store link element that matches wanted location's address)
   var wantedAddress; 
   await page.goto("https://www.publix.com")
-  await page.$("div.store-search-toggle-wrapper button", (el)=>el.click())
-  await page.$("input[data-qa='store-search-input']", (el)=>{
-    el.hover();
+  await page.$eval("div.store-search-toggle-wrapper button", (el)=>el.click())
+  let storeSearchButton = await page.waitForSelector("input[data-qa='store-search-input']", {visible: true}) ; 
+  await storeSearchButton.hover();
+  await storeSearchButton.click(); 
+  await storeSearchButton.type(ZIPCODE, {delay: 200}) 
+  await page.$eval("button[title='Store Search']", (el)=>{
     el.click();
   })
-  await page.keyboard.type(ZIPCODE);
-  await page.$("button[title='Store Search']", (el)=>{
-    el.click()
-  })
+  // filter by address ; default store pods based on zip code : 15 stores . 
   wantedStoreDiv = await page.$$eval("div.store-pod", (elems)=>{
     return elems.filter((el)=> el.$("p.address", (address)=> address===wantedAddress))
   })
   await wantedStoreDiv.$("button.choose-store-button", (el)=>el.click())
   // wait for reload
-  await page.waitForNavigation({waitUntil:"domcontentloaded"})
+  await page.waitForNavigation({waitUntil:"domcontentloaded"});
+  await page.waitForNetworkIdle({idleTime: 2000})
   // navigate to https://www.publix.com/savings/all-deals
   break;
   case "foodDepotItems":
@@ -389,9 +381,6 @@ async function setUpBrowser(task, url = null) {
     await page.waitForNavigation({
       waitUntil: "networkidle0"
     })
-    
-    
-    
     break;
   case "dollarGeneralItems":
     // * dollar general items: 
@@ -507,45 +496,11 @@ function getStoreData() {
   return null;
 }
 
-function loadMoreAppears() {
-  /**
-   * evaluates if further pagination is necessary for dollar general promotional items
-   * can now be handled to page's individual setIterations to determine more user input is necessary
-   */
-
-  let iterations = setIterations(
-    response,
-    ["eligibleProductsResult", "PaginationInfo", "TotalRecords"],
-    ["eligibleProductsResult", "PaginationInfo", "ExpectedRecordsPerPage"]
-  );
-  if (iterations == 1) {
-    return;
-  } else {
-    for (let i = 1; i < iterations; i++) {
-      page.$eval(
-        "button.button eligible-products-results__load-more-button",
-        (elem) => elem.click()
-      );
-      // some wait element for ui elements to render
-    }
-  }
-  return null;
-}
-
-function getArrow() {
-  /** specific helper function for family dollar internal items */
-  // for ui arrow / currently down
-  return null;
-}
-
-async function writeJSONs(path, data, offset, startChar){
+async function writeJSONs(path, data, offset){
   /**
    * @param path : path to new file
    * @param dataToAdd: string represenation of newly acquired Response Jsons.
    */
-  startChar = Buffer.from(startChar)
-  data = Buffer.concat([startChar, data])
-  len = data.length; 
   fs.open(path, "a", (err, fd)=> {
     if (err?.code === "EEXIST"){
       // data can be appended
@@ -554,11 +509,8 @@ async function writeJSONs(path, data, offset, startChar){
       throw err;
     }
     // write to file 
-    console.log("Writing to File...")
-    // data = startChar + JSON.stringify(data)
-    // len = data.length
-    // console.log("len ", len, "offset", offset)
-    buffer = data// new Buffer.from(data);
+    console.log("Writing to File...");
+    buffer = data;
     fs.write(fd, buffer, 0, buffer.length, positon=offset, (err)=>{
       if (err) throw err ; 
       fs.close(fd, ()=> {
@@ -566,43 +518,14 @@ async function writeJSONs(path, data, offset, startChar){
       })
     });
   })
- return len; 
+ return null; 
 
 }
 
-
-function scrollDown(sleep = 10) {
-  /**
-   * helper to wrap sleep and end press together, iterations can be intergrated into this
-   * for instacart stores: body to watch for iterations is graphql?operationName=CollectionProductsWithFeaturedProducts
-   * wait for parent collection (i.e. d297-dairy-eggs) same as slug of opened tab,
-   * setIterations =(body, ["data", "collectionProducts", "itemIds", "length"])
-   */
-  setTimeout(() => page.keyboard.press("End"), sleep);
-  return null;
-}
-
-async function getKrogerCoupons(CSSSelector) {
-  /**
-   * @param CSSSelector = CSS path to See All Items Buttons.
-   * button.kds-Button.CouponCard-viewQualifyingProducts
-   */
-
-  let buttons = await page.$$(CSSSelector);
-  for (let button of buttons) {
-    await button.hover();
-    await button.click();
-    // wait on api response
-    setTimeout(() => {
-      // exit of modal
-      page.keyboard.press("Escape");
-    }, 8000);
-  }
-}
-
-async function getKrogerTrips(page){
+async function getKrogerTrips(page, browser){
   /**
    * @param page : PageElement from Successfully Launched Browser. 
+   * @param browser : the current browser instance
    * @prerequisite : login was successful, setUpBrowser was successful 
    * @steps : 
    * 1 - can get iterations via DOM pagination elements now. Get Them
@@ -614,6 +537,7 @@ async function getKrogerTrips(page){
   var wantedRequestRegex = /\/mypurchases\/api|\/atlas\/v1\/product\/v2\/products/
   page.on("response", async (interceptedRequest)=>{
     if (interceptedRequest.isInterceptResolutionHandled()) return;
+    let url = await interceptedRequest.url();   
     if (interceptedRequest.url().match(wantedRequestRegex)){
       let res = await interceptedRequest.response()
       res = await res.json()
@@ -635,104 +559,94 @@ async function getKrogerTrips(page){
     // await product card render, images of items purchased to be rendered 
     await page.waitForSelector("div.PH-PurchaseCard-iconRow.flex");     
   }
+  await page.waitForNetworkIdle({idleTime: 5500});
+  await browser.close();
+  await wrapFile(fileName);
+  console.log("file finsihed : ", fileName) ;
+  return null;
+  
 }
 
-async function getKrogerCoupons(page){
+async function getKrogerCoupons(page, browser){
     /**
    * @param page : PageElement from Successfully Launched Browser. 
+   * @param brower : The current Browser instance. 
    * @prerequisite : location setup was successful, setUpBrowser was successful 
    * @steps : 
    * 1 - can get iterations via DOM pagination elements now. Get Them
    * 2 - Await Load of User Trips... Carousel Cards are Rendered and Requests are Complete.
    * 3 - Press Arrow. Repeat Until Arrow is Unavailable via CSS class  
-  */
-    var wantedProductsRegex = /atlas\/v1\/product\/v2\/products\?/
-    var wantedCouponsRegex = /\/cl\/api\/coupons\?/
+  */ 
     var apiEmitter = new EventEmitter(); 
-    var jsons = []
+    var offset = 0;
+    var wantedRequestRegex = /atlas\/v1\/product\/v2\/products\?|\/cl\/api\/coupons\?/
+    let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
+    fileName = "../requests/server/collections/familydollar/items/" + fileName; 
     await page.setRequestInterception(true)
     page.on("response", async (res)=>{
       if (res.isInterceptResolutionHandled()) return;
       try {
-        let url = await res.url();
-        if (!url.match(wantedCouponsRegex) && !url.match(wantedProductsRegex)) {
-          return;
-        } else {
-          res = await res.text()
-          jsons.push(JSON.parse(res))
-          if (url.match(wantedProductsRegex)){
-            apiEmitter.emit("productsLoaded");
-          } else {
-            apiEmitter.emit("couponsLoaded")
-          }
+        let url = await res.url() ;
+        if (url.match(wantedRequestRegex)){
+          data = await res.buffer();
+          offset+=await writeResponse(fileName=fileName, response=data, url=url, offset=offset)
           return; 
-        }} catch (err){
-          console.log("error with ", res, "@ ", err)
-        } 
+        }
+        return ; 
+      } catch (err){
+        console.log("error with ", res, "@ ", err)
+      }
+    })  
+    // close out of intro modals
+    await page.$$eval("button.kds-DismissalButton.kds-Modal-closeButton", (elems)=>{
+    elems.map((el)=>el.click())
     })
-     // close out of intro modals
-     await page.$$eval("button.kds-DismissalButton.kds-Modal-closeButton", (elems)=>{
-      elems.map((el)=>el.click())
-     })
-     let currentCoupons = await page.$$eval("button.CouponCard-viewQualifyingProducts")
-     let startingLength = currentCoupons.length;
-     apiEmitter.on("couponsLoaded", async ()=>{
+    let currentCoupons = await page.$$eval("button.CouponCard-viewQualifyingProducts")
+    let startingLength = currentCoupons.length;
+    apiEmitter.on("couponsLoaded", async ()=>{
       moreCoupons = await page.$$("button.CouponCard-viewQualifyingProducts")
       currentCoupons.push(moreCoupons.slice(startingLength));
       startingLength = currentCoupons.length;
-     })
-     currentCoupons.map(async (el)=>{
-      el.click();
-      apiEmitter.on("productsLoaded", async ()=> {
-        await page.waitForTimeout(8000);
-        page.keyboard.press("Escape")
-      })
-     })
-
+    })
+    for (let coupon of currentCoupons){
+      await coupon.click();
+      await page.waitForNetworkIdle({waitUntil: 3300});
+      await page.keyboard.press("Escape");
+    }
+    await page.waitForNetworkIdle({idleTime: 3000});
+    await browser.close();
+    await wrapFile(fileName);
+    console.log("file finsihed : ", fileName) ;
+    return null;
 }
 
-
-async function getInstacartItems(page, unwantedPattern){
+async function getInstacartItems(page, browser){
   /**
    * @param page : PageElement from Successfully Launched Browser. 
-   * @param unwantedPattern : list of available navigations to filter out.
+   * @param browser : the current browser instance. 
    * @prequisite setUpBrowser() successful. 
    */
-  unwantedPattern = /(floral|shop-now)$/ // for aldi 
-  unwantedPatternPublix = /(greeting-cards|storm-prep|tailgating|popular)$/
-  unwantedPatternFamilyDollar = /(outdoor|toys|bed|electronics|clothing-shoes-accessories|office-crafts-party-supplies|)$/
-
-  storePatterns = /(aldi|familydollar|publix)/
+  let unwantedPattern = /(outdoor|toys|bed|electronics|clothing-shoes-accessories|office-crafts-party-supplies|greeting-cards|storm-prep|tailgating|popularfloral|shop-now)$/
+  let storePatterns = /(aldi|familydollar|publix)/
   let currentUrl = await page.url();
   let store = currentUrl.match(storePatterns)[0]
   let folder = store==="familydollar"? "instacartItems" : "items";
-  let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_");
-  let filePath = "../requests/server/collections/" + [store, folder, fileName].join("/") + ".json";
+  let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
+  let path = "../requests/server/collections/" + [store, folder].join("/") ;
   let offset = 0;
-
+  fileName = path+fileName ; 
   let wantedXPath = "//ul[contains(@class, 'StoreMenu')]/li/a" // XPath for custom CSS Classes Generated by Instacart
   // set request interception on page
   await page.setRequestInterception(true);
-  // handle associated events: Url Captures to Inform Iteration Times + File Creation
-  page
-  .on("request", async (interceptedRequest)=> {
-    if (interceptedRequest.isInterceptResolutionHandled()) return ;
-    interceptedRequest.continue(); 
-  })
-  .on("response", async(res)=> {
-    let url = await res.url();
-    // handle file writing
-    var wantedUrlsRegex = /item_attributes|operationName=Items|operationName=CollectionProductsWithFeaturedProducts/;
-    if (url.match(wantedUrlsRegex)){
-      var data = await res.json();
-      if (Array.isArray(data)){
-        data = {data: data}
-      }
-      data.url = await res.url();
-      data.acquisition_timestamp = Date.now()
-      offset = await writeJSONs(filePath, data=data, offset=offset)
-
+  var wantedResponseRegex =  /item_attributes|operationName=Items|operationName=CollectionProductsWithFeaturedProducts/;
+  page.on("response", async (res)=> {
+    let url = await res.url() ;
+    if (url.match(wantedResponseRegex)){
+      data = await res.buffer();
+      offset+=await writeResponse(fileName=fileName, response=data, url=url, offset=offset)
+      return; 
     }
+    return ; 
   })
   let wantedCategoryLinks = await page.$$(wantedXPath)
   wantedCategoryLinks=wantedCategoryLinks.map(async (link)=> {
@@ -763,61 +677,49 @@ async function getInstacartItems(page, unwantedPattern){
       await page.waitForTimeout(4000);
       newHeight = await body.getProperty("offsetHeight");
     }
-
   }
-}
-
-async function getFamilyDollarItems(page){
-  /**
-    * 
-    * @param page : PageElement from Successfully Launched Browser. 
-    * @prequisite setUpBrowser() successful. Iterations Set to 96. 
-    */
-  
-    // set request interception on page
-    await page.setRequestInterception(true);
-    // handle associated events: Url Captures to Inform Iteration Times + File Creation
-    page.on("response", async(res)=> {
-      let url = await res.url();
-      // handle file writing
-      if (url.match(responseRegex)){
-        var data = await res.json();
-        if (Array.isArray(data)){
-          data = {data: data}
-        }
-        data.url = await res.url();
-        data.acquisition_timestamp = Date.now()
-        offset = await writeJSONs(filePath, data=data, offset=offset)
-      }
-    })
-    await page.goto("https://www.familydollar.com/categories?N=categories.1%3ADepartment&No=0&Nr=product.active:1");
-    var offset = 0;
-    var responseRegex = /dollartree-cors\.groupbycloud\.com\/api/
-    let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
-    let filePath = "../requests/server/collections/familydollar/items/" + fileName; 
-    let iterations = await page.$eval("span.category-count", (el)=>{
-      return + el.textContent.replaceAll(/(\(|\))/g, "")
-    })
-    iterations = Math.floor(iterations/96) + 1;
-    // wait for page reload
-    
-    for (i=0; i<iterations; i++){
-      await page.waitForSelector("a.search-product-link");
-      await page.waitForTimeout(4000);
-      await page.keyboard.press("Enter");
-      await page.$("a[aria-label='Next']", (el)=>el.click()); // this is for getFamilyDollarItems
-    }
-    return null
+  await page.waitForNetworkIdle({idleTime: 3000});
+  await browser.close();
+  await wrapFile(fileName);
+  console.log("file finsihed : ", fileName) ; 
+  return null;
 }
 
 /**
- * @currentlyHave kroger trips, kroger coupons, aldi items, publix items, family dollar instacart items
- * @todo dollargeneral items, dollar general promotions, family dollar coupons, publix coupons ; 
- * food depot coupons, food depot items;
- * @involved : dg coupons, dg items ;
- * @easy : publix coupons, family dollar coupons, food depot coupons, food depot items ; 
+ * @currentlyHave kroger trips, kroger coupons,
+ * instacart items (aldi items, publix items, family dollar instacart items)
+ * dollargeneral items, dollar general promotions, family dollar coupons, 
+ * @todo publix coupons, food depot coupons, food depot items; 
  */
 
+async function getPublixCoupopns(browser, page){ 
+  /**
+   * @param browser : the currnet browser instance . 
+   * @param page : the current page instance. 
+   * @prerequiste : setUpBrowser() set location successfully. 
+   */
+  // set request interception on page
+  await page.setRequestInterception(true);
+  var path = "../requests/server/collections/publix/coupons/"
+  var fileName = new Date().toLocaleDateString.replaceAll(/\//g, "_") + ".json";
+  var offset = 0 ; 
+  fileName = path+fileName ; 
+  var wantedResponseRegex = /services.publix.com\/api\/.*\/savings\?/
+  page.on("response", async (res)=> {
+    let url = await res.url() ;
+    if (url.match(wantedResponseRegex)){
+      data = await res.buffer();
+      offset+=await writeResponse(fileName=fileName, response=data, url=url, offset=offset)
+      return; 
+    }
+    return ; 
+  })
+  await page.goto("https://www.publix.com/savings/all-deals");
+  await page.waitForNetworkIdle({idleTime: 3000});
+  await browser.close();
+  console.log("file finsihed : ", fileName) ; 
+  return null; 
+}
 
 async function getDollarGeneralCoupons(browser, page){ 
   /**
@@ -827,25 +729,22 @@ async function getDollarGeneralCoupons(browser, page){
    * @DOMElementsToTrack : []
    * @DOMElementsToUse : []
   */
-  await page.setRequestInterception(true)
-  var wantedPathsRegex = /\/bin\/omni\/coupons\/(products|recommended)/
-  var fileName =  new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
+  // set request interception on page
+  await page.setRequestInterception(true);
   var path = "../requests/server/collections/dollargeneral/promotions/"
+  var fileName = new Date().toLocaleDateString.replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
-  fileName = path + fileName ;
+  const newPagePromise = new Promise(x => browser.once('targetcreated', target => x(target.page()))); 
+  fileName = path+fileName ; 
+  var wantedResponseRegex = /\/bin\/omni\/coupons\/(products|recommended)/
   page.on("response", async (res)=> {
-    url = await res.url();
-    if (url.match(wantedPathsRegex)!==[]){
-      let fileExists = fs.existsSync(fileName) ; 
+    let url = await res.url() ;
+    if (url.match(wantedResponseRegex)){
       data = await res.buffer();
-      let metaData = new Buffer.from(`"url": "${url}", "acquisition_timestamp": ${acquisition_timestamp},`) ;   
-      let startChar = fileExists ? ",{" : "[{";
-      startChar = new Buffer.from(startChar)
-      data = Buffer.concat(startChar, metaData, data.subarray(1))
-      await writeJSONs(fileName, data=data, offset, startChar=startChar);
+      offset+=await writeResponse(fileName=fileName, response=data, url=url, offset=offset)
       return; 
     }
-    return;
+    return ; 
   })
   // page has reloaded to correct wanted location;
   // wait for iterations to be set 
@@ -864,31 +763,32 @@ async function getDollarGeneralCoupons(browser, page){
   items = await page.$$("li.coupons_results-list-item a.deal-card__image-wrapper");
   left = items.length ; 
   for (item of items){
-    await page.keyboard.down("Control")
-    await item.click()
-    page.keyboard.up("Control")
-    let pages = await browser.pages();
-    page = pages[1]
-    await page.waitForNetworkIdle({
+    await item.click({button: 'middle'})
+    let newTab = await newPagePromise;
+    await newTab.bringToFront(); 
+    await newTab.waitForNetworkIdle({
       idleTime: 2000,
     })
     // check for item modal to be present
-    let eligibleItems = await page.waitForSelector("section.couponPickDetails__products-wrapper.row", {timeout: 10000, visible: true}) ; 
+    let eligibleItems = await newTab.waitForSelector("section.couponPickDetails__products-wrapper.row", {timeout: 10000, visible: true}) ; 
     if (eligibleItems){
       let loadMoreButton = await eligibleItems.$("button.button.eligible-products-results__load-more-button") ;
       while (loadMoreButton){
         await loadMoreButton.click();
-        await page.waitForNetworkIdle({idleTime: 3000})
+        await newTab.waitForNetworkIdle({idleTime: 3000})
         loadMoreButton = await eligibleItems.$("button.button.eligibel-products-results__load-more-button") ; 
       }
     };
     // exit out of page and return page to promotions tab ; 
-    await page.close();
-    page = pages[0]
+    await newTab.close();
     console.log("finished promotion. ", left, " left.")
     left--;    
-
-  }
+};
+  await page.waitForNetworkIdle({idleTime: 3000});
+  await browser.close();
+  await wrapFile(fileName);
+  console.log("file finsihed : ", fileName) ; 
+  return null;
   
 }
 
@@ -898,27 +798,25 @@ async function getDollarGeneralItems(browser, page){
    * @param browser : the current browser instance.
    * @param page : the current page instance.
    */
-  var wantedResponseRegex = /https\:\/\/www\.dollargeneral\.com\/bin\/omni\/pickup\/categories\?/
+  // set request interception on page
+  await page.setRequestInterception(true);
   var path = "../requests/server/collections/dollargeneral/items/"
   var fileName = new Date().toLocaleDateString.replaceAll(/\//g, "_") + ".json";
+  var offset = 0 ; 
   fileName = path+fileName ; 
-  // go to sale page.
-  await page.goto("https://www.dollargeneral.com/c/on-sale");
-  // set request interception
-  await page.setRequestInterception(true);
+  var wantedResponseRegex = /https\:\/\/www\.dollargeneral\.com\/bin\/omni\/pickup\/categories\?/
   page.on("response", async (res)=> {
-    let url = await res.url(); 
+    let url = await res.url() ;
     if (url.match(wantedResponseRegex)){
-      let fileExists = fs.existsSync(fileName) ; 
       data = await res.buffer();
-      let metaData = new Buffer.from(`"url": "${url}", "acquisition_timestamp": ${acquisition_timestamp},`) ;   
-      let startChar = fileExists ? ",{" : "[{";
-      startChar = new Buffer.from(startChar)
-      data = Buffer.concat(startChar, metaData, data.subarray(1))
-      await writeJSONs(fileName, data=data, offset, startChar=startChar);
+      offset+=await writeResponse(fileName=fileName, response=data, url=url, offset=offset)
       return; 
     }
-  }) 
+    return ; 
+  })
+  // go to sale page.
+  await page.goto("https://www.dollargeneral.com/c/on-sale");
+  await page.waitForNetworkIdle({waitUntil: 3300})
   let button = await page.$("button[data-target='pagination-right-arrow']") ; 
   let disabled = await button.getProperty("disabled")
   while (!disabled){
@@ -928,12 +826,10 @@ async function getDollarGeneralItems(browser, page){
     button = await page.$("button[data-target='pagination-right-arrow']") ; 
     disabled = await button.getProperty("disabled")
   };
-
-  await browser.close(); 
-  fs.appendFileSync(fileName,  "]")
-  console.log("successfully wrote", fileName)
-
-
+  await page.waitForNetworkIdle({idleTime: 3000});
+  await browser.close();
+  await wrapFile(fileName);
+  console.log("file finsihed : ", fileName) ; 
   return null
 }
 
@@ -943,39 +839,81 @@ async function getFamilyDollarPromotions(browser, page){
    * @param browser : the existing browser instance
    * @param page : the starting page ; 
    */
+  // set request interception on page
+  await page.setRequestInterception(true);
   var path = "../requests/server/collections/familydollar/coupons/"
   var fileName = new Date().toLocaleDateString.replaceAll(/\//g, "_") + ".json";
+  var offset = 0 ; 
   fileName = path+fileName ; 
   var wantedRequestRegex = /ice-familydollar\.dpn\.inmar\.com\/v2\/offers\?/  
   page.on("response", async (res)=> {
     let url = await res.url() ;
-    let fileExists = fs.existsSync(fileName) ;    
     if (url.match(wantedRequestRegex)){
-      let fileExists = fs.existsSync(fileName) ; 
       data = await res.buffer();
-      let metaData = new Buffer.from(`"url": "${url}", "acquisition_timestamp": ${acquisition_timestamp},`) ;   
-      let startChar = fileExists ? ",{" : "[{";
-      startChar = new Buffer.from(startChar)
-      data = Buffer.concat(startChar, metaData, data.subarray(1))
-      await writeJSONs(fileName, data=data, offset, startChar=startChar);
+      offset+=await writeResponse(fileName=fileName, response=data, url=url, offset=offset)
       return; 
     }
     return ; 
-  
   })
   await page.goto("https://www.familydollar.com/smart-coupons")
-  await page.waitForNetworkIdle({idleTime: 5000});
+  await page.waitForNetworkIdle({idleTime: 3000});
   await browser.close();
-  fs.appendFileSync(fileName,  "]") ; 
+  await wrapFile(fileName);
   console.log("file finsihed : ", fileName) ; 
+  return null; 
 }
 
+async function getFamilyDollarItems(browser, page){
+  /**
+    * @param browser: the current browser instance .
+    * @param page : PageElement from Successfully Launched Browser. 
+    * @prequisite setUpBrowser() successful. Iterations Set to 96. 
+    */
+    // set request interception on page
+    await page.setRequestInterception(true);
+    var offset = 0;
+    var wantedRequestRegex = /dollartree-cors\.groupbycloud\.com\/api/
+    let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
+    fileName = "../requests/server/collections/familydollar/items/" + fileName; 
+    page.on("response", async (res)=> {
+      let url = await res.url() ;
+      if (url.match(wantedRequestRegex)){
+        data = await res.buffer();
+        offset+=await writeResponse(fileName=fileName, response=data, url=url, offset=offset)
+        return; 
+      }
+      return ; 
+    })
+    await page.goto("https://www.familydollar.com/categories?N=categories.1%3ADepartment&No=0&Nr=product.active:1");
+    let iterations = await page.$eval("span.category-count", (el)=>{
+      return + el.textContent.replaceAll(/(\(|\))/g, "")
+    })
+    iterations = Math.floor(iterations/96) + 1;
+    // wait for page reload
+    
+    for (i=0; i<iterations; i++){
+      await page.waitForSelector("a.search-product-link");
+      await page.waitForTimeout(4000);
+      await page.keyboard.press("Enter");
+      await page.$("a[aria-label='Next']", (el)=>el.click()); // this is for getFamilyDollarItems
+    }
 
-process.on("SIGINT", function () {
-  console.log("shutting down gracefully....");
-  fs.appendFileSync("./games.json", "]",)
-  console.log("successfully closed javascript objects....")
-  process.exit(); 
-});
+    await page.waitForNetworkIdle({waitUntil: 3000}); 
+    await wrapFile(fileName);
+    await browser.close(); 
+    console.log("finished file", fileName);
+    return null
+}
+
+async function wrapFile(fileName){
+  fs.open(fileName, "r+", (err, fd)=>{
+    if (err) throw err; 
+    let bytes= fs.statSync(fileName).size;
+    let buffer = new Buffer.from("]");
+    fs.write(fd, buffer, 0, 1, positon=bytes-1, (er)=>{
+      if (er) throw er; 
+    })
+  })
+}
 
 getTestWebsite()
