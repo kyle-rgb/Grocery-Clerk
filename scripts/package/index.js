@@ -33,10 +33,6 @@ async function getTestWebsite() {
       input: process.stdin,
       output: process.stdout
     });
-  
-    rl.on("SIGINT", function () {
-      process.emit("SIGINT");
-    });
   }
   offset = 0;
   let fileName = "./games.json"
@@ -183,6 +179,7 @@ function getScrollingData(page, wait) {
   }, wait);
   return null;
 }
+
 async function setUpBrowser(task, url = null) {
   /**
    * @for starting browser task, loading extension and handling location based services on websites on new browser instance
@@ -191,9 +188,24 @@ async function setUpBrowser(task, url = null) {
 
   const ZIPCODE = process.env.ZIPCODE;
   const PHONE_NUMBER = process.env.PHONE_NUMBER;
-  var page = await browser.launch(); 
+  const browser = await puppeteer.launch({
+    headless: false,
+    slowmo: 500, 
+    executablePath:
+      "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+    dumpio: false,
+    args: ["--start-maximized","--profile-directory=Profile 1"],
+    userDataDir: "C:\\c\\Profiles",
+    defaultViewport: {width: 1920, height: 1080},
+    devtools: false,
+    timeout: 0
+  });
+  let [page] = await browser.pages();
+
+
+
   switch (task) {
-    case "krogerCoupons":
+  case "krogerCoupons":
       // * kroger coupons: exit out of promotional modals (usually 1||2), click change store button, click find store, remove default zipcode in input, write wanted zipcode to input, press enter, select wanted modalitiy button (In-Store),
       // wait for page reload, select dropdown for filtering coupons, press arrow down and enter, wait for page reload
       let availableModalities = ["PICKUP", "DELIVERY", "SHIP", "IN_STORE"];
@@ -221,7 +233,7 @@ async function setUpBrowser(task, url = null) {
       wantedStoreDiv.$("button", (el) => el.click()); // button to choose store
       // reload not required should be handled by set iterations already, button clicking can commence
       break;
-    case "krogerTrips":
+  case "krogerTrips":
       // kroger trips: click account button, my purchases select drop down link, unselect persist login check box, click sign in
       // requires credentials to be saved in browser profile
       // @requires: login
@@ -248,7 +260,7 @@ async function setUpBrowser(task, url = null) {
         );
       }, 10000);
       break;
-    case "aldiItems":
+  case "aldiItems":
       // * aldi items: wait for free delivery banner to load, select pickup button, wait for page reload, click location picker button,
       // select location by address text in locations list section and click wanted stores button, wait for page reload
       var wantedModality;
@@ -288,7 +300,7 @@ async function setUpBrowser(task, url = null) {
       await page.press("Enter");
       await page.press("Enter");
       break;
-    case "publixItems":
+  case "publixItems":
     // * publix items: enter in zipcode, press enter, select login button from new modal, enter in email+pass for publix or save in browser profile, press login,
     // wanted store and shopping modality should be saved, but refer to above aldi instructions to select a new store,
     // @requires: login
@@ -305,7 +317,6 @@ async function setUpBrowser(task, url = null) {
     // login credentials already in browser profile; store is saved to account for now, otherwise use same location / modality handling for instacart site as those above for aldi.
     await page.$("form > div > button", (el)=> el.click());
     break;  
-  
   case "publixCoupons":
   // * publix coupons: navigate to all-deals, wait for api response, wait for copied response
   // needs to be whitelisted for accessing location or (
@@ -341,11 +352,9 @@ async function setUpBrowser(task, url = null) {
       el.click();
     })
     let zipInput = await page.$("input.zip-code-input")
-    await zipInput.type(ZIPCODE)
+    await zipInput.type(ZIPCODE, {delay: 400})
     await page.keyboard.press('Enter')
-    let firstStore = await page.$$eval("div.landing-page-store-row", (els)=> {
-      return els[0]
-    });
+    let firstStore = await page.$("div.landing-page-store-row")
     let storeLink = await firstStore.$("button.button.landing-page__store-go-button")
     await storeLink.click()
     break;
@@ -356,7 +365,7 @@ async function setUpBrowser(task, url = null) {
       * modal's next input, shutdown server, press enter, wait for api request with authetication,
       * @requires verification via mobile, needs to be coordinated with iPhone Automations. (10 min window on verfication, should be simple if automation of task (DAG) amd automation of phone shortcut occur at same time always).
     */
-    await page.$("input#phone", (el)=>{
+    await page.$eval("input#phone", (el)=>{
       el.type(PHONE_NUMBER, {delay: 200})
     })
     await page.$eval("button.button-login.default", (el)=>{
@@ -522,6 +531,17 @@ async function writeJSONs(path, data, offset){
 
 }
 
+async function wrapFile(fileName){
+  fs.open(fileName, "r+", (err, fd)=>{
+    if (err) throw err; 
+    let bytes= fs.statSync(fileName).size;
+    let buffer = new Buffer.from("]");
+    fs.write(fd, buffer, 0, 1, positon=bytes-1, (er)=>{
+      if (er) throw er; 
+    })
+  })
+}
+
 async function getKrogerTrips(page, browser){
   /**
    * @param page : PageElement from Successfully Launched Browser. 
@@ -671,7 +691,7 @@ async function getInstacartItems(page, browser){
     await page.waitForNavigation({waitUntil: "networkidle0"});
     newHeight = body.getProperty("offsetHeight")
     while (pageHeight !== newHeight){
-      newHeight = pageHeight;
+      pageHeight = newHeight;
       await page.keyboard.press("End");
       await page.waitForNavigation({waitUntil: "networkidle0"});
       await page.waitForTimeout(4000);
@@ -685,13 +705,6 @@ async function getInstacartItems(page, browser){
   return null;
 }
 
-/**
- * @currentlyHave kroger trips, kroger coupons,
- * instacart items (aldi items, publix items, family dollar instacart items)
- * dollargeneral items, dollar general promotions, family dollar coupons, 
- * @todo publix coupons, food depot coupons, food depot items; 
- */
-
 async function getPublixCoupopns(browser, page){ 
   /**
    * @param browser : the currnet browser instance . 
@@ -701,7 +714,7 @@ async function getPublixCoupopns(browser, page){
   // set request interception on page
   await page.setRequestInterception(true);
   var path = "../requests/server/collections/publix/coupons/"
-  var fileName = new Date().toLocaleDateString.replaceAll(/\//g, "_") + ".json";
+  var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   fileName = path+fileName ; 
   var wantedResponseRegex = /services.publix.com\/api\/.*\/savings\?/
@@ -732,7 +745,7 @@ async function getDollarGeneralCoupons(browser, page){
   // set request interception on page
   await page.setRequestInterception(true);
   var path = "../requests/server/collections/dollargeneral/promotions/"
-  var fileName = new Date().toLocaleDateString.replaceAll(/\//g, "_") + ".json";
+  var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   const newPagePromise = new Promise(x => browser.once('targetcreated', target => x(target.page()))); 
   fileName = path+fileName ; 
@@ -801,7 +814,7 @@ async function getDollarGeneralItems(browser, page){
   // set request interception on page
   await page.setRequestInterception(true);
   var path = "../requests/server/collections/dollargeneral/items/"
-  var fileName = new Date().toLocaleDateString.replaceAll(/\//g, "_") + ".json";
+  var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   fileName = path+fileName ; 
   var wantedResponseRegex = /https\:\/\/www\.dollargeneral\.com\/bin\/omni\/pickup\/categories\?/
@@ -842,7 +855,7 @@ async function getFamilyDollarPromotions(browser, page){
   // set request interception on page
   await page.setRequestInterception(true);
   var path = "../requests/server/collections/familydollar/coupons/"
-  var fileName = new Date().toLocaleDateString.replaceAll(/\//g, "_") + ".json";
+  var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   fileName = path+fileName ; 
   var wantedRequestRegex = /ice-familydollar\.dpn\.inmar\.com\/v2\/offers\?/  
@@ -905,15 +918,119 @@ async function getFamilyDollarItems(browser, page){
     return null
 }
 
-async function wrapFile(fileName){
-  fs.open(fileName, "r+", (err, fd)=>{
-    if (err) throw err; 
-    let bytes= fs.statSync(fileName).size;
-    let buffer = new Buffer.from("]");
-    fs.write(fd, buffer, 0, 1, positon=bytes-1, (er)=>{
-      if (er) throw er; 
+async function getFoodDepotItems(browser, page,){
+  /**
+   * @param browser : the current browser instance
+   * @param page : the current page instance
+   * @prerequisites : setUpBrowser() succeeded
+   */
+  /**
+   * @prerequisite : setUpBrowser() successfully set location. 
+   * @param browser : the current browser instance.
+   * @param page : the current page instance.
+   */
+  // set request interception on page
+  await page.setRequestInterception(true);
+  var path = "../requests/server/collections/dollargeneral/items/"
+  var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
+  var offset = 0 ; 
+  var wantedResponseRegex = /production-us-1\.noq-servers\.net\/api\/v.+\/stores\/.+\/products\?/
+  var baseUrl = "https://shop.fooddepot.com"; 
+  fileName = path+fileName;
+  var pageHeight, newHeight; 
+  // on store home page.
+  let shopNowButton = await page.$("#site-main-menu__button")
+  await shopNowButton.hover();
+  await shopNowButton.click(); 
+  let shopAllButton = await page.waitForSelector("li.site-main-menu__item > a")
+  await shopAllButton.click();
+  await page.waitForNavigation;
+  await page.waitForNetworkIdle({idleTime:2000});
+  // get all departments
+  let allCategories = await page.$$("i.category-sibling-links__item > a")
+  let categoryUrls = allCategories.map(async(el)=>{
+    let href = await el.getProperty("href");
+    if (!href.endsWith("shop/all")){
+      return baseUrl + href;
+    }
+  }).filter((link)=>link);
+
+  page.on("response", async (res)=> {
+    let url = await res.url() ;
+    if (url.match(wantedResponseRegex)){
+      data = await res.buffer();
+      offset+=await writeResponse(fileName=fileName, response=data, url=url, offset=offset)
+      return; 
+    }
+    return ; 
     })
-  })
+
+  for (let categoryUrl of categoryUrls){
+    // go to each category page
+    await page.goto(categoryUrl);
+    await page.waitForNavigation({waitUntil: "networkidle0"});
+    let body = await page.waitForSelector("body");
+    pageHeight = await body.getProperty("offsetHeight")
+    await page.keyboard.press("End");
+    await page.waitForNetworkIdle({waitUntil: 2500});
+    newHeight = await body.getProperty("offsetHeight");
+    while (pageHeight !== newHeight){
+      pageHeight=newHeight;
+      await page.keyboard.press("End");
+      await page.waitForNetworkIdle({waitUntil: 2500});
+      newHeight = await body.getProperty("offsetHeight");
+    }
+  }
+  await page.waitForNetworkIdle({waitUntil: 3000}); 
+  await wrapFile(fileName);
+  await browser.close(); 
+  console.log("finished file", fileName);
+  return null
 }
+
+async function getFoodDepotCoupons(browser, page){ 
+  /**
+   * @param browser : the current browser instance. 
+   * @param page : the current page instance.
+   * @requirements : setUpBrowser("foodDepotCoupons") was successful. 
+   */
+  // note : navigation to other stores promotions can only occur after MFA login 
+  await page.waitForNetworkIdle({idleTime:3000});
+  await page.setRequestInterception(true);
+  var path = "../requests/server/collections/dollargeneral/coupons/"
+  var fileName = new Date().toLocaleDateString() + ".json";
+  var offset = 0;
+  let wantedResponseRegex = /https\:\/\/appcard\.com\/baseapi\/.*\/token\/.*\/offers\/unclipped_recommendation_flag/
+  let wantedAddress;
+  fileName = path + fileName ;
+  page.on("response", async (res)=> {
+    let url = await res.url();
+    if (url.match(wantedResponseRegex)){
+      data = await res.buffer();
+      offset+= await writeResponse(fileName=fileName, response=data, url=url, offset=offset);
+    }
+    return ;
+  })
+  // optional pick another store location
+  let button = await page.$("button.desktop-menu");
+  await button.click(); 
+  let storeInfoButton = await page.waitForSelector.$("button.mat-focus-indicator.mat-menu-item")
+  await storeInfoButton.click();
+  // accepts city of state input 
+  let locationInput = await page.waitForSelector("div.search-stores > input");
+  await locationInput.type(wantedAddress);
+  let moreInfoButton = await page.$("button#more-info");  
+  await moreInfoButton.click();
+  let preferredLocation = await page.waitForSelector("div.preferred-branch-wrapper > button");
+  await preferredLocation.click();
+  let confirmButton = await page.waitForSelector("duv.modal-footer.ng-start-inserted > button.modal-btn.default")
+  await confirmButton.click(); 
+  await page.waitForNetworkIdle({waitUntil: 5000});
+  await wrapFile(fileName);
+  await browser.close();
+  console.log("finished file", fileName);
+  return null;
+}
+
 
 getTestWebsite()
