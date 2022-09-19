@@ -654,74 +654,79 @@ def simulateUser(link):
         print(f"Located {len(buttons)} Items")
         if len(buttons)>12 or iterations-i<=2:
             yaxis = list(map(lambda b: b.y, buttons))
-            if iterations-i<=2: 
+            if iterations-i<=200: 
                 buttons = [x for x in buttons if x.x in prevButtonsX]
             else:
                 buttons = [x for x in buttons if (yaxis.count(x.y) >= neededLinks[link]['maxCarousel'] ) and (x.y+1 not in yaxis)]
-
-        print(len(buttons), "buttons")
-        for b in buttons:
-            pag.moveTo(b)
-            x, y = pag.position()
-            draws = 0
-            direction = 1
-            print(pag.position())
-            if link!='dollarGeneral':
-                pag.moveRel(-186, 0, duration=1.5)
-                pag.click()
-                # escape out of portal
-                time.sleep(7.5)
-                pag.press('esc')
-                pag.moveRel(186, 0, duration=1.5)
-            else:
-                pag.moveRel(-70, 0, duration=1.5)
-                pag.moveRel(0, -125, duration=1.5)
-                issuesCount = requests.get("http://127.0.0.1:5000/issues").json().get('issues')
-                # expand to items page
-                pag.keyDown('ctrlleft')
-                pag.click()
-                time.sleep(3)
-                pag.keyUp('ctrlleft')
-                time.sleep(6)
-                # page level activities
-                issuesAfterRequest = requests.get("http://127.0.0.1:5000/issues").json().get('issues')
-                while issuesCount!=issuesAfterRequest:
-                    pag.moveTo(105, 613)
+        if i>3:
+            print(len(buttons), "buttons")
+            for b in buttons:
+                pag.moveTo(b)
+                x, y = pag.position()
+                draws = 0
+                direction = 1
+                print(pag.position())
+                if link!='dollarGeneral':
+                    pag.moveRel(-186, 0, duration=1.5)
                     pag.click()
-                    time.sleep(1)
+                    # escape out of portal
+                    time.sleep(7.5)
+                    pag.press('esc')
+                    pag.moveRel(186, 0, duration=1.5)
+                else:
+                    pag.moveRel(-160, 0, duration=1.5)
+                    pag.moveRel(0, -125, duration=1.5)
+                    issuesCount = requests.get("http://127.0.0.1:5000/issues").json().get('issues')
+                    # expand to items page
+                    pag.keyDown('ctrlleft')
                     pag.click()
-                    time.sleep(1)
-                    pag.moveTo(89, 61, duration=1)
-                    pag.click()
-                    time.sleep(12)
-                    prevIssueCt = issuesAfterRequest
+                    time.sleep(3)
+                    pag.keyUp('ctrlleft')
+                    time.sleep(6)
+                    # page level activities
                     issuesAfterRequest = requests.get("http://127.0.0.1:5000/issues").json().get('issues')
-                    if (issuesCount+5==issuesAfterRequest) or (issuesAfterRequest==prevIssueCt):
-                        break
-                pag.press('end')
-                time.sleep(3)
-                # check for load more button (indicating more loadable items) 
-                moreItems = loadMoreAppears()
-                issuesCt = requests.get("http://127.0.0.1:5000/issues").json().get('issues')
-                while bool(moreItems):
-                    button = moreItems
-                    pag.moveTo(button.x, button.y, duration=0.5)
-                    pag.click()
-                    time.sleep(7)
-                    pag.press('pagedown', 3, interval=1)
+                    while issuesCount!=issuesAfterRequest:
+                        pag.moveTo(105, 613)
+                        pag.click()
+                        time.sleep(1)
+                        pag.click()
+                        time.sleep(1)
+                        pag.moveTo(89, 61, duration=1)
+                        pag.click()
+                        time.sleep(12)
+                        prevIssueCt = issuesAfterRequest
+                        issuesAfterRequest = requests.get("http://127.0.0.1:5000/issues").json().get('issues')
+                        if (issuesCount+5==issuesAfterRequest) or (issuesAfterRequest==prevIssueCt):
+                            break
+                    pag.press('end')
+                    time.sleep(3)
+                    # check for load more button (indicating more loadable items) 
                     moreItems = loadMoreAppears()
-                pag.keyDown('ctrlleft')
-                pag.keyDown('w')
-                pag.keyUp('ctrlleft')
-                pag.keyUp('w')
-                time.sleep(12.5)
-                    
-
-        if i<=1 and link=='dollarGeneral':
+                    issuesCt = requests.get("http://127.0.0.1:5000/issues").json().get('issues')
+                    while bool(moreItems):
+                        button = moreItems
+                        pag.moveTo(button.x, button.y, duration=0.5)
+                        pag.click()
+                        time.sleep(7)
+                        pag.press("end")
+                        time.sleep(3)
+                        moreItems = loadMoreAppears()
+                    pag.keyDown('ctrlleft')
+                    pag.keyDown('w')
+                    pag.keyUp('ctrlleft')
+                    pag.keyUp('w')
+                    time.sleep(12.5)
+                        
+        scrollNumber = -20
+        if i<=0 and link=='dollarGeneral':
             pag.scroll(neededLinks[link]['initialScroll'])
         elif link=='dollarGeneral':
             pag.scroll(neededLinks[link]['scrollAmount'])
-            pag.scroll(-20)
+            time.sleep(2)
+            pag.scroll(scrollNumber)
+            if i>2:
+                for j in range(i-2):
+                    pag.scroll(scrollNumber)
             prevButtonsX = set(button.x for button in buttons)
             print(prevButtonsX)
         else:
@@ -2307,17 +2312,16 @@ def getStores():
     client.close()
     return None
 
-
-# createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips', 'digital', 'cashback'], additionalPaths=[])
 backupDatabase()
 createDBSummaries('new')
 
-# runAndDocument([setUpBrowser, getScrollingData, eatThisPage], ["setUpBrowserForAldi", 'getAldiItems', 'flushData'],
-#                kwargs=[{"n": 'aldi-items', 'initialSetup': True}, {"chain": "aldi"}, {'reset': True}])
-# time.sleep(210)
-# runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerDigitalCouponsAndItems', 'flushData'],
-#                kwargs=[{"url": "https://www.kroger.com/savings/cl/coupons", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "digital"}, {'reset': True}])
-# time.sleep(25)
-# runAndDocument([simulateUser, eatThisPage], ['getKrogerCashbackCouponsAndItems', 'flushData'],
-#                kwargs=[{"link": "cashback"}, {'reset': True}]) 
+runAndDocument([setUpBrowser, getScrollingData, eatThisPage], ["setUpBrowserForAldi", 'getAldiItems', 'flushData'],
+               kwargs=[{"n": 'aldi-items', 'initialSetup': True}, {"chain": "aldi"}, {'reset': True}])
+time.sleep(210)
+runAndDocument([setUpBrowser, simulateUser, eatThisPage], ["setUpBrowserForKroger", 'getKrogerDigitalCouponsAndItems', 'flushData'],
+               kwargs=[{"url": "https://www.kroger.com/savings/cl/coupons", "n": 'kroger-coupons', 'initialSetup': True}, {"link": "digital"}, {'reset': True}])
+time.sleep(25)
+runAndDocument([simulateUser, eatThisPage], ['getKrogerCashbackCouponsAndItems', 'flushData'],
+               kwargs=[{"link": "cashback"}, {'reset': True}]) 
 
+createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips', 'digital', 'cashback'], additionalPaths=["familydollar/coupons", "dollargeneral/promotions"])
