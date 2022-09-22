@@ -2311,14 +2311,14 @@ def getStores():
     client.close()
     return None
 
-# backupDatabase()
-# createDBSummaries('new')
+backupDatabase()
+createDBSummaries('new')
 
 # runAndDocument([setUpBrowser, getScrollingData, eatThisPage], ["setUpBrowserForAldi", 'getAldiItems', 'flushData'],
 #                kwargs=[{"n": 'aldi-items', 'initialSetup': True}, {"chain": "aldi"}, {'reset': True}])
 # time.sleep(210)
-runAndDocument([simulateUser, eatThisPage], ['getKrogerDigitalCouponsAndItems', 'flushData'],
-               kwargs=[{"link": "digital"}, {'reset': True}])
+# runAndDocument([simulateUser, eatThisPage], ['getKrogerDigitalCouponsAndItems', 'flushData'],
+#                kwargs=[{"link": "digital"}, {'reset': True}])
 #time.sleep(25)
 # runAndDocument([simulateUser, eatThisPage], ['getKrogerCashbackCouponsAndItems', 'flushData'],
 #                kwargs=[{"link": "cashback"}, {'reset': True}]) 

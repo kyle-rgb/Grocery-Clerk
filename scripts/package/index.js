@@ -9,6 +9,7 @@ const { spawn } = require('child_process')
 // add stealth plugin and use defaults 
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { ProtocolError } = require('puppeteer');
+const { symbol } = require('d3');
 
 puppeteer.use(StealthPlugin())
 
@@ -205,6 +206,10 @@ async function setUpBrowser(task) {
       dumpFrameTree(child, indent+ '      ')
     }
   }
+  async function asyncFilter(arr, predicate){
+    // map predicate must return values if condition
+    return Promise.all(arr.map(predicate)).then((results)=>arr.filter((_, idx)=> results[idx] || results[idx]===0))
+  }
 
 
   const ZIPCODE = process.env.ZIPCODE; 
@@ -214,7 +219,7 @@ async function setUpBrowser(task) {
   try { 
     browser = await puppeteer.launch({
       headless: false,
-      slowMo: 555, 
+      slowMo: 956, 
       executablePath:
         "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
       dumpio: false,
@@ -231,14 +236,18 @@ async function setUpBrowser(task) {
       return 
     })
     switch (task) {
-      case "krogerCoupons":
+      case "krogerCoupons": {
           // * kroger coupons: exit out of promotional modals (usually 1||2), click change store button, click find store, remove default zipcode in input, write wanted zipcode to input, press enter, select wanted modalitiy button (In-Store),
           // wait for page reload, select dropdown for filtering coupons, press arrow down and enter, wait for page reload
+          /**
+           * @tests passed
+           * 
+          */  
           let availableModalities = ["PICKUP", "DELIVERY", "SHIP", "IN_STORE"];
           var wantedModality = "PICKUP";
-          var wantedAddress = "3559 Chamblee Tucker Rd\nAtlanta, GA";
+          var wantedAddress = "2301 College Station Road\nAthens, GA";
           await page.goto("https://www.kroger.com")
-          await page.waitForNetworkIdle({idleTime: 2000})
+          await page.waitForNetworkIdle({idleTime: 2200})
           let introModals = await page.$$("button.kds-DismissalButton.kds-Modal-closeButton")
           if (introModals){
             for (let modal of introModals){
@@ -252,23 +261,32 @@ async function setUpBrowser(task) {
           for (let j=0;j<placeHolder.length;j++){
             await zipInput.press("Backspace");
           }
-          await zipInput.type(ZIPCODE, {delay: 125});
+          await zipInput.type("30605", {delay: 125}); // ZIPCODE
           await page.keyboard.press("Enter");
           modalityButton = await page.waitForSelector(
             `button[data-testid='ModalityOption-Button-${wantedModality}']`
           );
           await modalityButton.click();
           // outText of inner div has street address, city, state
-          let wantedStoreDiv = await page.$$eval(
-            "div.ModalitySelector--StoreSearchResult div[data-testid='StoreSearchResultAddress'] > div",
-            (elems) => elems.filter((el) => el.outerText === "3559 Chamblee Tucker Rd\nAtlanta, GA")[0].parentElement.parentElement.parentElement
-          ); 
-          await wantedStoreDiv.$eval("button", (el) => el.click()); // button to choose store
-          // wait for reload
-          await page.waitForNavigation({timeout: 20000, waitUntil: "networkidle0"});
-          console.log("network idle for 2000. exiting...")
+          var targetStoreModals = await page.$$("div.ModalitySelector--StoreSearchResult") 
+          console.log(targetStoreModals)
+          var [targetStoreModal] = await asyncFilter(targetStoreModals, async (storeItem, index)=> {
+            let address = await storeItem.$eval("div[data-testid='StoreSearchResultAddress']", (el)=>el.outerText)
+            if (address === wantedAddress){ 
+              return index
+            } 
+          })
+          await Promise.all([
+            // wait for reload
+            page.waitForResponse(res=> res.url().endsWith("start-my-cart"), {timeout: 15000}), 
+            // button to choose store
+            targetStoreModal.$eval("button", (el) => el.click()),
+          ])
+
+          console.log("\nSuccess!")
           break;
-      case "krogerTrips":
+      }
+      case "krogerTrips": {
           // kroger trips: click account button, my purchases select drop down link, unselect persist login check box, click sign in
           // requires credentials to be saved in browser profile
           // @requires: login
@@ -295,47 +313,73 @@ async function setUpBrowser(task) {
             );
           }, 10000);
           break;
-      case "aldiItems":
+      }
+      case "aldiItems": {
+        /**
+           * @tests passed => can be extended to other instacaRT pages exactly. publix/familydollar 
+           * 
+        */
           // * aldi items: wait for free delivery banner to load, select pickup button, wait for page reload, click location picker button,
           // select location by address text in locations list section and click wanted stores button, wait for page reload
           var wantedModality;
+          var ZIPSTREET = "Dewberry Trail" ; // street that corresponds to zipcode
           availableModalities = ["Pickup", "Delivery"];
-          var wantedStore = "10955 Jones Bridge Road";
-          modalityButton = await page.$$eval(
+          var wantedAddress = "10955 Jones Bridge Road";
+
+          await page.goto("https://shop.aldi.us/store/aldi/storefront")
+          await page.waitForNetworkIdle({idleTime: 4000})
+          // click pickup modal // defaults to delivery
+          var [modalityButton] = await page.$$eval(
             "div[aria-label='service type'] > button",
-            (els) => els.filter((el) => el.text == wantedModality)
+            (els) => els.filter((el) => el.textContent == wantedModality)
           );
-          modalityButton.click();
-          /** @todo : write helper for instacart location handling via MapBox API  */
-          await page.$("div.css-1advtqp-PickupLocationPicker").click();
+          // click pickup button && wait for refresh
+          await Promise.all([
+            page.waitForNetworkIdle({idleTime:2000}),
+            modalityButton.click()
+          ]);
+          // click on pickup location picker
+          let [locationPicker] = await page.$x("//div[contains(@class, 'PickupLocationPicker')/button[@aria-haspopup]");
+          await locationPicker.click();
+          // wait for map modal to appear
+          await page.waitForSelector("div.__reakit-portal", {visible: true});
+          // click near zip button to launch choose address modal
           await page
             .$(
-              "div[aria-label='Pickup Locations List'] > section > button[type='button']"
+              "div[aria-label='Pickup Locations List'] > section > button[aria-haspopup='dialog']"
             )
             .click();
-          await page.$("address", (el) => el.parentElement.click());
-          await page.$("button[type='submit']", (el) => el.click());
-          let locationsList = await page.$("ul[aria-labelledby='locations-list']");
-          let wantedIndex = await locationsList.$$eval(
-            "span > div > div > h3",
-            (elems) =>
-              elems
-                .map((d, i) => {
-                  if (d.textContent === wantedStore) {
-                    return i;
-                  }
-                })
-                .filter((d) => d)
-          )[0];
-          wantedIndex += 4; // to by pass headers and turn index to tab presses
-          await page.$("h2#locations-list", (el) => el.click());
-          for (let i = 1; i < wantedIndex; i++) {
-            await page.press("Tab");
-          }
-          await page.press("Enter");
-          await page.press("Enter");
+          let inputZip = await page.$("#streetAddress");
+          // do not have to press enter b/c autocomplete request occurs when typing
+          // await inputZip.type(ZIPCODE);
+          // let addrSuggestion = await page.$x("//div[contains(@class, 'AddressSuggestionList']");
+          // await addrSuggestion.click();
+          //
+          await inputZip.type(ZIPSTREET);
+          addrSuggestions = await page.$x("//div[contains(@class, 'AddressSuggestionList']");
+          var [targetLocation] = await asyncFilter(addrSuggestions, async (storeItem, index)=> {
+            let address = await storeItem.getProperty("innerText")
+            if (address.includes(ZIPSTREET)){ 
+              return index
+            } 
+          });
+          await page.waitForSelector("div.__reakit-portal form button").then(async (submit)=> await submit.click());
+          await page.waitForNetworkIdle({idleTime: 2000})
+          var targetStoreModals = await page.$$("ul[aria-labelledby='locations-list'] > li > button"); 
+          var [targetStoreModal] = await asyncFilter(targetStoreModals, async (storeItem, index)=> {
+            let address = await storeItem.getProperty("innerText")
+            if (wantedAddress && address.includes(wantedAddress)){
+              return index
+            } else if (!wantedAddress && index<=0){
+              return index // return first entry if wantedAddress not set
+            }
+          });
+          await targetStoreModal.click();
+          await page.waitForNetworkIdle({idleTime: 2500})
+          console.log("Success!")
           break;
-      case "publixItems":
+      }
+      case "publixItems": {
         // * publix items: enter in zipcode, press enter, select login button from new modal, enter in email+pass for publix or save in browser profile, press login,
         // wanted store and shopping modality should be saved, but refer to above aldi instructions to select a new store,
         // @requires: login
@@ -351,8 +395,9 @@ async function setUpBrowser(task) {
         })
         // login credentials already in browser profile; store is saved to account for now, otherwise use same location / modality handling for instacart site as those above for aldi.
         await page.$("form > div > button", (el)=> el.click());
-        break;  
-      case "publixCoupons":
+        break;
+      }  
+      case "publixCoupons": {
       // * publix coupons: navigate to all-deals, wait for api response, wait for copied response
       // needs to be whitelisted for accessing location or (
       // click choose a store button from navbar
@@ -379,7 +424,8 @@ async function setUpBrowser(task) {
       await page.waitForNetworkIdle({idleTime: 2000})
       // navigate to https://www.publix.com/savings/all-deals
       break;
-      case "foodDepotItems":
+      }
+      case "foodDepotItems": {
         // * food depot items: navigate to store page, enter zipcode into input box, select store based on address, click start shopping button
         // or started immediately at specific store website
         // test worked.
@@ -392,7 +438,8 @@ async function setUpBrowser(task) {
         let firstStoreLink = await page.waitForSelector("tr.landing-page-store-row button.button.landing-page__store-go-button"); // <Promise ?ElementHandle>
         await firstStoreLink.click(); // <Promise Resolves>
         break;
-      case "foodDepotCoupons":
+      }
+      case "foodDepotCoupons":{
         /**
           * food depot coupons: navigate to coupon site, enter phone number into input#phone, press enter, wait for automation on phone to send verification text,
           * IPhone Automation will extract code and send a request to a temporary server with the code, once the request is recieved, the server will forward it to node and enter it in to
@@ -416,7 +463,8 @@ async function setUpBrowser(task) {
           waitUntil: "networkidle0"
         })
         break;
-      case "dollarGeneralItems":
+      }
+      case "dollarGeneralItems":{
         // * dollar general items: 
         // navigate to page,
         // force refresh,
@@ -440,7 +488,8 @@ async function setUpBrowser(task) {
           })
         }
         break;
-      case "dollarGeneralCoupons":
+      }
+      case "dollarGeneralCoupons": {
         var secondLoadSwitch; 
         // * dollar general coupons:
         var wantedAddress;
@@ -472,18 +521,32 @@ async function setUpBrowser(task) {
         // wait for reload,
         await Promise.all([setStoreButton.click(), page.waitForNavigation({waitFor: "networkidle0"})])
         break;
-      case "familyDollarItems":
+      }
+      case "familyDollarItems": {
+        /**
+           * @tests passed
+           * 
+        */
         // * family dollar items: go to specific url that shows all items, press end, click select drop down for maximum items (96), wait for page refresh
-        await page.goto("https://www.familydollar.com/categories?N=categories.1%3ADepartment%2Bcategories.2%3AHousehold&No=0&Nr=product.active:1")
-        await page.$("occ-select select", async (el)=>{
-          await el.hover()
-          await page.click();
-          await page.keyboard.press("ArrowDown")
-          await page.keyboard.press("ArrowDown")
-          await page.keyboard.press("Enter")
-        })
+        await page.goto("https://www.familydollar.com/categories?N=categories.1%3ADepartment&No=0&Nr=product.active:1")
+        let selectDiv = await page.$$(".oc3-select > div > select");
+        selectDiv = selectDiv[1]
+        await selectDiv.hover()
+        await selectDiv.click();
+        await selectDiv.press("ArrowDown")
+        await selectDiv.press("ArrowDown")
+        await Promise.all([
+          selectDiv.press("Enter"),
+          page.waitForNavigation({waitUntil: "domcontentloaded"})
+        ])
+        console.log("Success!")
         break;
-      case "familyDollarInstacartItems":
+      }
+      case "familyDollarInstacartItems": {
+        /**
+           * @tests passed
+           * 
+          */
         // * family dollar instacart items: differs from other instacart sites as it is delivery only 
         // navigate to store page
         await page.goto("https://sameday.familydollar.com/store/family-dollar/storefront")
@@ -497,9 +560,14 @@ async function setUpBrowser(task) {
         await page.$("div[aria-label='Choose address'] button[type='submit']", (el)=> el.click())
         //wait for reload
         break;
-      case "familyDollarCoupons":
+      }
+      case "familyDollarCoupons": {
+      /**
+         * @tests passed
+         * 
+        */
       // * family dollar coupons:
-      var wantedStore = "3201 Tucker Norcross Rd Ste B2,\nTucker, GA 30084-2152";
+      var wantedStore = "1165 Ralph D Abernathy Blvd Sw,\nAtlanta, GA 30310-1757";
       // navigate to smart-coupons page,
       await page.goto("https://www.familydollar.com")
       // click your store link in nav bar,
@@ -515,15 +583,23 @@ async function setUpBrowser(task) {
       await page.waitForTimeout(2000)
       var targetStoreModals = await frameZip.$$("li.poi-item")
       // select store by address,
-      var [targetStoreIndex] = targetStoreModals.map(async (poiItem, index)=> {
+      var [targetStoreModal] = await asyncFilter(targetStoreModals, async (poiItem, index)=> {
         let address = await poiItem.$eval("div > div.address-wrapper", (el)=>el.outerText)
-        address === wantedAddress ? index : void 0 ; 
-      }).filter((d)=>d);
-      console.log(targetStoreIndex)
-      var targetStoreModal = targetStoreModals[targetStoreIndex];
-      await targetStoreModal.$eval("div > div.mystoreIcon > span > a", (el)=>el.click())
-      await page.waitForNavigation({timeout: 15000, waitUntil: "networkidle0"});
+        console.log(address.replace("\n", "\\n"))
+        if (address === wantedStore){ 
+          return index
+        } 
+      })
+      console.log(targetStoreModal);
+      await Promise.all([
+        targetStoreModal.$eval("div > div.mystoreIcon > span > a", (el)=>el.click()),
+        page.waitForNavigation({timeout: 15000, waitUntil: "networkidle0"})
+      ]);
+      let locataionChangedModal = await page.waitForSelector("div.modal.occ-notifications-modal.in a.modal-close")
+      await locataionChangedModal.click();
+      console.log("Success!")
       break;
+      }
       // 
   } } catch (e) {
     console.log(e)
@@ -1102,4 +1178,4 @@ return new Promise((resolve, reject) => {
 }
 
 // getTestWebsite()
-setUpBrowser(task="familyDollarCoupons")
+setUpBrowser(task="krogerCoupons")
