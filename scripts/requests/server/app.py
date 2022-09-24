@@ -73,17 +73,16 @@ def returnvars():
 
 @app.route("/validate", methods=["GET"])
 def validate():
+    print(dt.datetime.now())
     if request.method=="GET":
         global verify
         verify = request.args.get("code")
-        print(dt.datetime.now())
         return {"code": verify}
 
 @app.route("/getValidate", methods=["GET"])
 def getValidate():
+    print(dt.datetime.now())
     if request.method=="GET" and verify:
-        verify
-        print(dt.datetime.now())
         return {"code": verify}
     else:
         return {"wait": True}

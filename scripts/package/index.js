@@ -79,6 +79,9 @@ async function getTestWebsite() {
       //   (request) =>
       //     console.log(`${request.failure().errorText} ${request.url()}`)
       // );
+
+    await page.waitForTimeout(500000)
+
     await page.goto(
       "https://www.nfl.com/"
     );
@@ -182,18 +185,6 @@ function setIterations(body, path, by) {
   return Math.floor(+getNestedObject(body, path) / by) + 1;
 }
 
-function getScrollingData(page, wait) {
-  /**
-   * @for apps that bind calls to ui elements in a single page app = {FoodDepot, Publix, FamilyDollar, Aldi}
-   * press end to fire call and wait for render of api element to UI interface
-   * wraps end keyboard press into setTimeout
-   */
-  setTimeout(() => {
-    page.keyboard.press("End");
-  }, wait);
-  return null;
-}
-
 async function setUpBrowser(task) {
   /**
    * @for starting browser task, loading extension and handling location based services on websites on new browser instance
@@ -210,19 +201,13 @@ async function setUpBrowser(task) {
     // map predicate must return values if condition
     return Promise.all(arr.map(predicate)).then((results)=>arr.filter((_, idx)=> results[idx] || results[idx]===0))
   }
-
-
   var ZIPCODE = process.env.ZIPCODE; 
   const PHONE_NUMBER = process.env.PHONE_NUMBER;
-  const SERVER_IP = process.env.SERVER_IP;
-  const EMAIL = process.env.EMAIL;
-  const PASSWORD_PUBLIX = process.env.PASSWORD_PUBLIX
-
   var browser;
   try { 
     browser = await puppeteer.launch({
       headless: false,
-      slowMo: 885, 
+      slowMo: 1020, 
       executablePath:
         "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
       dumpio: true,
@@ -289,36 +274,30 @@ async function setUpBrowser(task) {
             // button to choose store
             targetStoreModal.$eval("button", (el) => el.click()),
           ])
-          console.log("\nSuccess!")
           break;
       }
       case "krogerTrips": {
           // kroger trips: click account button, my purchases select drop down link, unselect persist login check box, click sign in
           // requires credentials to be saved in browser profile
           // @requires: login
-          var username, password;
-          await page.$("button.WelcomeButtonDesktop", (el) => el.hover()); // activate dropdown
-          await page.$("a[href='/mypurchases']", (el) => el.click()); // set redirect
-          await page.$("input#SignIn-rememberMe", (el) => el.click());
-          if (requireCreditentials) {
-            await page.$("input#SignIn-emailInput", (el) => {
-              el.click();
-              page.keyboard.type(username);
-            }); // if necessary
-            await page.$("input#SignIn-passwordInput", (el) => {
-              el.click();
-              page.keyboard.type(password);
-            }); // if necessary
+          const USERNAME_KROGER = process.env.USERNAME_KROGER;
+          const PASSWORD_KROGER = process.env.PASSWORD_KROGER;
+          await page.goto("https://www.kroger.com");
+          await page.waitForNetworkIdle({idleTime: 2000});
+          let introModals = await page.$$("button.kds-DismissalButton.kds-Modal-closeButton")
+          if (introModals){
+            for (let modal of introModals){
+              await modal.click(); 
+            }
           }
-          await page.$("button#SignIn-submitButton", (el) => el.click()); // submit
-          setTimeout(() => {
-            setIterations(
-              "https://www.kroger.com/mypurchases/api/v1/receipt/summary/by-user-id",
-              (path = ["length"]),
-              (by = 5)
-            );
-          }, 10000);
-          break;
+          await page.$eval("a[href='/mypurchases']", (el) => el.click()); // set redirect
+          let rememberCreditentialsButton = await page.waitForSelector("#SignIn-rememberMe");
+          await rememberCreditentialsButton.click()
+          let emailInput = await page.$("#SignIn-emailInput")
+          let passwordInput = await page.$("#SignIn-passwordInput");
+          await emailInput.type(USERNAME_KROGER, {delay: 120});
+          await passwordInput.type(PASSWORD_KROGER, {delay: 120});
+          break; 
       }
       case "aldiItems": {
         /**
@@ -523,7 +502,10 @@ async function setUpBrowser(task) {
         await zipInput.type(ZIPCODE, {delay: 666}); // <Promise Resolves>
         await page.keyboard.press('Enter'); //  <Promise Resolves> 
         let firstStoreLink = await page.waitForSelector("tr.landing-page-store-row button.button.landing-page__store-go-button"); // <Promise ?ElementHandle>
-        await firstStoreLink.click(); // <Promise Resolves>
+        await Promise.all([
+          firstStoreLink.click(), // <Promise Resolves>
+          page.waitForNavigation({"waitUntil": "networkidle0"})
+        ])
         break;
       }
       case "foodDepotCoupons":{
@@ -533,22 +515,48 @@ async function setUpBrowser(task) {
           * modal's next input, shutdown server, press enter, wait for api request with authetication,
           * @requires verification via mobile, needs to be coordinated with iPhone Automations. (10 min window on verfication, should be simple if automation of task (DAG) amd automation of phone shortcut occur at same time always).
         */
-        // nav to page => AppCard App That Requires MFA
-        await page.goto(`http://www.fooddepot.com/coupons/`);
-        let phoneInput = await page.waitForSelector("input#phone");
+        var wantedAddress = "3590 Panola Road, Lithonia, GA";
+        await page.goto(`https://www.fooddepot.com/coupons/`);
+        // nav to page => AppCard App That Requires MFA ; allow additional time for shortcut to run
+        page.setDefaultTimeout(timeout=90000)
+        var appCardIFrame = await page.waitForSelector("#ac-iframe");
+        let frameCoupons = await appCardIFrame.contentFrame();
+        let phoneInput = await frameCoupons.waitForSelector("#phone");
         await phoneInput.type(PHONE_NUMBER, {delay: 400})
-        await page.$eval("button.button-login.default", async (el)=>{
+        await frameCoupons.$eval("button.button-login.default", async (el)=>{
           await el.click();
         })
         var parsedVerificationCode = await getFoodDepotCode(); 
-        await page.$("code-input", (el)=>{
-          el.type(parsedVerificationCode, {delay: 200})
+        let codeInput = await frameCoupons.waitForSelector("code-input")
+        await codeInput.type(parsedVerificationCode, {delay: 200})
+        // will send code typeFinish on completed 
+        await page.waitForNetworkIdle({
+          idleTime: 5500
         })
-
-        // will send code on completed 
-        await page.waitForNavigation({
-          waitUntil: "networkidle0"
-        })
+        if (wantedAddress){
+            // handle change in wanted location if  
+          var moreButton = await frameCoupons.$("button[aria-label='More']");
+          var dropDownButtons = await frameCoupons.waitForSelector("div.mat-menu-content > button[role='menuitem']")
+          var [modalityButton] = await asyncFilter(dropDownButtons, async (item, index)=> {
+            let buttonText = await item.getProperty("innerText").then(async (jsHandle)=> await jsHandle.jsonValue());
+            if (buttonText.includes("Store Info")){ 
+              return index
+            } 
+          });
+          console.log(modalityButton)
+          await modalityButton.click();
+          var availableStores = await frameCoupons.waitForSelector("li[app-branch-info]")
+          var [wantedStore] = await asyncFilter(availableStores, async (storeItem, index)=> {
+            let address = await storeItem.getProperty("innerText").then(async (jsHandle)=> await jsHandle.jsonValue());
+            if (address.includes(wantedAddress) && !address.includes("Ecomm")){ 
+              return index
+            }
+          });
+          await wantedStore.$eval("button#more-info", (el)=>el.click());
+          await wantedStore.$eval("div.branch-info-collapse.is-iframe.is-open button", (el)=>el.click())
+          var finalizeNewStore = await frameCoupons.waitForSelector("app-active-branch button.modal-btn.default")
+          await frameCoupons.waitForNetworkIdle({idleTime: 3000})
+        }
         break;
       }
       case "dollarGeneralItems":{
@@ -590,24 +598,23 @@ async function setUpBrowser(task) {
         // "span.store-list-item__store-address-1"
         let setStoreButton = await wantedStoreDiv.$("button[data-selectable-store-text='Set as my store']")
         // wait for reload,
-        await Promise.all([setStoreButton.click(), page.waitForNetworkIdle({idleTime: 3000})])
-        await page.waitForTimeout(5000)
-        await page.goto("https://www.dollargeneral.com/c/on-sale")
-        await page.waitForNetworkIdle({idleTime:2800})
-        let nextButton = await page.$("button[data-target='pagination-right-arrow']");
-        let isNext = await page.$eval("button[data-target='pagination-right-arrow']", (el)=>el.disabled);
-        console.log(isNext, nextButton)
-        while (isNext===false){
-          await Promise.all([
-            nextButton.click(),
-            page.waitForNavigation({waitUntil: "networkidle0"})
-          ])
-          nextButton = await page.$("button[data-target='pagination-right-arrow']");
-          isNext = await page.$eval("button[data-target='pagination-right-arrow']", (el)=>el.disabled);
-        }
-        await page.waitForNetworkIdle({
-            idleTime: 2000
-        })
+        await Promise.all([setStoreButton.click(), page.waitForNetworkIdle({idleTime: 8000})])
+        // await page.goto("https://www.dollargeneral.com/c/on-sale")
+        // await page.waitForNetworkIdle({idleTime:2800})
+        // let nextButton = await page.$("button[data-target='pagination-right-arrow']");
+        // let isNext = await page.$eval("button[data-target='pagination-right-arrow']", (el)=>el.disabled);
+        // console.log(isNext, nextButton)
+        // while (isNext===false){
+        //   await Promise.all([
+        //     nextButton.click(),
+        //     page.waitForNavigation({waitUntil: "networkidle0"})
+        //   ])
+        //   nextButton = await page.$("button[data-target='pagination-right-arrow']");
+        //   isNext = await page.$eval("button[data-target='pagination-right-arrow']", (el)=>el.disabled);
+        // }
+        // await page.waitForNetworkIdle({
+        //     idleTime: 2000
+        // })
         break; 
         }
       case "dollarGeneralCoupons": {
@@ -650,8 +657,7 @@ async function setUpBrowser(task) {
         // "span.store-list-item__store-address-1"
         let setStoreButton = await wantedStoreDiv.$("button[data-selectable-store-text='Set as my store']")
         // wait for reload,
-        await Promise.all([setStoreButton.click(), page.waitForNetworkIdle({idleTime: 3000})])
-        await page.waitForTimeout(5000)
+        await Promise.all([setStoreButton.click(), page.waitForNetworkIdle({idleTime: 8000})])
         break;
       }
       case "familyDollarItems": {
@@ -672,8 +678,7 @@ async function setUpBrowser(task) {
           // wait for reload
           page.waitForResponse(res=> res.url().includes("api/v1/search"), {timeout: 15000}), 
         ])
-        console.log("Success!")
-        await page.waitForTimeout(5400)
+        await page.waitForNetworkIdle(5000)
         break;
       }
       case "familyDollarInstacartItems": {
@@ -749,10 +754,8 @@ async function setUpBrowser(task) {
   console.log("Success!") 
 } catch (e) {
     console.log(e)
-  } finally {
-    await browser.close();
   }
-  return null // [browser, page];
+  return [browser, page];
 }
 
 function getStoreData() {
@@ -805,42 +808,50 @@ async function getKrogerTrips(page, browser){
    * 2 - Await Load of User Trips... Carousel Cards are Rendered and Requests are Complete.
    * 3 - Press Arrow. Repeat Until Arrow is Unavailable via CSS class  
   */
-
+  var path = "../requests/server/collections/kroger/trips/"
+  var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
+  var offset = 0 ;
   await page.setRequestInterception(true)
-  var wantedRequestRegex = /\/mypurchases\/api|\/atlas\/v1\/product\/v2\/products/
-  page.on("response", async (interceptedRequest)=>{
-    if (interceptedRequest.isInterceptResolutionHandled()) return;
-    let url = await interceptedRequest.url();   
-    if (interceptedRequest.url().match(wantedRequestRegex)){
-      let res = await interceptedRequest.response()
-      res = await res.json()
+  await Promise.all([
+    page.waitForNavigation({waitUntil: "networkidle0"}),
+    page.$eval("#SignIn-submitButton", (el) => el.click())
+  ])
+  await page.waitForNetworkIdle({idleTime: 3000})
+  var wantedResponseRegex = /\/mypurchases\/api|\/atlas\/v1\/product\/v2\/products/
+  page.on("response", async (res)=> {
+    let url = await res.url() ;
+    if (url.match(wantedResponseRegex)){
+      data = await res.buffer();
+      offset+=await writeResponse(fileName=fileName, response=data, url=url, offset=offset)
+      return; 
     }
-    // write response to trips file 
+    return ; 
   })
-  
   const nextButton = async () => {
-    await page.$eval("button.kds-Pagination-next", (el)=> {
-    if (el.hasAttribute("disabled")){
-      return false;
+    isNext = await page.$eval("button.kds-Pagination-next", (el)=>el.disabled);
+    if (isNext){
+      return await page.$("button.kds-Pagination-next")
     } else {
-      return el
+      return false
     }
-  })}
+  }
   while( nextButton() ){
     // click to next page
     await nextButton().click();
     // await product card render, images of items purchased to be rendered 
-    await page.waitForSelector("div.PH-PurchaseCard-iconRow.flex");     
+    await page.waitForNetworkIdle({idleTime: 3000})
+    await page.waitForSelector("div[aria-label='Purchase History Order']");   
   }
   await page.waitForNetworkIdle({idleTime: 5500});
   await browser.close();
   await wrapFile(fileName);
-  console.log("file finsihed : ", fileName) ;
+  console.log("file finsihed : ", fileName);
+  await browser.close();
+  console.log("exiting....")
   return null;
-  
 }
 
-async function getKrogerCoupons(page, browser){
+async function getKrogerCoupons(page, browser, type){
     /**
    * @param page : PageElement from Successfully Launched Browser. 
    * @param brower : The current Browser instance. 
@@ -850,11 +861,14 @@ async function getKrogerCoupons(page, browser){
    * 2 - Await Load of User Trips... Carousel Cards are Rendered and Requests are Complete.
    * 3 - Press Arrow. Repeat Until Arrow is Unavailable via CSS class  
   */ 
+    if (!['cashback', 'digital'].includes(type)){
+      throw new Error(`Type is not right . Avaialable Values: 'cashback' or 'digital' `)
+    }
     var apiEmitter = new EventEmitter(); 
     var offset = 0;
     var wantedRequestRegex = /atlas\/v1\/product\/v2\/products\?|\/cl\/api\/coupons\?/
     let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
-    fileName = "../requests/server/collections/familydollar/items/" + fileName; 
+    fileName = `../requests/server/collections/kroger/${type}/` + fileName; 
     await page.setRequestInterception(true)
     page.on("response", async (res)=>{
       if (res.isInterceptResolutionHandled()) return;
@@ -871,10 +885,11 @@ async function getKrogerCoupons(page, browser){
       }
     })  
     // close out of intro modals
-    await page.$$eval("button.kds-DismissalButton.kds-Modal-closeButton", (elems)=>{
-    elems.map((el)=>el.click())
-    })
-    let currentCoupons = await page.$$eval("button.CouponCard-viewQualifyingProducts")
+    let introModals = await page.$$("button.kds-DismissalButton.kds-Modal-closeButton")
+    for (intro of introModals){
+      await intro.click();
+    }
+    let currentCoupons = await page.$$("button.CouponCard-viewQualifyingProducts")
     let startingLength = currentCoupons.length;
     apiEmitter.on("couponsLoaded", async ()=>{
       moreCoupons = await page.$$("button.CouponCard-viewQualifyingProducts")
@@ -883,7 +898,7 @@ async function getKrogerCoupons(page, browser){
     })
     for (let coupon of currentCoupons){
       await coupon.click();
-      await page.waitForNetworkIdle({waitUntil: 3300});
+      await page.waitForNetworkIdle({waitUntil: 6600});
       await page.keyboard.press("Escape");
     }
     await page.waitForNetworkIdle({idleTime: 3000});
@@ -1047,8 +1062,8 @@ async function getDollarGeneralCoupons(browser, page){
     };
     // exit out of page and return page to promotions tab ; 
     await newTab.close();
-    console.log("finished promotion. ", left, " left.")
     left--;    
+    console.log("finished promotion. ", left, " left.")
 };
   await page.waitForNetworkIdle({idleTime: 3000});
   await browser.close();
@@ -1099,7 +1114,7 @@ async function getDollarGeneralItems(browser, page){
   return null
 }
 
-async function getFamilyDollarPromotions(browser, page){
+async function getFamilyDollarCoupons(browser, page){
   /**
    * @prerequisite : setUpBrowser() worked. 
    * @param browser : the existing browser instance
@@ -1216,7 +1231,7 @@ async function getFoodDepotItems(browser, page,){
       return; 
     }
     return ; 
-    })
+  })
 
   for (let categoryUrl of categoryUrls){
     // go to each category page
@@ -1299,8 +1314,7 @@ const getFoodDepotCode = async () => {
     let logs = data.toString(); 
     console.log(data.toString())
     if (logs.includes("/validate")) { 
-      passedValidateCode = await axios.get(SERVER_IP+"/getValidate");
-      passedValidateCode = passedValidateCode.data.code; 
+      passedValidateCode = logs.match(/code=(\d+)/)[1]
       console.log("code from phone", passedValidateCode);
       cmd.kill("SIGTERM")
     }
@@ -1351,4 +1365,4 @@ async function getDebugBrowser(){
 }
 
 // getTestWebsite()
-setUpBrowser(task="dollarGeneralItems")
+setUpBrowser(task="krogerTrips")
