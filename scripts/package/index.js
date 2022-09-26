@@ -8,7 +8,7 @@ const EventEmitter = require('node:events');
 const { spawn } = require('child_process')
 // add stealth plugin and use defaults 
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-const { ProtocolError } = require('puppeteer');
+const { ProtocolError, TimeoutError } = require('puppeteer');
 
 
 puppeteer.use(StealthPlugin())
@@ -185,22 +185,23 @@ function setIterations(body, path, by) {
   return Math.floor(+getNestedObject(body, path) / by) + 1;
 }
 
+function dumpFrameTree(frame, indent){
+  console.log(indent, frame.url());
+  for (const child of frame.childFrames()){
+    dumpFrameTree(child, indent+ '      ')
+  }
+}
+async function asyncFilter(arr, predicate){
+  // map predicate must return values if condition
+  return Promise.all(arr.map(predicate)).then((results)=>arr.filter((_, idx)=> results[idx] || results[idx]===0))
+}
+
 async function setUpBrowser(task) {
   /**
    * @for starting browser task, loading extension and handling location based services on websites on new browser instance
    * @note : request interception should occur only once page has setup been completed to prevent wrong location data.
    * @param  task : a camelCase string that is franchise + {wantedScrapedPageCategory} 
    */
-  function dumpFrameTree(frame, indent){
-    console.log(indent, frame.url());
-    for (const child of frame.childFrames()){
-      dumpFrameTree(child, indent+ '      ')
-    }
-  }
-  async function asyncFilter(arr, predicate){
-    // map predicate must return values if condition
-    return Promise.all(arr.map(predicate)).then((results)=>arr.filter((_, idx)=> results[idx] || results[idx]===0))
-  }
   async function checkForErrorModal(){
     let errorVisible  = await page.$eval("#global-message-modal", (el)=>el.getAttribute("aria-hidden"));
     console.log("type from getAttribute", typeof errorVisible, ' ', errorVisible)
@@ -221,7 +222,7 @@ async function setUpBrowser(task) {
   try { 
     browser = await puppeteer.launch({
       headless: false,
-      slowMo: 755, 
+      slowMo: 855, 
       executablePath:
         "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
       dumpio: true,
@@ -509,6 +510,7 @@ async function setUpBrowser(task) {
         // * food depot items: navigate to store page, enter zipcode into input box, select store based on address, click start shopping button
         // or started immediately at specific store website
         // test worked.
+        var wantedAddress = "Douglasville Hwy 5"
         await page.goto("https://shop.fooddepot.com/online"); // <Promise <?HTTPResponse>>
         clickAndCollectButton = await page.waitForSelector("button.landing-page-button__button"); // <Promise ElementHandle>
         await clickAndCollectButton.click(); // <Promise, resolves>
@@ -518,7 +520,7 @@ async function setUpBrowser(task) {
         let firstStoreLink = await page.waitForSelector("tr.landing-page-store-row button.button.landing-page__store-go-button"); // <Promise ?ElementHandle>
         await Promise.all([
           firstStoreLink.click(), // <Promise Resolves>
-          page.waitForNavigation({"waitUntil": "networkidle0"})
+          page.waitForNavigation({"waitUntil": "load"})
         ])
         break;
       }
@@ -529,28 +531,35 @@ async function setUpBrowser(task) {
           * modal's next input, shutdown server, press enter, wait for api request with authetication,
           * @requires verification via mobile, needs to be coordinated with iPhone Automations. (10 min window on verfication, should be simple if automation of task (DAG) amd automation of phone shortcut occur at same time always).
         */
-        var wantedAddress = "3590 Panola Road, Lithonia, GA";
+        var wantedAddress = null// "3696 Highway 5";
         await page.goto(`https://www.fooddepot.com/coupons/`);
         // nav to page => AppCard App That Requires MFA ; allow additional time for shortcut to run
-        page.setDefaultTimeout(timeout=90000)
-        var appCardIFrame = await page.waitForSelector("#ac-iframe");
+        page.setDefaultTimeout(timeout=120000)
+        var appCardIFrame = await page.$("#ac-iframe");
+        console.log(appCardIFrame)
         let frameCoupons = await appCardIFrame.contentFrame();
-        let phoneInput = await frameCoupons.waitForSelector("#phone");
-        await phoneInput.type(PHONE_NUMBER, {delay: 400})
-        await frameCoupons.$eval("button.button-login.default", async (el)=>{
-          await el.click();
-        })
-        var parsedVerificationCode = await getFoodDepotCode(); 
-        let codeInput = await frameCoupons.waitForSelector("code-input")
-        await codeInput.type(parsedVerificationCode, {delay: 200})
-        // will send code typeFinish on completed 
-        await page.waitForNetworkIdle({
-          idleTime: 5500
-        })
+        console.log(frameCoupons)
+        if (appCardIFrame){
+          let phoneInput = await frameCoupons.waitForSelector("#phone");
+          await phoneInput.type(PHONE_NUMBER, {delay: 400})
+          await frameCoupons.$eval("button.button-login.default", async (el)=>{
+            await el.click();
+          })
+          var parsedVerificationCode = await getFoodDepotCode(); 
+          let codeInput = await frameCoupons.waitForSelector("code-input")
+          await codeInput.type(parsedVerificationCode, {delay: 200})
+          // will send code typeFinish on completed 
+          await page.waitForNetworkIdle({
+            idleTime: 5500
+          })
+        }
+        
         if (wantedAddress){
             // handle change in wanted location if  
           var moreButton = await frameCoupons.$("button[aria-label='More']");
-          var dropDownButtons = await frameCoupons.waitForSelector("div.mat-menu-content > button[role='menuitem']")
+          await moreButton.click();
+          await page.waitForTimeout(3000);
+          var dropDownButtons = await frameCoupons.$$("div.mat-menu-content > button[role='menuitem']")
           var [modalityButton] = await asyncFilter(dropDownButtons, async (item, index)=> {
             let buttonText = await item.getProperty("innerText").then(async (jsHandle)=> await jsHandle.jsonValue());
             if (buttonText.includes("Store Info")){ 
@@ -559,7 +568,8 @@ async function setUpBrowser(task) {
           });
           console.log(modalityButton)
           await modalityButton.click();
-          var availableStores = await frameCoupons.waitForSelector("li[app-branch-info]")
+          await page.waitForTimeout(3000);
+          var availableStores = await frameCoupons.$$("li[app-branch-info]")
           var [wantedStore] = await asyncFilter(availableStores, async (storeItem, index)=> {
             let address = await storeItem.getProperty("innerText").then(async (jsHandle)=> await jsHandle.jsonValue());
             if (address.includes(wantedAddress) && !address.includes("Ecomm")){ 
@@ -569,6 +579,7 @@ async function setUpBrowser(task) {
           await wantedStore.$eval("button#more-info", (el)=>el.click());
           await wantedStore.$eval("div.branch-info-collapse.is-iframe.is-open button", (el)=>el.click())
           var finalizeNewStore = await frameCoupons.waitForSelector("app-active-branch button.modal-btn.default")
+          await finalizeNewStore.click()
           await frameCoupons.waitForNetworkIdle({idleTime: 3000})
         }
         break;
@@ -625,55 +636,55 @@ async function setUpBrowser(task) {
         }
       case "dollarGeneralCoupons": {
         // * dollar general coupons:
-        // var wantedStoreAddress = "4312 Chamblee Tucker Road";
-        // var wasError, step = 0, tries = 0;
-        // // provide break points for evaluating existance of error modal at different steps of the setup procedure. If ever error, restart process with known workaround.        
-        // do {
-        //   console.log("i was done")
-        //   if (step===0){
-        //     tries++;
-        //     console.log("i was done 1")
-        //     if (tries>4){
-        //       throw new Error(`Error Modal Continutes on All Setup Pages after ${tries} tries.`)
-        //     }
-        //     // navigate to homepage : 
-        //     await page.goto("https://www.dollargeneral.com/dgpickup")
-        //     await page.waitForNetworkIdle({idleTime: 5000})
-        //     // select store menu,
-        //     await page.$eval("div.aem-header-store-locator > button", (el)=>el.click()) 
-        //   } else if (step===1){
-        //     console.log("i was done 2")
-        //       // select button.store-locator-menu__location-toggle,
-        //     await page.$eval("button.store-locator-menu__location-toggle", (el)=>el.click())
-        //     // select input#store-locator-input,
-        //     let zipInput = await page.waitForSelector("input#store-locator-input");
-        //     await zipInput.click();
-        //     // delete placeholder
-        //     for (i = 0 ; i<5 ; i++){
-        //       page.keyboard.press("Backspace")
-        //     }
-        //     // type zipcode,
-        //     await page.keyboard.type(ZIPCODE, {delay: 100});
-        //     // submit new location
-        //     await page.$eval("button.location-form__apply-button", (el)=>el.click())
-        //     // select li.store-list-item who's span-list-item__store-address-1 == wanted store address,
-        //     let wantedStoreDivs = await page.$$("li.store-list-item");
-        //     var [wantedStoreDiv] = await asyncFilter(wantedStoreDivs, async (storeItem, index)=> {
-        //     address = await storeItem.getProperty("innerText").then(async (jsHandle)=> await jsHandle.jsonValue());
-        //     if (address.includes(wantedStoreAddress)){ 
-        //         return index
-        //       } 
-        //     });
-        //     // "span.store-list-item__store-address-1"
-        //     let setStoreButton = await wantedStoreDiv.$("button[data-selectable-store-text='Set as my store']")
-        //     // wait for reload,
-        //     await Promise.all([setStoreButton.click(), page.waitForNetworkIdle({idleTime: 3000})])
-        //     break;
-        //   }
-        //   wasError = await checkForErrorModal(); 
-        //   step = wasError ? 0 : step+1;
-        //   console.log(wasError, step)
-        // } while (!wasError);
+        var wantedStoreAddress = "4312 Chamblee Tucker Road";
+        var wasError, step = 0, tries = 0;
+        // provide break points for evaluating existance of error modal at different steps of the setup procedure. If ever error, restart process with known workaround.        
+        do {
+          console.log("i was done")
+          if (step===0){
+            tries++;
+            console.log("i was done 1")
+            if (tries>4){
+              throw new Error(`Error Modal Continutes on All Setup Pages after ${tries} tries.`)
+            }
+            // navigate to homepage : 
+            await page.goto("https://www.dollargeneral.com/dgpickup")
+            await page.waitForNetworkIdle({idleTime: 5000})
+            // select store menu,
+            await page.$eval("div.aem-header-store-locator > button", (el)=>el.click()) 
+          } else if (step===1){
+            console.log("i was done 2")
+              // select button.store-locator-menu__location-toggle,
+            await page.$eval("button.store-locator-menu__location-toggle", (el)=>el.click())
+            // select input#store-locator-input,
+            let zipInput = await page.waitForSelector("input#store-locator-input");
+            await zipInput.click();
+            // delete placeholder
+            for (i = 0 ; i<5 ; i++){
+              page.keyboard.press("Backspace")
+            }
+            // type zipcode,
+            await page.keyboard.type(ZIPCODE, {delay: 100});
+            // submit new location
+            await page.$eval("button.location-form__apply-button", (el)=>el.click())
+            // select li.store-list-item who's span-list-item__store-address-1 == wanted store address,
+            let wantedStoreDivs = await page.$$("li.store-list-item");
+            var [wantedStoreDiv] = await asyncFilter(wantedStoreDivs, async (storeItem, index)=> {
+            address = await storeItem.getProperty("innerText").then(async (jsHandle)=> await jsHandle.jsonValue());
+            if (address.includes(wantedStoreAddress)){ 
+                return index
+              } 
+            });
+            // "span.store-list-item__store-address-1"
+            let setStoreButton = await wantedStoreDiv.$("button[data-selectable-store-text='Set as my store']")
+            // wait for reload,
+            await Promise.all([setStoreButton.click(), page.waitForNetworkIdle({idleTime: 3000})])
+            break;
+          }
+          wasError = await checkForErrorModal(); 
+          step = wasError ? 0 : step+1;
+          console.log(wasError, step)
+        } while (!wasError);
         break;
       }
       case "familyDollarItems": {
@@ -682,19 +693,40 @@ async function setUpBrowser(task) {
            * 
         */
         // * family dollar items: go to specific url that shows all items, press end, click select drop down for maximum items (96), wait for page refresh
-        await page.goto("https://www.familydollar.com/categories?N=categories.1%3ADepartment&No=0&Nr=product.active:1")
-        let selectDiv = await page.$$(".oc3-select > div > select");
-        selectDiv = selectDiv[1]
-        await selectDiv.hover()
-        await selectDiv.click();
-        await selectDiv.press("ArrowDown")
-        await selectDiv.press("ArrowDown")
+        var wantedStore = "3201 Tucker Norcross Rd Ste B2,\nTucker, GA 30084-2152";
+        // navigate to smart-coupons page,
+        await page.goto("https://www.familydollar.com")
+        // click your store link in nav bar,
+        page.$eval("a[text='FIND A STORE']", (el)=> el.click())
+        // redirects to /store-locator
+        await page.waitForNavigation({waitUntil: "networkidle0"})
+        // enter zip code into input,
+        var locatorIFrame = await page.waitForSelector("#storeLocator");
+        frameZip = await locatorIFrame.contentFrame();
+        var inputZip = await frameZip.$("input") 
+        await inputZip.type(ZIPCODE);
+        await inputZip.press("Enter");
+        await page.waitForNetworkIdle({idleTime: 4000})
+        var targetStoreModals = await frameZip.$$("li.poi-item")
+        // select store by address,
+        var [targetStoreModal] = await asyncFilter(targetStoreModals, async (poiItem, index)=> {
+          let address = await poiItem.$eval("div > div.address-wrapper", (el)=>el.outerText)
+          console.log(address.replace("\n", "\\n"))
+          if (address === wantedStore){ 
+            return index
+          } 
+        })
+        console.log(targetStoreModal);
         await Promise.all([
-          selectDiv.press("Enter"),
-          // wait for reload
-          page.waitForResponse(res=> res.url().includes("api/v1/search"), {timeout: 15000}), 
-        ])
-        await page.waitForNetworkIdle(5000)
+          targetStoreModal.$eval("div > div.mystoreIcon > span > a", (el)=>el.click()),
+          page.waitForNavigation({timeout: 15000, waitUntil: "load"})
+        ]);
+        let locationChangedModal = await page.$("div.modal.occ-notifications-modal.in a.modal-close");
+        if (locationChangedModal){
+          await locationChangedModal.click();
+        }
+        await page.goto("https://www.familydollar.com/categories?N=categories.1%3ADepartment&No=0&Nr=product.active:1")
+        await page.waitForNetworkIdle({idleTime: 3500})
         break;
       }
       case "familyDollarInstacartItems": {
@@ -703,7 +735,7 @@ async function setUpBrowser(task) {
            * 
           */
         // * family dollar instacart items: differs from other instacart sites as it is delivery only 
-        var ZIPSTREET = "Dewberry Trail" ;
+        var ZIPSTREET = "Old Norcross Road" ;
         // navigate to store page
         await page.goto("https://sameday.familydollar.com/store/family-dollar/storefront")
         // click on delivery button
@@ -733,7 +765,7 @@ async function setUpBrowser(task) {
          * 
         */
       // * family dollar coupons:
-      var wantedStore = "1165 Ralph D Abernathy Blvd Sw,\nAtlanta, GA 30310-1757";
+      var wantedStore = "3201 Tucker Norcross Rd Ste B2,\nTucker, GA 30084-2152";
       // navigate to smart-coupons page,
       await page.goto("https://www.familydollar.com")
       // click your store link in nav bar,
@@ -762,7 +794,10 @@ async function setUpBrowser(task) {
         page.waitForNavigation({timeout: 15000, waitUntil: "networkidle0"})
       ]);
       let locataionChangedModal = await page.waitForSelector("div.modal.occ-notifications-modal.in a.modal-close")
-      await locataionChangedModal.click();
+      await Promise.all([
+        locataionChangedModal.click(),
+        page.waitForNavigation({waitUntil: "load"})
+      ])
       break;
       }
       
@@ -811,6 +846,7 @@ async function wrapFile(fileName){
   let buffer = new Buffer.from("]")
   const fd = await fs.promises.open(fileName, "r+");
   await fd.write(buffer, 0, 1, positon=bytes-1);
+  await fd.close();
   return "Done"
 }
 
@@ -1020,13 +1056,11 @@ async function getPublixCoupopns(browser, page){
 
 async function getDollarGeneralCoupons(browser, page){ 
   /**
-   * @prerequisite : setUpBrowser() ran successfully; 
-   * @urlsToWatch : ["*://*.dollargeneral.com/bin/omni/coupons/products*", "*://*.dollargeneral.com/bin/omni/coupons/recommended*"];
-   * @pathToFile : `../requests/server/collections/dollargeneral` : /items, /promotions 
-   * @DOMElementsToTrack : []
-   * @DOMElementsToUse : []
+   * @param browser: the passed browser instance from SetupBrowser()
+   * @param page: the passed page instance from SetupBrowser()
   */
   // set request interception on page
+  var badRequests = [];
   var path = "../requests/server/collections/dollargeneral/promotions/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
@@ -1061,41 +1095,51 @@ async function getDollarGeneralCoupons(browser, page){
   await page.keyboard.press("Home");
   // now get all carousel nodes and begin 
   var items = await page.$$eval("li.coupons_results-list-item a.deal-card__image-wrapper", (elems)=>elems.map((e)=>{return e.getAttribute("href")}));
-  items = items.slice(71)
   let left = items.length
-  console.log(items, items.length)
-  for (let item of items){
-    let itemlink = item // await item.evaluate((el)=>el.getAttribute('href'))
-    console.log("https://www.dollargeneral.com"+itemlink)
-    await page.goto("https://www.dollargeneral.com" + itemlink)
-    //await item.click({button: 'middle'})
-    // let newTab = await newPagePromise;
-    // console.log(newTab)
-    // await newTab.bringToFront(); 
-    await page.waitForNetworkIdle({
-      idleTime: 3000,
-    })
-    // check for item modal to be present
-    let eligibleItems = await page.$("section[class='couponPickDetails__products-wrapper row']") ; 
-    if (eligibleItems){
-      let loadMoreButton = await eligibleItems.$("button[class='button eligible-products-results__load-more-button']") ;
-      while (loadMoreButton){
-        await loadMoreButton.click();
-        await page.waitForNetworkIdle({idleTime: 3000})
-        loadMoreButton = await eligibleItems.$("button[class='button eligible-products-results__load-more-button']") ; 
+    for (let itemlink of items){
+      try {
+        console.log("https://www.dollargeneral.com"+itemlink)
+        await page.goto("https://www.dollargeneral.com" + itemlink)
+        await page.waitForNetworkIdle({
+          idleTime: 8000,
+        })
+        // check for item modal to be present
+        let eligibleItems = await page.$("section[class='couponPickupDetails__products-wrapper row']") ; 
+        console.log(eligibleItems)
+        if (eligibleItems){
+          let loadMoreButton = await eligibleItems.$("button[class='button eligible-products-results__load-more-button']") ;
+          console.log(loadMoreButton)
+          while (loadMoreButton){
+            await loadMoreButton.click();
+            await page.waitForNetworkIdle({idleTime: 6500})
+            loadMoreButton = await eligibleItems.$("button[class='button eligible-products-results__load-more-button']") ; 
+            console.log(loadMoreButton)
+          }
+        };
+        // exit out of page and return page to promotions tab ; 
+        //await newTab.close();
+      } catch (err){
+        if (err instanceof TimeoutError){
+          console.log("Timeout Error => ", err)
+          badRequests.push(itemlink)
+        } else {
+          console.log("New Error", err);
+          badRequests.push(itemlink)
+        }
       }
-    };
-    // exit out of page and return page to promotions tab ; 
-    //await newTab.close();
-    left--;    
-    console.log("finished promotion. ", left, " left.")
-};
-  await page.waitForNetworkIdle({idleTime: 3000});
-  await browser.close();
-  await wrapFile(fileName);
-  console.log("file finsihed : ", fileName) ; 
-  return null;
+        left--;    
+        console.log("finished promotion. ", left, " left.")
+  };
+    await page.waitForNetworkIdle({idleTime: 3000});
+    await wrapFile(fileName);
+    console.log("file finsihed : ", fileName) ;
+    if (badRequests.length>0){
+      console.log(`Writing ${badRequests.length} to file ./temp.json.`)
+      let br = JSON.stringify(badRequests);
+      await fs.promises.writeFile("./temp.json", br)
+    }
   
+  return null;
 }
 
 async function getDollarGeneralItems(browser, page){
@@ -1111,26 +1155,33 @@ async function getDollarGeneralItems(browser, page){
   var offset = 0 ; 
   fileName = path+fileName ; 
   var wantedResponseRegex = /https\:\/\/www\.dollargeneral\.com\/bin\/omni\/pickup\/categories\?/
+  page.on('request', (req)=> {
+    if (req.isInterceptResolutionHandled()) return;
+    else req.continue()
+  })
   page.on("response", async (res)=> {
     let url = await res.url() ;
     if (url.match(wantedResponseRegex)){
-      data = await res.buffer();
-      offset+=await writeResponse(fileName=fileName, response=data, url=url, offset=offset)
+      offset+=await writeResponse(fileName=fileName, response=res, url=url, offset=offset)
       return; 
     }
     return ; 
   })
   // go to sale page.
   await page.goto("https://www.dollargeneral.com/c/on-sale");
-  await page.waitForNetworkIdle({waitUntil: 3300})
+  await page.waitForNetworkIdle({waitUntil: 3600})
   let button = await page.$("button[data-target='pagination-right-arrow']") ; 
-  let disabled = await button.getProperty("disabled")
+  let disabled = await button.getProperty("disabled").then((jsHandle)=>jsHandle.jsonValue())
+  console.log(button, disabled)
   while (!disabled){
-    button.click();
-    await page.waitForNavigation();
+    await Promise.all([
+      button.click(),
+      page.waitForNavigation({waitUntil: 'load'})
+    ])
     await page.waitForNetworkIdle({idleTime: 3500});
     button = await page.$("button[data-target='pagination-right-arrow']") ; 
-    disabled = await button.getProperty("disabled")
+    disabled = await button.getProperty("disabled").then((jsHandle)=>jsHandle.jsonValue())
+    console.log(button, disabled)
   };
   await page.waitForNetworkIdle({idleTime: 3000});
   await browser.close();
@@ -1151,18 +1202,24 @@ async function getFamilyDollarCoupons(browser, page){
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   fileName = path+fileName ; 
-  var wantedRequestRegex = /ice-familydollar\.dpn\.inmar\.com\/v2\/offers\?/  
+  var wantedRequestRegex = /ice-familydollar\.dpn\.inmar\.com\/v2\/offers\?/
+  page.on('request', (req)=> {
+    if (req.isInterceptResolutionHandled()) return;
+    else req.continue();
+  })  
   page.on("response", async (res)=> {
     let url = await res.url() ;
     if (url.match(wantedRequestRegex)){
-      data = await res.buffer();
-      offset+=await writeResponse(fileName=fileName, response=data, url=url, offset=offset)
+      offset+=await writeResponse(fileName=fileName, response=res, url=url, offset=offset)
       return; 
     }
     return ; 
   })
-  await page.goto("https://www.familydollar.com/smart-coupons")
-  await page.waitForNetworkIdle({idleTime: 3000});
+  await Promise.all([
+    page.goto("https://www.familydollar.com/smart-coupons"),
+    page.waitForNavigation({waitUntil: "load"}),
+    page.waitForNetworkIdle({idleTime: 3000})
+  ])
   await browser.close();
   await wrapFile(fileName);
   console.log("file finsihed : ", fileName) ; 
@@ -1184,24 +1241,40 @@ async function getFamilyDollarItems(browser, page){
     page.on("response", async (res)=> {
       let url = await res.url() ;
       if (url.match(wantedRequestRegex)){
-        data = await res.buffer();
-        offset+=await writeResponse(fileName=fileName, response=data, url=url, offset=offset)
+        offset+=await writeResponse(fileName=fileName, response=res, url=url, offset=offset)
         return; 
       }
       return ; 
     })
-    await page.goto("https://www.familydollar.com/categories?N=categories.1%3ADepartment&No=0&Nr=product.active:1");
+    page.on("request", (request)=> {
+      if (request.isInterceptResolutionHandled()) return;
+      else request.continue();
+    })
+    let selectDiv = await page.$$(".oc3-select > div > select");
+    selectDiv = selectDiv[1]
+    await selectDiv.hover()
+    await selectDiv.click();
+    await selectDiv.press("ArrowDown")
+    await selectDiv.press("ArrowDown")
+    await Promise.all([
+      selectDiv.press("Enter"),
+      // wait for reload
+      page.waitForResponse(res=> res.url().includes("api/v1/search"), {timeout: 15000}), 
+    ])
+    await page.waitForNetworkIdle({idleTime: 2000})
+
     let iterations = await page.$eval("span.category-count", (el)=>{
-      return + el.textContent.replaceAll(/(\(|\))/g, "")
+      return +el.textContent.replaceAll(/(\(|\))/g, "")
     })
     iterations = Math.floor(iterations/96) + 1;
     // wait for page reload
     
-    for (i=0; i<iterations; i++){
-      await page.waitForSelector("a.search-product-link");
-      await page.waitForTimeout(4000);
-      await page.keyboard.press("Enter");
-      await page.$("a[aria-label='Next']", (el)=>el.click()); // this is for getFamilyDollarItems
+    for (let i=1; i<iterations; i++){
+      await Promise.all([
+        page.$eval("a[aria-label='Next']", (el)=>el.click()),
+        page.waitForNetworkIdle({idleTime: 6500})
+      ])
+      console.log("finished ", i , " ", iterations-i, " left ")
     }
 
     await page.waitForNetworkIdle({waitUntil: 3000}); 
@@ -1211,68 +1284,87 @@ async function getFamilyDollarItems(browser, page){
     return null
 }
 
-async function getFoodDepotItems(browser, page,){
+async function getFoodDepotItems(browser, page){
   /**
    * @param browser : the current browser instance
    * @param page : the current page instance
    * @prerequisites : setUpBrowser() succeeded
-   */
-  /**
-   * @prerequisite : setUpBrowser() successfully set location. 
-   * @param browser : the current browser instance.
-   * @param page : the current page instance.
+   * @todo : synchronous image loading & rendering is blocking network causing requests to complete and images to appear on page before next request is called, filled and rendered.
+   * This occurs is 40 item batches so waiting for network to be silent takes much longer. Images to async fill / render is more images are loaded (aka a new API call is initiated by a End button press)
+   * This network blocking effect effectively triples wait times for large pages (1000+ items). Meaning 37 40 item batch calls ~= 38 mins for 15+ categories.
+   * See Setup Calls to See if API can just be intercepted and changed to write to file w.o. worrying about site
    */
   // set request interception on page
   await page.setRequestInterception(true);
-  var path = "../requests/server/collections/dollargeneral/items/"
+  await page.setDefaultTimeout(0)
+  var path = "../requests/server/collections/fooddepot/items/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   var wantedResponseRegex = /production-us-1\.noq-servers\.net\/api\/v.+\/stores\/.+\/products\?/
-  var baseUrl = "https://shop.fooddepot.com"; 
   fileName = path+fileName;
   var pageHeight, newHeight; 
+  page.on("response", async (res)=> {
+    let url = res.url() ;
+    if (url.match(wantedResponseRegex)){
+      let req= res.request();
+      if (req.method()!=="OPTIONS"){ // filter out preflight request
+        console.log(url, req, req.method(), )  
+        offset+=await writeResponse(fileName=fileName, response=res, url=url, offset=offset) 
+      } else {
+        console.log(req.method())
+      }
+      return;
+    }
+    return ; 
+  })
+  page.on('request', (request)=>{
+    if (request.isInterceptResolutionHandled()) return;
+    else request.continue();
+  })
+  
   // on store home page.
   let shopNowButton = await page.$("#site-main-menu__button")
   await shopNowButton.hover();
   await shopNowButton.click(); 
+  console.log("got main button")
   let shopAllButton = await page.waitForSelector("li.site-main-menu__item > a")
-  await shopAllButton.click();
-  await page.waitForNavigation;
-  await page.waitForNetworkIdle({idleTime:2000});
+  await Promise.all([
+    shopAllButton.click(),
+    page.waitForNavigation({waitUntil: 'load'}),
+    page.waitForNetworkIdle({idleTime:2000})
+  ])
   // get all departments
-  let allCategories = await page.$$("i.category-sibling-links__item > a")
-  let categoryUrls = allCategories.map(async(el)=>{
-    let href = await el.getProperty("href");
-    if (!href.endsWith("shop/all")){
-      return baseUrl + href;
+  let allCategories = await page.$$eval("li.category-sibling-links__item > a", (els)=> els.map((el)=>{
+    if (!el.href.endsWith("shop/all")){
+      return el.href
     }
-  }).filter((link)=>link);
-
-  page.on("response", async (res)=> {
-    let url = await res.url() ;
-    if (url.match(wantedResponseRegex)){
-      data = await res.buffer();
-      offset+=await writeResponse(fileName=fileName, response=data, url=url, offset=offset)
-      return; 
-    }
-    return ; 
-  })
-
-  for (let categoryUrl of categoryUrls){
+  }))
+  allCategories=allCategories.filter((c)=>c)
+  console.log(allCategories)
+  for (let categoryUrl of allCategories){
+    console.log('starting ', categoryUrl)
     // go to each category page
-    await page.goto(categoryUrl);
-    await page.waitForNavigation({waitUntil: "networkidle0"});
-    let body = await page.waitForSelector("body");
-    pageHeight = await body.getProperty("offsetHeight")
+    await Promise.all([
+      page.goto(categoryUrl),
+      page.waitForNavigation({waitUntil: "load"})
+    ])
+    console.log("CATEGORY PAGE LOADED")
+    let body = await page.$("body");
+    pageHeight = await body.getProperty("offsetHeight").then((jsHandle)=> jsHandle.jsonValue())
+    console.log(pageHeight)
     await page.keyboard.press("End");
-    await page.waitForNetworkIdle({waitUntil: 2500});
-    newHeight = await body.getProperty("offsetHeight");
+    await page.waitForNetworkIdle({waitUntil: 4000});
+    newHeight = await body.getProperty("offsetHeight").then((jsHandle)=> jsHandle.jsonValue());
+    console.log(newHeight)
     while (pageHeight !== newHeight){
       pageHeight=newHeight;
+      console.log(newHeight)
       await page.keyboard.press("End");
-      await page.waitForNetworkIdle({waitUntil: 2500});
-      newHeight = await body.getProperty("offsetHeight");
+      await page.waitForNetworkIdle({waitUntil: 2500}); // what is blocking syncrohous calls if end is not pressed again, images will stall and render one by one before next image resource is called
+      newHeight = await body.getProperty("offsetHeight").then((jsHandle)=> jsHandle.jsonValue());
+      console.log(newHeight)
     }
+    console.log('finished ', categoryUrl, ' @ index: ', allCategories.indexOf(categoryUrl), ' of ', allCategories.length-1)
   }
   await page.waitForNetworkIdle({waitUntil: 3000}); 
   await wrapFile(fileName);
@@ -1292,35 +1384,26 @@ async function getFoodDepotCoupons(browser, page){
   // page = page[0]
   await page.waitForNetworkIdle({idleTime:3000});
   await page.setRequestInterception(true);
+  page.on("response", async (res)=> {
+    let url = await res.url();
+    if (url.match(wantedResponseRegex)){
+      offset+= await writeResponse(fileName=fileName, response=res, url=url, offset=offset);
+    }
+    return ;
+  })
+  page.on('request', (request)=>{
+    if (request.isInterceptResolutionHandled()) return;
+    else request.continue();
+  })
   await page.goto("https://www.dollargeneral.com/dgpickup/deals/coupons")
   var path = "../requests/server/collections/dollargeneral/coupons/"
   var fileName = new Date().toLocaleDateString() + ".json";
   var offset = 0;
   let wantedResponseRegex = /https\:\/\/appcard\.com\/baseapi\/.*\/token\/.*\/offers\/unclipped_recommendation_flag/
-  let wantedAddress;
   fileName = path + fileName ;
-  page.on("response", async (res)=> {
-    let url = await res.url();
-    if (url.match(wantedResponseRegex)){
-      data = await res.buffer();
-      offset+= await writeResponse(fileName=fileName, response=data, url=url, offset=offset);
-    }
-    return ;
-  })
+  await page.reload({waitUntil: "networkidle0"});
+  
   // optional pick another store location
-  let button = await page.$("button.desktop-menu");
-  await button.click(); 
-  let storeInfoButton = await page.waitForSelector.$("button.mat-focus-indicator.mat-menu-item")
-  await storeInfoButton.click();
-  // accepts city of state input 
-  let locationInput = await page.waitForSelector("div.search-stores > input");
-  await locationInput.type(wantedAddress);
-  let moreInfoButton = await page.$("button#more-info");  
-  await moreInfoButton.click();
-  let preferredLocation = await page.waitForSelector("div.preferred-branch-wrapper > button");
-  await preferredLocation.click();
-  let confirmButton = await page.waitForSelector("duv.modal-footer.ng-start-inserted > button.modal-btn.default")
-  await confirmButton.click(); 
   await page.waitForNetworkIdle({waitUntil: 5000});
   await wrapFile(fileName);
   await browser.close();
@@ -1365,36 +1448,28 @@ return new Promise((resolve, reject) => {
 });
 }
 
-async function getDebugBrowser(){
-  var browser; 
-  try {
-    browser = await puppeteer.launch({
-    headless: false,
-    slowMo: 885, 
-    executablePath:
-      "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-    dumpio: true,
-    args: ["--start-maximized","--profile-directory=Profile 1"],
-    userDataDir: "C:\\c\\Profiles",
-    defaultViewport: {width: 1920, height: 1080},
-    devtools: false,
-    timeout: 0
-  })
-    let [page] = await browser.pages();
-    await page.goto("https://www.google.com")
-  ;
-  } catch (err) {
-    console.log (err)
-  } finally{
-    await browser.close();
-  } 
+// puppeteer.launch({
+// headless: false,
+// slowMo: 400, 
+// executablePath:
+//   "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+// dumpio: true,
+// args: ["--start-maximized","--profile-directory=Profile 1"],
+// userDataDir: "C:\\c\\Profiles",
+// defaultViewport: {width: 1920, height: 1080},
+// devtools: false,
+// timeout: 0
+// }).then((browser)=> {
+//   browser.pages().then((pages)=>{
+//     let page = pages[0]
+//     page.goto("chrome://settings")
+  
+//   })
 
-  return 0;
-}
+// })
 
-// getTestWebsite()
+
 // setUpBrowser(task="krogerTrips")
-setUpBrowser(task='dollarGeneralCoupons').then(([browser, page])=> {
-  console.log(browser, page)
-  getDollarGeneralCoupons(browser=browser, page=page)
+setUpBrowser(task='foodDepotCoupons').then(([browser, page])=> {
+  getFoodDepotCoupons(browser, page)
 })
