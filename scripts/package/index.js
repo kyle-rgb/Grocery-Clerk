@@ -149,23 +149,37 @@ async function writeResponse(fileName, response, url, offset) {
       if (err) throw err; 
     })
   }
-  let data = await response.buffer();
-  let metaData = `{"url": "${url}", "acquisition_timestamp": ${Date.now()},`
-  let close = new Buffer.from("},")
-  // handle lists
-  if (data.at(0)===91){
-    metaData+=`"data":`;
-    metaData = new Buffer.from(metaData);
-    data = Buffer.concat([metaData, data, close]);
-  } else {
-    // else add as attributes to object
-    close = new Buffer.from(','); 
-    metaData = new Buffer.from(metaData); 
-    data = Buffer.concat([metaData, data.subarray(1), close]);
+  try {
+    let data = await response.buffer();
+    let metaData = `{"url": "${url}", "acquisition_timestamp": ${Date.now()},`
+    let close = new Buffer.from("},")
+    // handle lists
+    if (data.at(0)===91){
+      metaData+=`"data":`;
+      metaData = new Buffer.from(metaData);
+      data = Buffer.concat([metaData, data, close]);
+    } else {
+      // else add as attributes to object
+      close = new Buffer.from(','); 
+      metaData = new Buffer.from(metaData); 
+      data = Buffer.concat([metaData, data.subarray(1), close]);
+    }
+    let len = data.length;  
+    await writeJSONs(fileName, data=data, offset);
+    console.log(`wrote ${url.length > 150 ? url.slice(0, 150) : url}`)
+    return len
+  } catch (err){
+    if (err instanceof ProtocolError){
+      console.log("error loading buffer for", url)
+      console.log(err)
+      console.log(response.headers())
+    } else {
+      console.log("general error = ", err)
+      console.log("for url : ", url)
+      console.log(response.headers())
+    }
+    return 0
   }
-  let len = data.length;  
-  await writeJSONs(fileName, data=data, offset);
-  return len
 }
 
 function setIterations(body, path, by) {
@@ -222,7 +236,7 @@ async function setUpBrowser(task) {
   try { 
     browser = await puppeteer.launch({
       headless: false,
-      slowMo: 855, 
+      slowMo: 1025, 
       executablePath:
         "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
       dumpio: true,
@@ -248,11 +262,10 @@ async function setUpBrowser(task) {
           // wait for page reload, select dropdown for filtering coupons, press arrow down and enter, wait for page reload
           /**
            * @tests passed
-           * 
           */  
           let availableModalities = ["PICKUP", "DELIVERY", "SHIP", "IN_STORE"];
           var wantedModality = "PICKUP";
-          var wantedAddress = "2301 College Station Road\nAthens, GA";
+          var wantedAddress = "3559 Chamblee Tucker Rd"; // "4357 Lawrenceville Hwy"
           await page.goto("https://www.kroger.com")
           await page.waitForNetworkIdle({idleTime: 2200})
           let introModals = await page.$$("button.kds-DismissalButton.kds-Modal-closeButton")
@@ -263,32 +276,30 @@ async function setUpBrowser(task) {
           }
           await page.$eval("button.CurrentModality-button", (el)=>el.click());
           zipInput = await page.$("input[autocomplete='postal-code']");
-          placeHolder = await zipInput.getProperty("value").then(async (v)=>await v.jsonValue());
+          placeHolder = await zipInput.getProperty("value").then((v)=> v.jsonValue());
           console.log("placeHolder was", placeHolder, " ", placeHolder.length)
           for (let j=0;j<placeHolder.length;j++){
             await zipInput.press("Backspace");
           }
-          await zipInput.type("30605", {delay: 125}); // ZIPCODE
+          await zipInput.type(ZIPCODE, {delay: 125}); // ZIPCODE
           await page.keyboard.press("Enter");
           modalityButton = await page.waitForSelector(
             `button[data-testid='ModalityOption-Button-${wantedModality}']`
           );
           await modalityButton.click();
-          // outText of inner div has street address, city, state
-          var targetStoreModals = await page.$$("div.ModalitySelector--StoreSearchResult") 
-          console.log(targetStoreModals)
-          var [targetStoreModal] = await asyncFilter(targetStoreModals, async (storeItem, index)=> {
-            let address = await storeItem.$eval("div[data-testid='StoreSearchResultAddress']", (el)=>el.outerText)
-            if (address === wantedAddress){ 
-              return index
-            } 
-          })
-          await Promise.all([
-            // wait for reload
-            page.waitForResponse(res=> res.url().endsWith("start-my-cart"), {timeout: 15000}), 
-            // button to choose store
-            targetStoreModal.$eval("button", (el) => el.click()),
-          ])
+          if (wantedModality === "PICKUP" || wantedModality === "IN_STORE"){
+            // outerText of inner div has street address, city, state
+            var targetStoreModals = await page.$$("div.ModalitySelector--StoreSearchResult") 
+            var [targetStoreModal] = await asyncFilter(targetStoreModals, async (storeItem, index)=> {
+              let address = await storeItem.$eval("div[data-testid='StoreSearchResultAddress']", (el)=>el.outerText)
+              if (address.includes(wantedAddress)){ 
+                return index
+              } 
+            })
+            // button to choose right store
+            await targetStoreModal.$eval("button", (el) => el.click());
+          } 
+          page.waitForNetworkIdle({idleTime: 4500})
           break;
       }
       case "krogerTrips": {
@@ -393,7 +404,7 @@ async function setUpBrowser(task) {
          */
         var ZIPSTREET = "Dewberry Trail" ; // street that corresponds to zipcode
         var availableModalities = ["Pickup", "Delivery"];
-        var wantedStoreAddress = "4480 S Cobb Dr SE";
+        var wantedStoreAddress = "4650 Hugh Howell Rd";
         var wantedModality = availableModalities[0]; // @param?
         console.log(wantedModality, `div[class$='${wantedModality === "Delivery" ? wantedModality+"Address" : wantedModality+"Location"}Picker'] button[aria-haspopup]`)
         await page.goto("https://delivery.publix.com/store/publix/storefront")
@@ -477,7 +488,7 @@ async function setUpBrowser(task) {
       //enter in zipcode
       //press enter
       //click on store link element that matches wanted location's address)
-      var wantedStoreAddress = "4401 Shallowford Rd"; 
+      var wantedStoreAddress = "4650 Hugh Howell Rd"; 
       await page.goto("https://www.publix.com")
       await page.$eval("div.store-search-toggle-wrapper button", (el)=>el.click())
       let storeSearchButton = await page.waitForSelector("input[data-qa='store-search-input']", {visible: true}) ; 
@@ -897,13 +908,13 @@ async function getKrogerTrips(page, browser){
   await page.waitForNetworkIdle({idleTime: 5500});
   await browser.close();
   await wrapFile(fileName);
-  console.log("file finsihed : ", fileName);
+  console.log("file finished : ", fileName);
   await browser.close();
   console.log("exiting....")
   return null;
 }
 
-async function getKrogerCoupons(page, browser, type){
+async function getKrogerCoupons(browser, page, type){
     /**
    * @param page : PageElement from Successfully Launched Browser. 
    * @param brower : The current Browser instance. 
@@ -916,47 +927,60 @@ async function getKrogerCoupons(page, browser, type){
     if (!['cashback', 'digital'].includes(type)){
       throw new Error(`Type is not right . Avaialable Values: 'cashback' or 'digital' `)
     }
+    // set url based on type 
+    var promotionUrl = type === "digital" ? "https://www.kroger.com/savings/cl/coupons" : "https://www.kroger.com/savings/cbk/cashback" ;  
     var apiEmitter = new EventEmitter(); 
     var offset = 0;
-    var wantedRequestRegex = /atlas\/v1\/product\/v2\/products\?|\/cl\/api\/coupons\?/
+    var wantedRequestRegex = /atlas\/v1\/product\/v2\/products\?|\/cl\/api\/coupons/
     let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
     fileName = `../requests/server/collections/kroger/${type}/` + fileName; 
-    await page.setRequestInterception(true)
+    await page.goto(promotionUrl);
     page.on("response", async (res)=>{
-      if (res.isInterceptResolutionHandled()) return;
-      try {
-        let url = await res.url() ;
-        if (url.match(wantedRequestRegex)){
-          data = await res.buffer();
-          offset+=await writeResponse(fileName=fileName, response=data, url=url, offset=offset)
-          return; 
+      let url = res.url() ;
+      if (url.match(wantedRequestRegex)){
+        let req = res.request()
+        let method = req.method()
+        if (method!=="OPTIONS"){
+          if (url.includes("coupons?")){
+            console.log("emitting coupons event")
+            apiEmitter.emit("couponsLoaded")
+          }
+          offset+=await writeResponse(fileName=fileName, response=res, url=url, offset=offset)
         }
-        return ; 
-      } catch (err){
-        console.log("error with ", res, "@ ", err)
+        return; 
       }
-    })  
+      return ; 
+    })
+    
+    await page.waitForNetworkIdle({idleTime: 4500})
     // close out of intro modals
     let introModals = await page.$$("button.kds-DismissalButton.kds-Modal-closeButton")
     for (intro of introModals){
       await intro.click();
     }
+    let sortButton = await page.$("select[data-testid='catalogue-sort']")    
+    await sortButton.click();
+    await sortButton.press("ArrowDown");
+    await sortButton.press("ArrowDown");
+    await sortButton.press("Enter");
+    await page.waitForNetworkIdle({idleTime: 4000})
     let currentCoupons = await page.$$("button.CouponCard-viewQualifyingProducts")
     let startingLength = currentCoupons.length;
     apiEmitter.on("couponsLoaded", async ()=>{
       moreCoupons = await page.$$("button.CouponCard-viewQualifyingProducts")
-      currentCoupons.push(moreCoupons.slice(startingLength));
+      currentCoupons = currentCoupons.concat(moreCoupons.slice(startingLength));
       startingLength = currentCoupons.length;
     })
     for (let coupon of currentCoupons){
       await coupon.click();
-      await page.waitForNetworkIdle({waitUntil: 6600});
+      await page.waitForNetworkIdle({idleTime: 8000});
       await page.keyboard.press("Escape");
+      console.log("CCs Length", currentCoupons.length)
     }
     await page.waitForNetworkIdle({idleTime: 3000});
     await browser.close();
     await wrapFile(fileName);
-    console.log("file finsihed : ", fileName) ;
+    console.log("file finished : ", fileName) ;
     return null;
 }
 
@@ -982,8 +1006,7 @@ async function getInstacartItems(page, browser){
   page.on("response", async (res)=> {
     let url = await res.url() ;
     if (url.match(wantedResponseRegex)){
-      data = await res.buffer();
-      offset+=await writeResponse(fileName=fileName, response=data, url=url, offset=offset)
+      offset+=await writeResponse(fileName=fileName, response=res, url=url, offset=offset)
       return; 
     }
     return ; 
@@ -1021,36 +1044,47 @@ async function getInstacartItems(page, browser){
   await page.waitForNetworkIdle({idleTime: 3000});
   await browser.close();
   await wrapFile(fileName);
-  console.log("file finsihed : ", fileName) ; 
+  console.log("file finished : ", fileName) ; 
   return null;
 }
 
-async function getPublixCoupopns(browser, page){ 
+async function getPublixCoupons(browser, page){ 
   /**
    * @param browser : the currnet browser instance . 
    * @param page : the current page instance. 
    * @prerequiste : setUpBrowser() set location successfully. 
    */
   // set request interception on page
-  await page.setRequestInterception(true);
+  //await page.setRequestInterception(true);
+  // page.on('request', (req)=> {
+  //   if (req.isInterceptResolutionHandled()) return;
+  //   else req.continue()
+  // })
   var path = "../requests/server/collections/publix/coupons/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   fileName = path+fileName ; 
-  var wantedResponseRegex = /services.publix.com\/api\/.*\/savings\?/
+  var wantedResponseRegex = /services\.publix\.com\/api\/.*\/savings\?/
+
   page.on("response", async (res)=> {
     let url = await res.url() ;
     if (url.match(wantedResponseRegex)){
-      data = await res.buffer();
-      offset+=await writeResponse(fileName=fileName, response=data, url=url, offset=offset)
+      let reqMethod = res.request().method();
+      if (reqMethod!=="OPTIONS"){
+        let start = Date.now()
+        console.log("started async writeResponse @ ", start)
+        offset+=await writeResponse(fileName=fileName, response=res, url=url, offset=offset)
+        console.log("writeResponse ended @ ", Date.now(), ' which took ', Date.now() - start, " seconds >.< ")
+      }
       return; 
     }
     return ; 
   })
   await page.goto("https://www.publix.com/savings/all-deals");
-  await page.waitForNetworkIdle({idleTime: 3000});
+  await page.waitForNetworkIdle({idleTime: 8000});
+  await wrapFile(fileName);
   await browser.close();
-  console.log("file finsihed : ", fileName) ; 
+  console.log("file finished : ", fileName) ; 
   return null; 
 }
 
@@ -1132,7 +1166,7 @@ async function getDollarGeneralCoupons(browser, page){
   };
     await page.waitForNetworkIdle({idleTime: 3000});
     await wrapFile(fileName);
-    console.log("file finsihed : ", fileName) ;
+    console.log("file finished : ", fileName) ;
     if (badRequests.length>0){
       console.log(`Writing ${badRequests.length} to file ./temp.json.`)
       let br = JSON.stringify(badRequests);
@@ -1186,7 +1220,7 @@ async function getDollarGeneralItems(browser, page){
   await page.waitForNetworkIdle({idleTime: 3000});
   await browser.close();
   await wrapFile(fileName);
-  console.log("file finsihed : ", fileName) ; 
+  console.log("file finished : ", fileName) ; 
   return null
 }
 
@@ -1222,7 +1256,7 @@ async function getFamilyDollarCoupons(browser, page){
   ])
   await browser.close();
   await wrapFile(fileName);
-  console.log("file finsihed : ", fileName) ; 
+  console.log("file finished : ", fileName) ; 
   return null; 
 }
 
@@ -1293,9 +1327,11 @@ async function getFoodDepotItems(browser, page){
    * This occurs is 40 item batches so waiting for network to be silent takes much longer. Images to async fill / render is more images are loaded (aka a new API call is initiated by a End button press)
    * This network blocking effect effectively triples wait times for large pages (1000+ items). Meaning 37 40 item batch calls ~= 38 mins for 15+ categories.
    * See Setup Calls to See if API can just be intercepted and changed to write to file w.o. worrying about site
+   * @note : request intercept handling is not necessary for requests where you do not intend to change requests data, querystring parameters or header values.
+   * responses for these requests can be handled  
    */
   // set request interception on page
-  await page.setRequestInterception(true);
+  //await page.setRequestInterception(true);
   await page.setDefaultTimeout(0)
   var path = "../requests/server/collections/fooddepot/items/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
@@ -1317,10 +1353,10 @@ async function getFoodDepotItems(browser, page){
     }
     return ; 
   })
-  page.on('request', (request)=>{
-    if (request.isInterceptResolutionHandled()) return;
-    else request.continue();
-  })
+  // page.on('request', (request)=>{
+  //   if (request.isInterceptResolutionHandled()) return;
+  //   else request.continue();
+  // })
   
   // on store home page.
   let shopNowButton = await page.$("#site-main-menu__button")
@@ -1360,7 +1396,7 @@ async function getFoodDepotItems(browser, page){
       pageHeight=newHeight;
       console.log(newHeight)
       await page.keyboard.press("End");
-      await page.waitForNetworkIdle({waitUntil: 2500}); // what is blocking syncrohous calls if end is not pressed again, images will stall and render one by one before next image resource is called
+      await page.waitForNetworkIdle({waitUntil: 5500}); // what is blocking syncrohous calls if end is not pressed again, images will stall and render one by one before next image resource is called
       newHeight = await body.getProperty("offsetHeight").then((jsHandle)=> jsHandle.jsonValue());
       console.log(newHeight)
     }
@@ -1467,9 +1503,6 @@ return new Promise((resolve, reject) => {
 //   })
 
 // })
-
-
-// setUpBrowser(task="krogerTrips")
-setUpBrowser(task='foodDepotCoupons').then(([browser, page])=> {
-  getFoodDepotCoupons(browser, page)
+setUpBrowser(task='krogerCoupons').then(([browser, page])=> {
+  getKrogerCoupons(browser, page, "digital")
 })

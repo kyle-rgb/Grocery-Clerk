@@ -11,7 +11,7 @@ var scrapingUrls = [
   "*://dollartree-cors.groupbycloud.com/api*", // Family Dollar : Coupons, Products
   "*://*.dollargeneral.com/bin/omni/coupons/products*",
   "*://*.dollargeneral.com/bin/omni/coupons/recommended*", // Dollar General: Products, Coupons 
-  "https://www.dollargeneral.com/bin/omni/pickup/categories*", // Dollar General Sale Items 
+  "*://*.dollargeneral.com/bin/omni/pickup/categories*", // Dollar General Sale Items 
   "*://*.noq-servers.net/api/v1/application/stores/*/products?*",
   "*://*.appcard.com/baseapi/1.0/token/*/offers/unclipped_recommendation_flag*", 
   "*://production-us-1.noq-servers.net/api/v1/application/coupon*",// Food Depot : Products, 3rd Party Coupons, 1st Party Coupons
