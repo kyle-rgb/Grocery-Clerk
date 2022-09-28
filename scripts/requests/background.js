@@ -47,7 +47,7 @@ async function createType(){
     var t = ''
     let t2 =''
     let reg = /kroger|aldi|publix|dollargeneral|familydollar|fooddepot/
-    let regKroger = /mypurchases|cashback|coupons|Buy5Save1|Buy3Save6|Buy2Save10|Spend\d+Save\d+/
+    let regKroger = /mypurchases|cashback|coupons|Buy5Save1|Buy3Save6|Buy2Save10|Spend\d+Save\d+|S\d+S\d+/
     let regFamilyDollar = /\?N=|smart-coupons|sameday/
     let regPublix = /savings/
     let regFoodDepot = /coupons/

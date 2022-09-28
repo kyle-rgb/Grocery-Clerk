@@ -182,32 +182,23 @@ async function writeResponse(fileName, response, url, offset) {
   }
 }
 
-function setIterations(body, path, by) {
-  /**
-   * @param body - the response body of request that contains totals  <Object>
-   * @param path - the path to query based on structure of wanted response <Array>
-   * @param by - the optional path or number of items determining the limit to the call. Sometimes can be found along number of records, while other time calls handle based on amount of on-screen/rendered DOM elements.  
-
-   * @return iterations 
-  */
-  var limit;
-  if (Array.isArray(by)) {
-    limit = getNestedObject(body, by);
-  } else if (typeof by === "number") {
-    limit = by;
-  }
-  return Math.floor(+getNestedObject(body, path) / by) + 1;
-}
-
 function dumpFrameTree(frame, indent){
   console.log(indent, frame.url());
   for (const child of frame.childFrames()){
     dumpFrameTree(child, indent+ '      ')
   }
 }
+
 async function asyncFilter(arr, predicate){
   // map predicate must return values if condition
-  return Promise.all(arr.map(predicate)).then((results)=>arr.filter((_, idx)=> results[idx] || results[idx]===0))
+  return Promise.all(arr.map(predicate)).then((results)=>{
+    results = results.filter((i)=>i);
+    if (results.length===0){
+      return arr[0]
+    } else {
+      return arr[results[0]]
+    }
+  })
 }
 
 async function setUpBrowser(task) {
@@ -236,7 +227,7 @@ async function setUpBrowser(task) {
   try { 
     browser = await puppeteer.launch({
       headless: false,
-      slowMo: 1025, 
+      slowMo: 1000, 
       executablePath:
         "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
       dumpio: true,
@@ -290,7 +281,7 @@ async function setUpBrowser(task) {
           if (wantedModality === "PICKUP" || wantedModality === "IN_STORE"){
             // outerText of inner div has street address, city, state
             var targetStoreModals = await page.$$("div.ModalitySelector--StoreSearchResult") 
-            var [targetStoreModal] = await asyncFilter(targetStoreModals, async (storeItem, index)=> {
+            var targetStoreModal = await asyncFilter(targetStoreModals, async (storeItem, index)=> {
               let address = await storeItem.$eval("div[data-testid='StoreSearchResultAddress']", (el)=>el.outerText)
               if (address.includes(wantedAddress)){ 
                 return index
@@ -317,12 +308,13 @@ async function setUpBrowser(task) {
             }
           }
           await page.$eval("a[href='/mypurchases']", (el) => el.click()); // set redirect
-          let rememberCreditentialsButton = await page.waitForSelector("#SignIn-rememberMe");
+          let rememberCreditentialsButton = await page.waitForSelector("#SignIn-rememberMe"); // deselect
           await rememberCreditentialsButton.click()
           let emailInput = await page.$("#SignIn-emailInput")
           let passwordInput = await page.$("#SignIn-passwordInput");
           await emailInput.type(USERNAME_KROGER, {delay: 120});
-          await passwordInput.type(PASSWORD_KROGER, {delay: 120});
+          await passwordInput.type(PASSWORD_KROGER, {delay: 220});
+
           break; 
       }
       case "aldiItems": {
@@ -332,23 +324,23 @@ async function setUpBrowser(task) {
         */
           // * aldi items: wait for free delivery banner to load, select pickup button, wait for page reload, click location picker button,
           // select location by address text in locations list section and click wanted stores button, wait for page reload
-          var ZIPSTREET = "Dewberry Trail" ; // street that corresponds to zipcode
+          var ZIPSTREET = "Old Norcross Tucker Rd" ; // street that corresponds to zipcode
           var availableModalities = ["Pickup", "Delivery"];
-          var wantedStoreAddress = "10955 Jones Bridge Road";
-          var wantedModality = availableModalities[1]; // @param?
+          var wantedStoreAddress = "1669 Scott Boulevard";
+          var wantedModality = availableModalities[0]; // @param?
           console.log(wantedModality, `div[class$='${wantedModality === "Delivery" ? wantedModality+"Address" : wantedModality+"Location"}Picker'] button[aria-haspopup]`)
           await page.goto("https://shop.aldi.us/store/aldi/storefront")
           await page.waitForNetworkIdle({idleTime: 4000})
           // click pickup modal // defaults to delivery
           var modalityButtons =await page.$$("div[aria-label='service type'] > button");
-          var [modalityButton] = await asyncFilter(modalityButtons, async (storeItem, index)=> {
-            let address = await storeItem.getProperty("innerText").then(async (jsHandle)=> await jsHandle.jsonValue());
+          var modalityButton = await asyncFilter(modalityButtons, async (storeItem, index)=> {
+            let address = await storeItem.getProperty("innerText").then((jsHandle)=> jsHandle.jsonValue());
             if (address === wantedModality){ 
               return index
             } 
           });
           console.log(modalityButton)
-          console.log(await modalityButton.getProperty("innerText").then(async (j)=>await j.jsonValue()));
+          console.log(await modalityButton.getProperty("innerText").then((j)=>j.jsonValue()));
           // click pickup button && wait for refresh
           await Promise.all([
             page.waitForNetworkIdle({idleTime:2000}),
@@ -370,8 +362,8 @@ async function setUpBrowser(task) {
           // do not have to press enter b/c autocomplete request occurs when typing
           await inputZip.type(ZIPSTREET);
           addrSuggestions = await page.$$("div[class$='AddressSuggestionList']");
-          var [targetLocation] = await asyncFilter(addrSuggestions, async (storeItem, index)=> {
-            let address = await storeItem.getProperty("innerText").then(async (jsHandle)=> await jsHandle.jsonValue());
+          var targetLocation = await asyncFilter(addrSuggestions, async (storeItem, index)=> {
+            let address = await storeItem.getProperty("innerText").then((jsHandle)=> jsHandle.jsonValue());
             if (address.includes(ZIPCODE)){ 
               return index
             } 
@@ -381,8 +373,8 @@ async function setUpBrowser(task) {
           // below to select pickup for specific store, choosing the delivery option would revert you back to main page
           if (wantedModality==="Pickup"){
             var targetStoreModals = await page.$$("ul[aria-labelledby='locations-list'] > li > button"); 
-            var [targetStoreModal] = await asyncFilter(targetStoreModals, async (storeItem, index)=> {
-              let address = await storeItem.getProperty("innerText").then(async (jsHandle)=> await jsHandle.jsonValue());
+            var targetStoreModal = await asyncFilter(targetStoreModals, async (storeItem, index)=> {
+              let address = await storeItem.getProperty("innerText").then((jsHandle)=> jsHandle.jsonValue());
               if (wantedStoreAddress && address.includes(wantedStoreAddress)){
                 return index
               } else if (!wantedStoreAddress && index<=0){
@@ -395,14 +387,13 @@ async function setUpBrowser(task) {
             await page.keyboard.press("Enter");
           }
           await page.waitForNetworkIdle({idleTime: 5500})
-          console.log("Success!")
           break;
       }
       case "publixItems": {
         /**
          * @tests passed
          */
-        var ZIPSTREET = "Dewberry Trail" ; // street that corresponds to zipcode
+        var ZIPSTREET = "Old Norcross Tucker Rd" ; // street that corresponds to zipcode
         var availableModalities = ["Pickup", "Delivery"];
         var wantedStoreAddress = "4650 Hugh Howell Rd";
         var wantedModality = availableModalities[0]; // @param?
@@ -411,14 +402,14 @@ async function setUpBrowser(task) {
         await page.waitForNetworkIdle({idleTime: 4000})
         // click pickup modal // defaults to delivery
         var modalityButtons =await page.$$("div[aria-label='service type'] > button");
-        var [modalityButton] = await asyncFilter(modalityButtons, async (storeItem, index)=> {
-          let address = await storeItem.getProperty("innerText").then(async (jsHandle)=> await jsHandle.jsonValue());
-          if (address === wantedModality){ 
+        var modalityButton = await asyncFilter(modalityButtons, async (storeItem, index)=> {
+          let address = await storeItem.getProperty("innerText").then((jsHandle)=> jsHandle.jsonValue());
+          if (address.includes(wantedModality)){ 
             return index
           } 
         });
         console.log(modalityButton)
-        console.log(await modalityButton.getProperty("innerText").then(async (j)=>await j.jsonValue()));
+        console.log(await modalityButton.getProperty("innerText").then((j)=>j.jsonValue()));
         // click pickup button && wait for refresh
         await Promise.all([
           page.waitForNetworkIdle({idleTime:2000}),
@@ -433,15 +424,14 @@ async function setUpBrowser(task) {
         if (wantedModality === "Pickup"){
           // click zip button to launch choose address modal
           await page.$eval("button[class$='AddressButton']", (el)=>el.click());
-
         }
         
         let inputZip = await page.waitForSelector("#streetAddress");
         // do not have to press enter b/c autocomplete request occurs when typing
         await inputZip.type(ZIPSTREET);
-        addrSuggestions = await page.$$("div[class$='AddressSuggestionList']");
-        var [targetLocation] = await asyncFilter(addrSuggestions, async (storeItem, index)=> {
-          let address = await storeItem.getProperty("innerText").then(async (jsHandle)=> await jsHandle.jsonValue());
+        var addrSuggestions = await page.$$("div[class$='AddressSuggestionList']");
+        var targetLocation = await asyncFilter(addrSuggestions, async (storeItem, index)=> {
+          let address = await storeItem.getProperty("innerText").then((jsHandle)=> jsHandle.jsonValue());
           if (address.includes(ZIPCODE)){ 
             return index
           } 
@@ -451,12 +441,10 @@ async function setUpBrowser(task) {
         // below to select pickup for specific store, choosing the delivery option would revert you back to main page
         if (wantedModality==="Pickup"){
           var targetStoreModals = await page.$$("ul[aria-labelledby='locations-list'] > li > button"); 
-          var [targetStoreModal] = await asyncFilter(targetStoreModals, async (storeItem, index)=> {
-            let address = await storeItem.getProperty("innerText").then(async (jsHandle)=> await jsHandle.jsonValue());
+          var targetStoreModal = await asyncFilter(targetStoreModals, async (storeItem, index)=> {
+            let address = await storeItem.getProperty("innerText").then((jsHandle)=> jsHandle.jsonValue());
             if (wantedStoreAddress && address.includes(wantedStoreAddress)){
               return index
-            } else if (!wantedStoreAddress && index<=0){
-              return index // return first entry if wantedAddress not set, i.e. closest store to given address
             }
           });
           await targetStoreModal.click();
@@ -466,20 +454,6 @@ async function setUpBrowser(task) {
         }
         await page.waitForNetworkIdle({idleTime: 5500})
         break;
-        // for sign in 
-        // var introModal = await page.waitForSelector("input[data-testid='homepage-address-input']")
-        // await introModal.type(ZIPCODE);
-        // await introModal.press("Enter");
-        // let authLogin = await page.$("div.AuthModal__Content > div > div > div > div:not([class$='Body']) button:not([data-testid])")
-        // await authLogin.click();
-        // let emailInput = await page.waitForSelector("input[autocomplete='email']");
-        // await emailInput.type(EMAIL);
-        // let passwordInput = await page.waitForSelector("input[autocomplete='current-password']")
-        // await passwordInput.type(PASSWORD_PUBLIX);
-        // await page.$eval("div[class$=Body] button[type='submit']", (el)=>el.click());
-        // await page.waitForNetworkIdle({idleTime: 5000});
-        // // login credentials already in browser profile; store is saved to account for now, otherwise use same location / modality handling for instacart site as those above for aldi.
-        // await page.$("form > div > button", (el)=> el.click());
       }  
       case "publixCoupons": {
       // * publix coupons: navigate to all-deals, wait for api response, wait for copied response
@@ -500,9 +474,9 @@ async function setUpBrowser(task) {
       })
       // filter by address ; default store pods based on zip code : 15 stores . 
       let wantedStoreDivs = await page.$$("div.store-pod")
-      var [wantedStoreDiv] = await asyncFilter(wantedStoreDivs, async (storeItem, index)=> {
+      var wantedStoreDiv = await asyncFilter(wantedStoreDivs, async (storeItem, index)=> {
         let address = await storeItem.$("p.address")
-        address = await address.getProperty("innerText").then(async (jsHandle)=> await jsHandle.jsonValue());
+        address = await address.getProperty("innerText").then((jsHandle)=> jsHandle.jsonValue());
         if (address.includes(wantedStoreAddress)){ 
           return index
         } 
@@ -571,8 +545,8 @@ async function setUpBrowser(task) {
           await moreButton.click();
           await page.waitForTimeout(3000);
           var dropDownButtons = await frameCoupons.$$("div.mat-menu-content > button[role='menuitem']")
-          var [modalityButton] = await asyncFilter(dropDownButtons, async (item, index)=> {
-            let buttonText = await item.getProperty("innerText").then(async (jsHandle)=> await jsHandle.jsonValue());
+          var modalityButton = await asyncFilter(dropDownButtons, async (item, index)=> {
+            let buttonText = await item.getProperty("innerText").then((jsHandle)=> jsHandle.jsonValue());
             if (buttonText.includes("Store Info")){ 
               return index
             } 
@@ -581,8 +555,8 @@ async function setUpBrowser(task) {
           await modalityButton.click();
           await page.waitForTimeout(3000);
           var availableStores = await frameCoupons.$$("li[app-branch-info]")
-          var [wantedStore] = await asyncFilter(availableStores, async (storeItem, index)=> {
-            let address = await storeItem.getProperty("innerText").then(async (jsHandle)=> await jsHandle.jsonValue());
+          var wantedStore = await asyncFilter(availableStores, async (storeItem, index)=> {
+            let address = await storeItem.getProperty("innerText").then((jsHandle)=> jsHandle.jsonValue());
             if (address.includes(wantedAddress) && !address.includes("Ecomm")){ 
               return index
             }
@@ -629,8 +603,8 @@ async function setUpBrowser(task) {
             await page.$eval("button.location-form__apply-button", (el)=>el.click())
             // select li.store-list-item who's span-list-item__store-address-1 == wanted store address,
             let wantedStoreDivs = await page.$$("li.store-list-item");
-            var [wantedStoreDiv] = await asyncFilter(wantedStoreDivs, async (storeItem, index)=> {
-            address = await storeItem.getProperty("innerText").then(async (jsHandle)=> await jsHandle.jsonValue());
+            var wantedStoreDiv = await asyncFilter(wantedStoreDivs, async (storeItem, index)=> {
+            address = await storeItem.getProperty("innerText").then((jsHandle)=> jsHandle.jsonValue());
             if (address.includes(wantedStoreAddress)){ 
                 return index
               } 
@@ -720,9 +694,8 @@ async function setUpBrowser(task) {
         await page.waitForNetworkIdle({idleTime: 4000})
         var targetStoreModals = await frameZip.$$("li.poi-item")
         // select store by address,
-        var [targetStoreModal] = await asyncFilter(targetStoreModals, async (poiItem, index)=> {
+        var targetStoreModal = await asyncFilter(targetStoreModals, async (poiItem, index)=> {
           let address = await poiItem.$eval("div > div.address-wrapper", (el)=>el.outerText)
-          console.log(address.replace("\n", "\\n"))
           if (address === wantedStore){ 
             return index
           } 
@@ -741,12 +714,8 @@ async function setUpBrowser(task) {
         break;
       }
       case "familyDollarInstacartItems": {
-        /**
-           * @tests passed
-           * 
-          */
         // * family dollar instacart items: differs from other instacart sites as it is delivery only 
-        var ZIPSTREET = "Old Norcross Road" ;
+        var ZIPSTREET = "Old Norcross Tucker Rd" ;
         // navigate to store page
         await page.goto("https://sameday.familydollar.com/store/family-dollar/storefront")
         // click on delivery button
@@ -755,8 +724,8 @@ async function setUpBrowser(task) {
         var inputZip = await page.waitForSelector("#streetAddress")
         await inputZip.type(ZIPSTREET, {delay: 125})
         var addrSuggestions = await page.$$("div[class$='AddressSuggestionList']");
-        var [targetLocation] = await asyncFilter(addrSuggestions, async (storeItem, index)=> {
-          let address = await storeItem.getProperty("innerText").then(async (v)=>await v.jsonValue())
+        var targetLocation = await asyncFilter(addrSuggestions, async (storeItem, index)=> {
+          let address = await storeItem.getProperty("innerText").then((v)=>v.jsonValue())
           console.log(address.replaceAll("\n", "\\n"))
           if (address.includes(ZIPCODE)){ 
             return index
@@ -792,7 +761,7 @@ async function setUpBrowser(task) {
       await page.waitForTimeout(2000)
       var targetStoreModals = await frameZip.$$("li.poi-item")
       // select store by address,
-      var [targetStoreModal] = await asyncFilter(targetStoreModals, async (poiItem, index)=> {
+      var targetStoreModal = await asyncFilter(targetStoreModals, async (poiItem, index)=> {
         let address = await poiItem.$eval("div > div.address-wrapper", (el)=>el.outerText)
         console.log(address.replace("\n", "\\n"))
         if (address === wantedStore){ 
@@ -861,7 +830,7 @@ async function wrapFile(fileName){
   return "Done"
 }
 
-async function getKrogerTrips(page, browser){
+async function getKrogerTrips(browser, page){
   /**
    * @param page : PageElement from Successfully Launched Browser. 
    * @param browser : the current browser instance
@@ -873,37 +842,40 @@ async function getKrogerTrips(page, browser){
   */
   var path = "../requests/server/collections/kroger/trips/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
+  var wantedResponseRegex = /\/mypurchases\/api\/v.\/receipt\/details|\/atlas\/v1\/product\/v2\/products/
+  path += fileName
   var offset = 0 ;
-  await page.setRequestInterception(true)
-  await Promise.all([
-    page.waitForNavigation({waitUntil: "networkidle0"}),
-    page.$eval("#SignIn-submitButton", (el) => el.click())
-  ])
-  await page.waitForNetworkIdle({idleTime: 3000})
-  var wantedResponseRegex = /\/mypurchases\/api|\/atlas\/v1\/product\/v2\/products/
   page.on("response", async (res)=> {
     let url = await res.url() ;
     if (url.match(wantedResponseRegex)){
-      data = await res.buffer();
-      offset+=await writeResponse(fileName=fileName, response=data, url=url, offset=offset)
+      offset+=await writeResponse(fileName=path, response=res, url=url, offset=offset)
       return; 
     }
     return ; 
   })
+  await Promise.all([
+    page.waitForNavigation({waitUntil: "load"}),
+    page.$eval("#SignIn-submitButton", (el) => el.click())
+  ])
+  await page.waitForNetworkIdle({idleTime: 4000})
+  
   const nextButton = async () => {
-    isNext = await page.$eval("button.kds-Pagination-next", (el)=>el.disabled);
+    let isNext = await page.$eval("button.kds-Pagination-next", (el)=>!el.disabled);
     if (isNext){
       return await page.$("button.kds-Pagination-next")
     } else {
       return false
     }
   }
-  while( nextButton() ){
+  let element = await nextButton()
+  console.log(element)
+  while( element ){
     // click to next page
-    await nextButton().click();
+    await element.click();
     // await product card render, images of items purchased to be rendered 
-    await page.waitForNetworkIdle({idleTime: 3000})
-    await page.waitForSelector("div[aria-label='Purchase History Order']");   
+    await page.waitForNetworkIdle({idleTime: 8000})
+    await page.waitForSelector("div[aria-label='Purchase History Order']");
+    element = await nextButton();
   }
   await page.waitForNetworkIdle({idleTime: 5500});
   await browser.close();
@@ -971,11 +943,12 @@ async function getKrogerCoupons(browser, page, type){
       currentCoupons = currentCoupons.concat(moreCoupons.slice(startingLength));
       startingLength = currentCoupons.length;
     })
-    for (let coupon of currentCoupons){
+    for (let i = 0 ; i < currentCoupons.length ; i++){
+      let coupon = currentCoupons[i]
       await coupon.click();
       await page.waitForNetworkIdle({idleTime: 8000});
       await page.keyboard.press("Escape");
-      console.log("CCs Length", currentCoupons.length)
+      console.log("CCs Length", currentCoupons.length, " finished @", i)
     }
     await page.waitForNetworkIdle({idleTime: 3000});
     await browser.close();
@@ -984,62 +957,93 @@ async function getKrogerCoupons(browser, page, type){
     return null;
 }
 
-async function getInstacartItems(page, browser){
+async function getInstacartItems(browser, page){
   /**
    * @param page : PageElement from Successfully Launched Browser. 
    * @param browser : the current browser instance. 
-   * @prequisite setUpBrowser() successful. 
+   * @prerequisite setUpBrowser() successful.
+   * @todo : clicks on individual product cards gives way to item specific pages / modals that provide ItemDetailData (more info on specific item), =RelatedItems (Similar Products), =ComplementaryProductItems (Products Bought in Tandem), =ProductNutritionalInfo (More Nutritional Items)
+   * & =RecipesByProductId (links to recipes page on instacart site, which provide all items for recipes and their prices)
+        * given that this data is mostly static, It could be collected Incrementally Over Scrapes. It would have to occur over time given the large catalogue of items (1000+ items). 
    */
-  let unwantedPattern = /(outdoor|toys|bed|electronics|clothing-shoes-accessories|office-crafts-party-supplies|greeting-cards|storm-prep|tailgating|popularfloral|shop-now)$/
+  let unwantedPattern = /(outdoor|toys|bed|electronics|clothing-shoes-accessories|office-crafts-party-supplies|greeting-cards|storm-prep|tailgating|popular|floral|shop-now)$/
   let storePatterns = /(aldi|familydollar|publix)/
   let currentUrl = await page.url();
   let store = currentUrl.match(storePatterns)[0]
   let folder = store==="familydollar"? "instacartItems" : "items";
   let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
-  let path = "../requests/server/collections/" + [store, folder].join("/") ;
+  fileName = "../requests/server/collections/" + [store, folder, fileName].join("/") ;
   let offset = 0;
-  fileName = path+fileName ; 
-  let wantedXPath = "//ul[contains(@class, 'StoreMenu')]/li/a" // XPath for custom CSS Classes Generated by Instacart
-  // set request interception on page
-  await page.setRequestInterception(true);
   var wantedResponseRegex =  /item_attributes|operationName=Items|operationName=CollectionProductsWithFeaturedProducts/;
-  page.on("response", async (res)=> {
-    let url = await res.url() ;
-    if (url.match(wantedResponseRegex)){
-      offset+=await writeResponse(fileName=fileName, response=res, url=url, offset=offset)
-      return; 
-    }
-    return ; 
-  })
-  let wantedCategoryLinks = await page.$$(wantedXPath)
-  wantedCategoryLinks=wantedCategoryLinks.map(async (link)=> {
-    href = await link.getProperty("href");
-    href = await link.jsonValue();
-    if (href.match(unwantedPattern)){
-      return href;
-    } else {
-      return null
-    }
-  }).filter((a)=>a); // perform filter on unwanted links ... 
-  for (let link of wantedLinks){
+  let allCategoryLinks = await page.$$eval("ul[aria-labelledby='sm-departments'] > li > a", (elems)=> elems.map((a)=>a.href)) // departments side panel
+  allCategoryLinks = allCategoryLinks.filter((a)=>!a.match(unwantedPattern))
+  let apiEmitter = new EventEmitter();
+
+  async function setFlag(ee, waitTime = 4500, timeout = 45000){
+    let times = 0;
+    let previousTimes = 0;
+    let intervalId, doneEmitter = new EventEmitter(); 
+    ee.on("fileDone", ()=> {
+      times++
+    })
+    intervalId = setInterval(()=> {
+      if (times && previousTimes===times){
+        console.log(`times = ${times} previousTimes = ${previousTimes}`)
+        clearInterval(intervalId)
+        ee.emit("resolve")
+      } else {
+        console.log(`times = ${times} previousTimes = ${previousTimes}`)
+        previousTimes = times
+      }
+    }, waitTime)
+    return new Promise((resolve, reject)=> {
+      ee.on("resolve", ()=> {
+        resolve(true)
+      })
+      setTimeout(()=>{
+        reject(new Error("Resolve Was Not Called in 45 Seconds")) 
+      }, timeout)
+    })
+  }
+
+  for (let link of allCategoryLinks){
     // navigate to page ;
     // wait for request where (collections_all_items_grid) in wanted request
     // once loaded responses have been copied, evalulate document.body.offsetHeight to see if more items are available. 
-    var pageHeight, newHeight; 
+    var pageHeight, newHeight;
+    // handle response
+    page.on("response", async (res)=> {
+      let url = res.url() ;
+      if (url.match(wantedResponseRegex)){
+        offset+=await writeResponse(fileName=fileName, response=res, url=url, offset=offset)
+        apiEmitter.emit("fileDone")
+        return; 
+      }
+      return ; 
+    })
     await page.goto(link);
-    await page.waitForNavigation({waitUntil: "networkidle0"});
-    var body = await page.$("body")
-    pageHeight = await body.getProperty("offsetHeight");
+    await setFlag(apiEmitter)    
+    // await page.waitForTimeout(5500)
+    console.log("went to ", link, " and waited for 5.5")
+    pageHeight = await page.$eval("body", (body)=> body.offsetHeight)
     await page.keyboard.press("End");
-    await page.waitForNavigation({waitUntil: "networkidle0"});
-    newHeight = body.getProperty("offsetHeight")
+    console.log("pressed END")
+    await setFlag(apiEmitter)
+    // await page.waitForTimeout(9000)
+    newHeight = await page.$eval("body", (body)=> body.offsetHeight)
+    var lastStart = Date.now();
     while (pageHeight !== newHeight){
+      console.log(pageHeight, " pageHeight")
       pageHeight = newHeight;
       await page.keyboard.press("End");
-      await page.waitForNavigation({waitUntil: "networkidle0"});
-      await page.waitForTimeout(4000);
-      newHeight = await body.getProperty("offsetHeight");
+      console.log("pressed END in while ")
+      await setFlag(apiEmitter)
+      // await page.waitForNetworkIdle({idleTime: 4500})
+      newHeight = await page.$eval("body", (el)=>el.offsetHeight)
+      console.log(newHeight, " newHeight. Iteration Took ", (Date.now() - lastStart) / 1000, " secs");
+      lastStart = Date.now()
     }
+    console.log("finished ", link)
   }
   await page.waitForNetworkIdle({idleTime: 3000});
   await browser.close();
@@ -1203,7 +1207,7 @@ async function getDollarGeneralItems(browser, page){
   })
   // go to sale page.
   await page.goto("https://www.dollargeneral.com/c/on-sale");
-  await page.waitForNetworkIdle({waitUntil: 3600})
+  await page.waitForNetworkIdle({idleTime: 3600})
   let button = await page.$("button[data-target='pagination-right-arrow']") ; 
   let disabled = await button.getProperty("disabled").then((jsHandle)=>jsHandle.jsonValue())
   console.log(button, disabled)
@@ -1311,7 +1315,7 @@ async function getFamilyDollarItems(browser, page){
       console.log("finished ", i , " ", iterations-i, " left ")
     }
 
-    await page.waitForNetworkIdle({waitUntil: 3000}); 
+    await page.waitForNetworkIdle({idleTime: 3000}); 
     await wrapFile(fileName);
     await browser.close(); 
     console.log("finished file", fileName);
@@ -1353,11 +1357,6 @@ async function getFoodDepotItems(browser, page){
     }
     return ; 
   })
-  // page.on('request', (request)=>{
-  //   if (request.isInterceptResolutionHandled()) return;
-  //   else request.continue();
-  // })
-  
   // on store home page.
   let shopNowButton = await page.$("#site-main-menu__button")
   await shopNowButton.hover();
@@ -1389,20 +1388,20 @@ async function getFoodDepotItems(browser, page){
     pageHeight = await body.getProperty("offsetHeight").then((jsHandle)=> jsHandle.jsonValue())
     console.log(pageHeight)
     await page.keyboard.press("End");
-    await page.waitForNetworkIdle({waitUntil: 4000});
+    await page.waitForNetworkIdle({idleTime: 4000});
     newHeight = await body.getProperty("offsetHeight").then((jsHandle)=> jsHandle.jsonValue());
     console.log(newHeight)
     while (pageHeight !== newHeight){
       pageHeight=newHeight;
       console.log(newHeight)
       await page.keyboard.press("End");
-      await page.waitForNetworkIdle({waitUntil: 5500}); // what is blocking syncrohous calls if end is not pressed again, images will stall and render one by one before next image resource is called
+      await page.waitForNetworkIdle({idleTime: 5500}); // what is blocking syncrohous calls if end is not pressed again, images will stall and render one by one before next image resource is called
       newHeight = await body.getProperty("offsetHeight").then((jsHandle)=> jsHandle.jsonValue());
       console.log(newHeight)
     }
     console.log('finished ', categoryUrl, ' @ index: ', allCategories.indexOf(categoryUrl), ' of ', allCategories.length-1)
   }
-  await page.waitForNetworkIdle({waitUntil: 3000}); 
+  await page.waitForNetworkIdle({idleTime: 3000}); 
   await wrapFile(fileName);
   await browser.close(); 
   console.log("finished file", fileName);
@@ -1501,8 +1500,11 @@ return new Promise((resolve, reject) => {
 //     page.goto("chrome://settings")
   
 //   })
-
 // })
-setUpBrowser(task='krogerCoupons').then(([browser, page])=> {
-  getKrogerCoupons(browser, page, "digital")
+
+// setUpBrowser(task='publixItems').then(([browser, page])=> {
+//   getInstacartItems(browser, page)
+// })
+setUpBrowser(task='krogerTrips').then(([browser, page])=> {
+  getKrogerTrips(browser, page)
 })
