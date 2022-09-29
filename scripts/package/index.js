@@ -166,7 +166,6 @@ async function writeResponse(fileName, response, url, offset) {
     }
     let len = data.length;  
     await writeJSONs(fileName, data=data, offset);
-    console.log(`wrote ${url.length > 150 ? url.slice(0, 150) : url}`)
     return len
   } catch (err){
     if (err instanceof ProtocolError){
@@ -227,14 +226,14 @@ async function setUpBrowser(task) {
   try { 
     browser = await puppeteer.launch({
       headless: false,
-      slowMo: 1000, 
+      slowMo: 888, 
       executablePath:
         "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
       dumpio: true,
       args: ["--start-maximized","--profile-directory=Profile 1"],
       userDataDir: "C:\\c\\Profiles",
       defaultViewport: {width: 1920, height: 1080},
-      devtools: false,
+      devtools: true,
       timeout: 0
     });
     var zipInput, wantedModality, wantedAddress; 
@@ -297,6 +296,8 @@ async function setUpBrowser(task) {
           // kroger trips: click account button, my purchases select drop down link, unselect persist login check box, click sign in
           // requires credentials to be saved in browser profile
           // @requires: login
+          await page.goto("chrome://settings")
+          await page.waitForTimeout(9999)
           const USERNAME_KROGER = process.env.USERNAME_KROGER;
           const PASSWORD_KROGER = process.env.PASSWORD_KROGER;
           await page.goto("https://www.kroger.com");
@@ -313,7 +314,7 @@ async function setUpBrowser(task) {
           let emailInput = await page.$("#SignIn-emailInput")
           let passwordInput = await page.$("#SignIn-passwordInput");
           await emailInput.type(USERNAME_KROGER, {delay: 120});
-          await passwordInput.type(PASSWORD_KROGER, {delay: 220});
+          await passwordInput.type(PASSWORD_KROGER, {delay: 150});
 
           break; 
       }
@@ -869,13 +870,18 @@ async function getKrogerTrips(browser, page){
   }
   let element = await nextButton()
   console.log(element)
+  let yy = 1;
+  let st = null;
   while( element ){
+    st = Date.now()
     // click to next page
     await element.click();
     // await product card render, images of items purchased to be rendered 
     await page.waitForNetworkIdle({idleTime: 8000})
     await page.waitForSelector("div[aria-label='Purchase History Order']");
     element = await nextButton();
+    yy++
+    console.log(element, yy, ' ', (Date.now()-st)/1000, ' seconds')
   }
   await page.waitForNetworkIdle({idleTime: 5500});
   await browser.close();
@@ -976,13 +982,14 @@ async function getInstacartItems(browser, page){
   let offset = 0;
   var wantedResponseRegex =  /item_attributes|operationName=Items|operationName=CollectionProductsWithFeaturedProducts/;
   let allCategoryLinks = await page.$$eval("ul[aria-labelledby='sm-departments'] > li > a", (elems)=> elems.map((a)=>a.href)) // departments side panel
-  allCategoryLinks = allCategoryLinks.filter((a)=>!a.match(unwantedPattern))
+  allCategoryLinks = allCategoryLinks.filter((a)=>!a.match(unwantedPattern)).slice(1)
   let apiEmitter = new EventEmitter();
 
   async function setFlag(ee, waitTime = 4500, timeout = 45000){
     let times = 0;
     let previousTimes = 0;
-    let intervalId, doneEmitter = new EventEmitter(); 
+    let pageEnded = 0;
+    let intervalId; 
     ee.on("fileDone", ()=> {
       times++
     })
@@ -991,9 +998,14 @@ async function getInstacartItems(browser, page){
         console.log(`times = ${times} previousTimes = ${previousTimes}`)
         clearInterval(intervalId)
         ee.emit("resolve")
+      } else if (!times && !previousTimes && pageEnded>=3) {
+        // end of page has been reach
+        clearInterval(intervalId);
+        ee.emit("resolve")
       } else {
         console.log(`times = ${times} previousTimes = ${previousTimes}`)
         previousTimes = times
+        pageEnded++ 
       }
     }, waitTime)
     return new Promise((resolve, reject)=> {
@@ -1023,29 +1035,24 @@ async function getInstacartItems(browser, page){
     })
     await page.goto(link);
     await setFlag(apiEmitter)    
-    // await page.waitForTimeout(5500)
-    console.log("went to ", link, " and waited for 5.5")
+    console.log("went to ", link)
     pageHeight = await page.$eval("body", (body)=> body.offsetHeight)
     await page.keyboard.press("End");
-    console.log("pressed END")
     await setFlag(apiEmitter)
-    // await page.waitForTimeout(9000)
     newHeight = await page.$eval("body", (body)=> body.offsetHeight)
     var lastStart = Date.now();
     while (pageHeight !== newHeight){
       console.log(pageHeight, " pageHeight")
       pageHeight = newHeight;
       await page.keyboard.press("End");
-      console.log("pressed END in while ")
       await setFlag(apiEmitter)
-      // await page.waitForNetworkIdle({idleTime: 4500})
       newHeight = await page.$eval("body", (el)=>el.offsetHeight)
       console.log(newHeight, " newHeight. Iteration Took ", (Date.now() - lastStart) / 1000, " secs");
       lastStart = Date.now()
     }
     console.log("finished ", link)
   }
-  await page.waitForNetworkIdle({idleTime: 3000});
+  await page.waitForTimeout(10000)
   await browser.close();
   await wrapFile(fileName);
   console.log("file finished : ", fileName) ; 
@@ -1484,16 +1491,16 @@ return new Promise((resolve, reject) => {
 }
 
 // puppeteer.launch({
-// headless: false,
-// slowMo: 400, 
-// executablePath:
-//   "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-// dumpio: true,
-// args: ["--start-maximized","--profile-directory=Profile 1"],
-// userDataDir: "C:\\c\\Profiles",
-// defaultViewport: {width: 1920, height: 1080},
-// devtools: false,
-// timeout: 0
+//   headless: false,
+//   slowMo: 0, 
+//   executablePath:
+//     "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+//   dumpio: true,
+//   args: ["--start-maximized","--profile-directory=Profile 1"],
+//   userDataDir: "C:\\c\\Profiles",
+//   defaultViewport: {width: 1920, height: 1080},
+//   devtools: false,
+//   timeout: 0
 // }).then((browser)=> {
 //   browser.pages().then((pages)=>{
 //     let page = pages[0]
@@ -1502,9 +1509,10 @@ return new Promise((resolve, reject) => {
 //   })
 // })
 
-// setUpBrowser(task='publixItems').then(([browser, page])=> {
-//   getInstacartItems(browser, page)
-// })
 setUpBrowser(task='krogerTrips').then(([browser, page])=> {
   getKrogerTrips(browser, page)
 })
+// setUpBrowser(task='familyDollarInstacartItems').then(([browser, page])=> {
+//   getInstacartItems(browser, page)
+// })
+//wrapFile("..\\requests\\server\\collections\\familydollar\\instacartItems\\9_28_2022.json")

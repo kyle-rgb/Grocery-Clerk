@@ -1360,7 +1360,7 @@ def deconstructExtensions(filename):
     mytz=pytz.timezone('America/New_York')
     startingArray=[]
     upcsRegex = re.compile(r'https://www\.kroger\.com/cl/api/couponDetails/(\d+)/upcs')
-    couponsDetailsRegex = re.compile(r'https://www\.kroger\.com/cl/api/coupons\?.+')
+    couponsDetailsRegex = re.compile(r'https://www\.kroger\.com/cl/api/coupons.+')
     productsRegex = re.compile(r'https://www\.kroger\.com/atlas/v1/product/v2/products\?.+')
     tripRegex = re.compile(r'https://www\.kroger\.com/mypurchases/api/v1/receipt.+')
     storeRegex = re.compile(r'https://www\.(.+)\.com.+')
@@ -1470,7 +1470,9 @@ def deconstructExtensions(filename):
             
             # handle regular coupons
             elif re.match(couponsDetailsRegex, url):
-                coupons = data.get('coupons')
+                if "couponData" in data:
+                    data = data.get("couponData")
+                coupons = data.get('coupons') 
                 coupSchema = {'keep':{"id", "krogerCouponNumber", "brandName", "categories", "productUpcs", "type", "expirationDate",\
                      "redemptionsAllowed", "value", "requirementQuantity", "displayStartDate", "imageUrl", "shortDescription", "requirementDescription",
                      "modalities"},\
@@ -2311,16 +2313,68 @@ def getStores():
     client.close()
     return None
 
-backupDatabase()
-createDBSummaries('new')
+def findAndInsertExtraPromotions(head):
+    # To Extract Coupons Left in Archive Files (those with unclipped in url) 
+    upcsRegex = re.compile(r'https://www\.kroger\.com/cl/api/couponDetails/(\d+)/upcs')
+    promotionsCollection = []
+    for folder, _, files in os.walk(head):
+        for fd in files:
+            file_handle = open(folder+fd, "r", encoding="utf-8") 
+            jsonData = json.loads(file_handle.read())
+            file_handle.close()
+            missedResults = list(filter(lambda x: re.findall(r"unclipped|upcs$", x["url"]), jsonData))
+            cDict = {}
+            if missedResults:
+                for mr in missedResults:
+                    url = mr.pop('url')
+                    data = mr.pop("data")
+                    if "upcs" in url:
+                        couponId = re.match(upcsRegex, url).group(1)
+                        cDict[couponId] = data
+                    else: 
+                        coupons = data.get("couponData").get('coupons') 
 
-# runAndDocument([setUpBrowser, getScrollingData, eatThisPage], ["setUpBrowserForAldi", 'getAldiItems', 'flushData'],
-#                kwargs=[{"n": 'aldi-items', 'initialSetup': True}, {"chain": "aldi"}, {'reset': True}])
-# time.sleep(210)
-# runAndDocument([simulateUser, eatThisPage], ['getKrogerDigitalCouponsAndItems', 'flushData'],
-#                kwargs=[{"link": "digital"}, {'reset': True}])
-#time.sleep(25)
-# runAndDocument([simulateUser, eatThisPage], ['getKrogerCashbackCouponsAndItems', 'flushData'],
-#                kwargs=[{"link": "cashback"}, {'reset': True}]) 
+                        coupSchema = {'keep':{"id", "krogerCouponNumber", "brandName", "categories", "productUpcs", "type", "expirationDate",\
+                                "redemptionsAllowed", "value", "requirementQuantity", "displayStartDate", "imageUrl", "shortDescription", "requirementDescription",
+                                "modalities"},\
+                                "bool": {"cashbackCashoutType", "isSharable", "forCampaign", "specialSavings",  "longDescription"}}
+                        for k,v in coupons.items():
+                            promo = {}
+                            if k in cDict:
+                                v.update({'productUpcs': cDict[k]})
+                            else:
+                                v.update({'productUpcs': []})
 
-# createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips', 'digital', 'cashback'], additionalPaths=["familydollar/coupons", "dollargeneral/promotions"])
+                            for coupKey, coupVal in v.items():
+                                if coupKey in coupSchema['bool']:
+                                    if bool(coupVal):
+                                        if coupKey=='longDescription':
+                                            promo['terms'] = coupVal
+                                        else:
+                                            promo[coupKey] = coupVal
+                                elif coupKey in coupSchema['keep']:
+                                    if coupKey=='displayStartDate':
+                                        promo['startDate'] = pytz.utc.localize(dt.datetime.strptime(coupVal, "%Y-%m-%dT%H:%M:%SZ"))
+                                    elif coupKey=='expirationDate':
+                                        promo['expirationDate'] = pytz.utc.localize(dt.datetime.strptime(coupVal, "%Y-%m-%dT%H:%M:%SZ"))
+                                    elif coupKey=='shortDescription':
+                                        promo[coupKey] = coupVal.strip()
+                                    else:
+                                        promo[coupKey] = coupVal
+                            # filterBoolean is Calculated
+                            isProcessed = bool(list(filter(lambda x: x.get('krogerCouponNumber')==promo.get('krogerCouponNumber'), promotionsCollection)))
+                            if isProcessed==False:
+                                # promotions is appended to massiveArray
+                                promotionsCollection.append(promo)
+            print(f"finished {folder+fd}")
+    insertFilteredData(promotionsCollection, "promotions", "new", "krogerCouponNumber")
+    
+    return None
+
+
+# findAndInsertExtraPromotions("./requests/server/collections/kroger/digital/")
+# findAndInsertExtraPromotions("./requests/server/collections/kroger/cashback/")
+createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips', 'digital', 'cashback', 's30s10', 'spend40save10'], additionalPaths=["familydollar/coupons", "dollargeneral/promotions"])
+
+# backupDatabase()
+# createDBSummaries('new')
