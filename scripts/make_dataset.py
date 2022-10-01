@@ -8,7 +8,7 @@ import win32gui
 
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
-import pyperclip as clip, inspect
+import pyperclip as clip
 from api_keys import DB_ARCHIVE_KEY, EXTENSION_ARCHIVE_KEY, ZIPCODE, PHONE_NUMBER, VERIFICATION_CODE
 from tzwhere import tzwhere
 
@@ -28,6 +28,84 @@ from tzwhere import tzwhere
 
 # Use API to get prices of past purchases and estimate future trips
 # Use API to create same carts for Pickup
+
+# ---------------------------------------------------------------------Python make_datasey.py---------------------------------------------------------------------
+# normalizeDay(string); switchUrl(x, y, url); eatThisPage(reset=False); loadExtension(); x
+# setUpBrowser(n=0, initialSetup=True, url=None); getStoreData(chain); loadMoreAppears(png); x
+# getArrow(sleep=2); scrollDown(sleep=10); insertFilteredData(entries, collection_name, db, uuid)->None;
+# insertData(entries, collection_name, db='new'); retrieveData(collection_name, db); createDBSummaries(db='new'); runAndDocument(funcs:list, callNames:list, kwargs: list, callback=None); 
+# simulateUser(link); updateGasoline(data); getKrogerTrips(); getFamilyDollarItems(); getScrollingData(chain: str); getPublixCouponData(deals=673); getDGItems(); deconstructDollars(file); backupDatabase(); deconstructExtensions(filename);normalizeStoreData();
+# createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: dict = None, setStores: bool = False); queryDB(db, collections, pipeline=None, filterObj=None, stop=0); getCollectionFeatureCounts(db='new', collection='prices'); getCollectionFeatureTypes();
+# getStores(); findAndInsertExtraPromotions(head)  
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Data processing helpers for common flaws in data : [ 
+#   normalizeDay(string), updateGasoline(data), findAndInsertExtraPromotions(head) 
+#  ]
+# Data collection helpers for scraping functions : [
+#   switchUrl(x,y,url), eatThisPage(reset=False), loadExtension(),
+#   setUpBrowser(n, initialSetup, url), loadMoreAppears(png), getArrow(sleep),
+#   scrollDown(sleep=10), 
+#  ]
+# Queries to Database : [
+#   retrieveData(collection_name, db),
+#   getCollectionFeatureTypes(),
+#   getCollectionFeatureCounts(db, collection),
+#   queryDB(db, collections, pipeline, filterObj, stop)
+# ]
+# Data Entry Functions of Processed Data + Data Dumps : [ 
+#   insertData(entries, collection_name, db),
+#   insertFilteredData(entries, collection_name, db, uuid),
+#   runAndDocument(funcs, callNames, kwargs, callback),
+#   createDBSummaries(db)
+# ]
+# Backup DB : [ 
+#   backupDatabase(), 
+#  ]
+# Data Transformation Functions : [
+#  deconstructDollars(file), deconstructExtensions(filename), normalizeStoreData(),
+#  createDecompositions(dataRepoPath, wantedPaths, additionalPaths, setStores)
+# ]
+# Data Collection Functions : [
+#   getStoreData(chain), simulateUser(link), getKrogerTrips(), getFamilyDollarItems(),
+#   getScrollingData(chain), getPublixCouponData, getDGItems(), getStores() 
+# ]
+# Decomposition AGs: [
+    # "krogerTrips": { setUpBrowser >> getKrogerTrips >> createDecompositions:py3.7 },
+    # "krogerCoupons": {setUpBrowser >> getKrogerCoupons >> createDecompositions:py3.7},
+    # "aldiItems": {setUpBrowser >> getInstacartItems >> processInstacartItems:node16.13.2 },
+    # "publixItems" : {setUpBrowser >> getInstacartItems >> processInstacartItems:node16.13.2},
+    # "publixCoupons": {setUpBrowser >> getPublixCoupons >> summarizeNewCoupons:node16.13.2},
+    # "familyDollarInstacartItems": {setUpBrowser >> getInstacartItems >> processInstacartItems:node16.13.2},
+    # "familyDollarCoupons" : {setUpBrowser >> getFamilyDollarCoupons >> deconstructDollars:py3.7},
+    # "familyDollarItems": {setUpBrowser >> getFamilyDollarItems >> processFamilyDollarItems:node16.13.2},
+    # "dollarGeneralCoupons": {setUpBrowser >> getDollarGeneralCoupons >> deconstructDollars:py3.7},
+    # "dollarGeneralItems": {setUpBrowser >> getDollarGeneralItems >> ....}
+    # "foodDepotItems": {setUpBrowser >> getFoodDepotItems >> summarizeFoodDepot:node16.13.2}
+    # "foodDepotCoupons": {setUpBrowser >> getFoodDepotCoupons >> summarizeNewCoupons:node16.13.2}
+# ]
+
+# --------------------------------------------------------------------- Node.js summary.js---------------------------------------------------------------------
+# cleanup(object);
+# insertData(listOfObjects, collectionName);
+# insertFilteredData(id, collectionName, newData = undefined, dbName='new');
+# processInstacartItemItems(target, defaultLocation=null, uuid);
+# zipUp(); 
+# summarizeFoodDepot(target);
+# summarizeNewCoupons(target, parser, uuid);
+# processFamilyDollarItems(target, defaultLocation="2394");
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Data Cleanup Helpers : [cleanup()]
+# Database Insertions : [insertData(listOfObjects, collectionName), insertFilteredData(id, collectionName, newData, dbName)]
+# Data Transformations : [
+# processInstacartItems(target, defaultLocation, uuid),
+# summarizeFoodDepot(target),
+# summarizeNewCoupons(target, parser, uuid)
+# processFamilyDollarItems(target, defaultLocation)
+# ]
+# File Management : [zipUp()]
+#
+#
 
 # helper for normalizeStore function
 def normalizeDay(string):
@@ -1101,6 +1179,8 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
         # prices: Price, OriginalPrice,
         # quasiPriceModifiers: DealsAvailable, DealStatus, SponsoredProductId, SponsoredAgreementId, SponsoredDisplayRow
         # <bool>: CartQuantity
+    # REQUIRES : pytz, re, datetime, urllib, json
+    # insertData(), insertFilteredData(); 
     mytz = pytz.timezone('America/New_York')
                              
     newProducts=[]

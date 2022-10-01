@@ -5,9 +5,13 @@ const {MongoClient} = require('mongodb')
 const util = require('util')
 const { spawn } = require('child_process')
 
-let targetDirs = [ '../../../scripts/requests/server/collections/fooddepot/items', '../../../scripts/requests/server/collections/fooddepot/coupons',
-'../../../scripts/requests/server/collections/publix/items', '../../../scripts/requests/server/collections/publix/coupons',
-'../../../scripts/requests/server/collections/aldi']
+let targetDirs = [
+    '../../../scripts/requests/server/collections/fooddepot/items',
+    '../../../scripts/requests/server/collections/fooddepot/coupons',
+    '../../../scripts/requests/server/collections/publix/items',
+    '../../../scripts/requests/server/collections/publix/coupons',
+    '../../../scripts/requests/server/collections/aldi'
+]
 
 function cleanup(object){
     Object.entries(object).forEach(([k, v])=>{
