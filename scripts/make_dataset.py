@@ -2291,13 +2291,14 @@ def createDecompositions(dataRepoPath: str, wantedPaths: list, additionalPaths: 
             # priceModifierCollection (coupons applied a @ purchase. tied with trips. )
         # userCollection (nonTime bound in db, no duplicates preferrable, filter check)
         # sellerCollection (nonTime bound in db, no duplicates preferrable, filter check)
-    for head, subfolders, files in walkResults:         
-        if head.split('\\')[-1] in wantedPaths:
-            folder = head.split('\\')[-1]
-            os.makedirs(f'../data/collections/kroger/{folder}/', exist_ok=True)
-            for file in files:
-                deconstructExtensions(head+"\\"+file)
-                print(f'processed {file}.')
+    if wantedPaths: 
+        for head, subfolders, files in walkResults:         
+            if head.split('\\')[-1] in wantedPaths:
+                folder = head.split('\\')[-1]
+                os.makedirs(f'../data/collections/kroger/{folder}/', exist_ok=True)
+                for file in files:
+                    deconstructExtensions(head+"\\"+file)
+                    print(f'processed {file}.')
 
     if additionalPaths:
         for repo in additionalPaths:
@@ -2454,7 +2455,4 @@ def findAndInsertExtraPromotions(head):
 
 # findAndInsertExtraPromotions("./requests/server/collections/kroger/digital/")
 # findAndInsertExtraPromotions("./requests/server/collections/kroger/cashback/")
-# createDecompositions('./requests/server/collections/kroger', wantedPaths=['trips', 'digital', 'cashback', 's30s10', 'spend40save10'], additionalPaths=["familydollar/coupons", "dollargeneral/promotions"])
-
-backupDatabase()
-createDBSummaries('new')
+createDecompositions('./requests/server/collections/kroger', wantedPaths=[], additionalPaths=["familydollar/coupons", "dollargeneral/promotions"])

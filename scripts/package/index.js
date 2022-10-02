@@ -5,7 +5,8 @@ require("dotenv").config();
 const fs = require("fs")
 const readline = require("readline");
 const EventEmitter = require('node:events');
-const { spawn } = require('child_process')
+const { spawn } = require('child_process');
+const {MongoClient} = require('mongodb');
 // add stealth plugin and use defaults 
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { ProtocolError, TimeoutError } = require('puppeteer');
@@ -233,7 +234,7 @@ async function setUpBrowser(task) {
       args: ["--start-maximized","--profile-directory=Profile 1"],
       userDataDir: "C:\\c\\Profiles",
       defaultViewport: {width: 1920, height: 1080},
-      devtools: true,
+      devtools: false,
       timeout: 0
     });
     var zipInput, wantedModality, wantedAddress; 
@@ -654,13 +655,17 @@ async function setUpBrowser(task) {
             // submit new location
             await page.$eval("button.location-form__apply-button", (el)=>el.click())
             // select li.store-list-item who's span-list-item__store-address-1 == wanted store address,
+            await page.waitForTimeout(5000)
             let wantedStoreDivs = await page.$$("li.store-list-item");
-            var [wantedStoreDiv] = await asyncFilter(wantedStoreDivs, async (storeItem, index)=> {
+            console.log(wantedStoreDivs)
+            var wantedStoreDiv = await asyncFilter(wantedStoreDivs, async (storeItem, index)=> {
             address = await storeItem.getProperty("innerText").then(async (jsHandle)=> await jsHandle.jsonValue());
+            console.log(address)
             if (address.includes(wantedStoreAddress)){ 
                 return index
               } 
             });
+            console.log(wantedStoreDiv)
             // "span.store-list-item__store-address-1"
             let setStoreButton = await wantedStoreDiv.$("button[data-selectable-store-text='Set as my store']")
             // wait for reload,
@@ -780,6 +785,9 @@ async function setUpBrowser(task) {
         page.waitForNavigation({waitUntil: "load"})
       ])
       break;
+      }
+      case "": {
+        break;
       }
       
   }
@@ -1109,13 +1117,17 @@ async function getDollarGeneralCoupons(browser, page){
   var path = "../requests/server/collections/dollargeneral/promotions/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
+  var reqSet = new Set();
   const newPagePromise = new Promise(x => browser.once('targetcreated', target => x(target.page()))); 
   fileName = path+fileName ; 
   var wantedResponseRegex = /\/bin\/omni\/coupons\/(products|recommended)/
   await page.setRequestInterception(true);
   page.on("request", (req)=> {
     if (req.isInterceptResolutionHandled()) return ;
-    else req.continue();
+    else {
+      reqSet.add(req.url())
+      req.continue()
+    };
   })
   await page.goto("https://www.dollargeneral.com/dgpickup/deals/coupons", {timeout: 240000})
   page.on("response", async (res)=> {
@@ -1125,6 +1137,9 @@ async function getDollarGeneralCoupons(browser, page){
       return; 
     }
     return ; 
+  })
+  page.on("requestfinished", (req)=> {
+    reqSet.delete(req.url())
   })
   // page has reloaded to correct wanted location;
   // wait for iterations to be set 
@@ -1167,6 +1182,7 @@ async function getDollarGeneralCoupons(browser, page){
         if (err instanceof TimeoutError){
           console.log("Timeout Error => ", err)
           badRequests.push(itemlink)
+          console.log(reqSet)
         } else {
           console.log("New Error", err);
           badRequests.push(itemlink)
@@ -1265,7 +1281,7 @@ async function getFamilyDollarCoupons(browser, page){
     page.waitForNavigation({waitUntil: "load"}),
     page.waitForNetworkIdle({idleTime: 3000})
   ])
-  await browser.close();
+  //await browser.close();
   await wrapFile(fileName);
   console.log("file finished : ", fileName) ; 
   return null; 
@@ -1324,7 +1340,7 @@ async function getFamilyDollarItems(browser, page){
 
     await page.waitForNetworkIdle({idleTime: 3000}); 
     await wrapFile(fileName);
-    await browser.close(); 
+    //await browser.close(); 
     console.log("finished file", fileName);
     return null
 }
@@ -1490,6 +1506,74 @@ return new Promise((resolve, reject) => {
 });
 }
 
+
+async function insertRun(functionObject, collectionName, executionType, funcArgs, close=false, _id=undefined, description=null){
+  /**
+   * @example : the query I want => 
+   * db.runs.updateOne({"_id": ObjectId("6338abc4e0a000b5452cd56d"), "functions.function": <functionName>}, {$set: {"functions.$[pr].duration": <myvalue>}}, {arrayFilters: [{"pr.function": <functionName>}]})
+   */
+  const client = new MongoClient(process.env.MONGO_CONN_URL);
+  const dbName = 'new';
+  var document, result; 
+  await client.connect();
+  console.log("Connected to Server")
+  const db = client.db(dbName);
+  const collection = db.collection(collectionName);
+  // wrap functions metadata, determine type, get min started at, get total duration 
+  if (close){
+    if (!_id) throw new Error("_id must be present for update operations");
+    // @ every close function time must be incremented, duration must be incremented
+    // subtract time to log function execution time
+    // increment duration by this difference
+    let filter = {"_id": _id} 
+    let update = {
+      "$set": {
+        "duration": { 
+          "$divide": [{"$subtract": ["$$NOW", "$startedAt"]}, 1000]
+        },
+        "endedAt": "$$NOW"
+      }}
+    await collection.updateOne(filter, [update]);
+    update = {
+      "$set": {
+        "duration": { 
+          "$divide": [{"$subtract": ["$$NOW", "$startedAt"]}, 1000]
+        },
+        "endedAt": "$$NOW"
+      }}
+    jk = await collection.findOne({...filter, "functions.function": "yo"});
+    console.log("updated 1 document into ", collectionName)
+    result = _id
+  } else {
+    document = {
+      executeVia: executionType,
+      startedAt: new Date(),
+      duration: 0,
+      functions: [
+        {
+          function: functionObject.name,
+          description: description,
+          vars: funcArgs,
+          duration: 0,
+          startedAt: new Date() 
+        },
+        {
+          function: "yopla",
+          description: "sample",
+          vars: {yy: 1},
+          duration: 10,
+          startedAt: new Date(201201122) 
+
+        }
+      ]
+    }
+    result = (await collection.insertOne(document)).insertedId
+    console.log("inserted 1 document into ", collectionName)
+    // returns inserted run document for update operations once function has successfully completed
+  }
+  await client.close()
+  return result
+}
 // puppeteer.launch({
 //   headless: false,
 //   slowMo: 0, 
@@ -1509,10 +1593,13 @@ return new Promise((resolve, reject) => {
 //   })
 // })
 
-setUpBrowser(task='krogerTrips').then(([browser, page])=> {
-  getKrogerTrips(browser, page)
-})
-// setUpBrowser(task='familyDollarInstacartItems').then(([browser, page])=> {
-//   getInstacartItems(browser, page)
+// setUpBrowser(task='krogerTrips').then(([browser, page])=> {
+//   getKrogerTrips(browser, page)
 // })
-//wrapFile("..\\requests\\server\\collections\\familydollar\\instacartItems\\9_28_2022.json")
+setUpBrowser(task='familyDollarItems').then(async ([browser, page])=> {
+  await getFamilyDollarItems(browser, page)
+  await getFamilyDollarCoupons(browser, page)
+  let [browser, page] = await setUpBrowser(task='dollarGeneralCoupons')
+  await getDollarGeneralCoupons(browser, page)
+  await getDollarGeneralItems(browser,page)
+})

@@ -32,7 +32,6 @@ function cleanup(object){
 function insertData(listOfObjects, collectionName){
     if (listOfObjects.length===0) {
         throw new Error("bulkWrite Operations Cannot Write an Empty list!")
-        return
     }
     const client = new MongoClient(process.env.MONGO_CONN_URL)
     const dbName = 'new'
