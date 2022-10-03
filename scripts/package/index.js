@@ -23,7 +23,10 @@ async function getTestWebsite() {
     executablePath:
       "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
     dumpio: false,
-    args: ["--start-maximized","--profile-directory=Profile 1"],
+    args: [
+      "--start-maximized",
+      "--profile-directory=Profile 1",
+    ],
     userDataDir: "C:\\c\\Profiles",
     devtools: false,
     timeout: 0,
@@ -226,12 +229,15 @@ async function setUpBrowser(task) {
   var browser, page;
   try { 
     browser = await puppeteer.launch({
-      headless: false,
+      headless: task==="foodDepotCoupons"? true : false,
       slowMo: 888, 
       executablePath:
         "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
       dumpio: true,
-      args: ["--start-maximized","--profile-directory=Profile 1"],
+      args: [
+        "--start-maximized",
+        "--profile-directory=Profile 1",
+      ],
       userDataDir: "C:\\c\\Profiles",
       defaultViewport: {width: 1920, height: 1080},
       devtools: false,
@@ -519,19 +525,22 @@ async function setUpBrowser(task) {
           * @requires verification via mobile, needs to be coordinated with iPhone Automations. (10 min window on verfication, should be simple if automation of task (DAG) amd automation of phone shortcut occur at same time always).
         */
         var wantedAddress = null// "3696 Highway 5";
-        await page.goto(`https://www.fooddepot.com/coupons/`);
+        await page.goto(`https://www.fooddepot.com/coupons/`, {waitUntil: "load"});
         // nav to page => AppCard App That Requires MFA ; allow additional time for shortcut to run
         page.setDefaultTimeout(timeout=120000)
         var appCardIFrame = await page.$("#ac-iframe");
         console.log(appCardIFrame)
         let frameCoupons = await appCardIFrame.contentFrame();
-        console.log(frameCoupons)
+        console.log(frameCoupons.url())
         if (appCardIFrame){
-          let phoneInput = await frameCoupons.waitForSelector("#phone");
+          let phoneInput = await frameCoupons.$("#phone");
+          console.log(phoneInput)
           await phoneInput.type(PHONE_NUMBER, {delay: 400})
+          console.log("wrote phone number")
           await frameCoupons.$eval("button.button-login.default", async (el)=>{
             await el.click();
           })
+          console.log("clicked login button")
           var parsedVerificationCode = await getFoodDepotCode(); 
           let codeInput = await frameCoupons.waitForSelector("code-input")
           await codeInput.type(parsedVerificationCode, {delay: 200})
@@ -786,7 +795,7 @@ async function setUpBrowser(task) {
       ])
       break;
       }
-      case "": {
+      case "": {        
         break;
       }
       
@@ -1414,13 +1423,15 @@ async function getFoodDepotItems(browser, page){
     await page.waitForNetworkIdle({idleTime: 4000});
     newHeight = await body.getProperty("offsetHeight").then((jsHandle)=> jsHandle.jsonValue());
     console.log(newHeight)
+    let u = 1; 
     while (pageHeight !== newHeight){
       pageHeight=newHeight;
       console.log(newHeight)
       await page.keyboard.press("End");
       await page.waitForNetworkIdle({idleTime: 5500}); // what is blocking syncrohous calls if end is not pressed again, images will stall and render one by one before next image resource is called
+      u++;
       newHeight = await body.getProperty("offsetHeight").then((jsHandle)=> jsHandle.jsonValue());
-      console.log(newHeight)
+      console.log(newHeight, u)
     }
     console.log('finished ', categoryUrl, ' @ index: ', allCategories.indexOf(categoryUrl), ' of ', allCategories.length-1)
   }
@@ -1441,28 +1452,20 @@ async function getFoodDepotCoupons(browser, page){
   // page = await browser.pages()
   // page = page[0]
   await page.waitForNetworkIdle({idleTime:3000});
-  await page.setRequestInterception(true);
+  var path = "../requests/server/collections/fooddepot/coupons/"
+  var fileName = new Date().toLocaleDateString().replaceAll("/", "_") + ".json";
+  var offset = 0;
+  let wantedResponseRegex = /unclipped_recommendation_flag/
+  fileName = path + fileName ;
   page.on("response", async (res)=> {
-    let url = await res.url();
+    let url = res.url();
     if (url.match(wantedResponseRegex)){
       offset+= await writeResponse(fileName=fileName, response=res, url=url, offset=offset);
     }
     return ;
   })
-  page.on('request', (request)=>{
-    if (request.isInterceptResolutionHandled()) return;
-    else request.continue();
-  })
-  await page.goto("https://www.dollargeneral.com/dgpickup/deals/coupons")
-  var path = "../requests/server/collections/dollargeneral/coupons/"
-  var fileName = new Date().toLocaleDateString() + ".json";
-  var offset = 0;
-  let wantedResponseRegex = /https\:\/\/appcard\.com\/baseapi\/.*\/token\/.*\/offers\/unclipped_recommendation_flag/
-  fileName = path + fileName ;
-  await page.reload({waitUntil: "networkidle0"});
-  
-  // optional pick another store location
-  await page.waitForNetworkIdle({waitUntil: 5000});
+  await page.waitForNetworkIdle({idleTime: 15000});
+  await page.waitForTimeout(13000)
   await wrapFile(fileName);
   await browser.close();
   console.log("finished file", fileName);
@@ -1509,8 +1512,7 @@ return new Promise((resolve, reject) => {
 
 async function insertRun(functionObject, collectionName, executionType, funcArgs, close=false, _id=undefined, description=null){
   /**
-   * @example : the query I want => 
-   * db.runs.updateOne({"_id": ObjectId("6338abc4e0a000b5452cd56d"), "functions.function": <functionName>}, {$set: {"functions.$[pr].duration": <myvalue>}}, {arrayFilters: [{"pr.function": <functionName>}]})
+   * @param 
    */
   const client = new MongoClient(process.env.MONGO_CONN_URL);
   const dbName = 'new';
@@ -1534,20 +1536,50 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
         "endedAt": "$$NOW"
       }}
     await collection.updateOne(filter, [update]);
-    update = {
+    let updateElementPipeline = {
+        $set:  {
+          "functions": {
+              $map: {
+                input: "$functions",
+                in:{
+                  $cond: {
+                    if: {$eq: ["$$this.function", "yox"]},
+                    then: {$mergeObjects: ["$$this", {"endedAt": "$$NOW", "duration": {"$divide" : [{$subtract: ["$$NOW", "$$this.startedAt"]}, 1000]}}]},
+                    else: "$$this"}
+                  } 
+              }
+          }}
+      }
+      await collection.updateOne(filter, [updateElementPipeline]);
+      console.log("updated 1 document into ", collectionName)
+      result = _id
+    } else if (_id) {
+    let filter = {"_id": _id} 
+    let timestamp = new Date()
+    result = _id
+    let update = {
       "$set": {
         "duration": { 
-          "$divide": [{"$subtract": ["$$NOW", "$startedAt"]}, 1000]
+          "$divide": [{"$subtract": [timestamp, "$startedAt"]}, 1000]
         },
-        "endedAt": "$$NOW"
-      }}
-    jk = await collection.findOne({...filter, "functions.function": "yo"});
-    console.log("updated 1 document into ", collectionName)
-    result = _id
-  } else {
+        "endedAt": timestamp,
+      }
+    };
+    await collection.updateOne(filter, [update]);
+    update = {"$push": {"functions": {
+      function: 'billybean',
+      description: description,
+      vars: funcArgs,
+      duration: 0,
+      startedAt: timestamp
+    }}};
+    await collection.updateOne(filter, update);
+    console.log("updated 1")
+  }else {
+    let startedAt = new Date(); 
     document = {
       executeVia: executionType,
-      startedAt: new Date(),
+      startedAt: startedAt,
       duration: 0,
       functions: [
         {
@@ -1555,15 +1587,7 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
           description: description,
           vars: funcArgs,
           duration: 0,
-          startedAt: new Date() 
-        },
-        {
-          function: "yopla",
-          description: "sample",
-          vars: {yy: 1},
-          duration: 10,
-          startedAt: new Date(201201122) 
-
+          startedAt: startedAt
         }
       ]
     }
@@ -1592,14 +1616,10 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
   
 //   })
 // })
-
-// setUpBrowser(task='krogerTrips').then(([browser, page])=> {
-//   getKrogerTrips(browser, page)
-// })
-setUpBrowser(task='familyDollarItems').then(async ([browser, page])=> {
-  await getFamilyDollarItems(browser, page)
-  await getFamilyDollarCoupons(browser, page)
-  let [browser, page] = await setUpBrowser(task='dollarGeneralCoupons')
-  await getDollarGeneralCoupons(browser, page)
-  await getDollarGeneralItems(browser,page)
+setUpBrowser(task='foodDepotCoupons').then(async ([browser, page])=> {
+  let _id = insertRun(getFoodDepotCoupons, "runs", "node_call", [], false, undefined, "Puppeteer Node.Js Call to All Food Depot Coupons")
+  await getFoodDepotCoupons(browser, page);
+  _id = insertRun(getFoodDepotCoupons, "runs", "node_call", [], true, _id)
+  await getFoodDepotItems(browser, page);
+  _id = insertRun(getFoodDepotItems, "runs", "node_call", [], true, _id, "Puppeteer Node.js Call to All Food Depot Items Pages")
 })

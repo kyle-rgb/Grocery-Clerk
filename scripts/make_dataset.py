@@ -2455,4 +2455,6 @@ def findAndInsertExtraPromotions(head):
 
 # findAndInsertExtraPromotions("./requests/server/collections/kroger/digital/")
 # findAndInsertExtraPromotions("./requests/server/collections/kroger/cashback/")
-createDecompositions('./requests/server/collections/kroger', wantedPaths=[], additionalPaths=["familydollar/coupons", "dollargeneral/promotions"])
+# createDecompositions('./requests/server/collections/kroger', wantedPaths=[], additionalPaths=["familydollar/coupons", "dollargeneral/promotions"])
+backupDatabase()
+createDBSummaries('new')
