@@ -73,13 +73,13 @@ from tzwhere import tzwhere
 # Decomposition AGs: [
     # "krogerTrips": { setUpBrowser >> getKrogerTrips >> createDecompositions:py3.7 },
     # "krogerCoupons": {setUpBrowser >> getKrogerCoupons >> createDecompositions:py3.7},
+    # "familyDollarCoupons" : {setUpBrowser >> getFamilyDollarCoupons >> deconstructDollars:py3.7},
+    # "dollarGeneralCoupons": {setUpBrowser >> getDollarGeneralCoupons >> deconstructDollars:py3.7},
     # "aldiItems": {setUpBrowser >> getInstacartItems >> processInstacartItems:node16.13.2 },
     # "publixItems" : {setUpBrowser >> getInstacartItems >> processInstacartItems:node16.13.2},
     # "publixCoupons": {setUpBrowser >> getPublixCoupons >> summarizeNewCoupons:node16.13.2},
     # "familyDollarInstacartItems": {setUpBrowser >> getInstacartItems >> processInstacartItems:node16.13.2},
-    # "familyDollarCoupons" : {setUpBrowser >> getFamilyDollarCoupons >> deconstructDollars:py3.7},
     # "familyDollarItems": {setUpBrowser >> getFamilyDollarItems >> processFamilyDollarItems:node16.13.2},
-    # "dollarGeneralCoupons": {setUpBrowser >> getDollarGeneralCoupons >> deconstructDollars:py3.7},
     # "dollarGeneralItems": {setUpBrowser >> getDollarGeneralItems >> ....}
     # "foodDepotItems": {setUpBrowser >> getFoodDepotItems >> summarizeFoodDepot:node16.13.2}
     # "foodDepotCoupons": {setUpBrowser >> getFoodDepotCoupons >> summarizeNewCoupons:node16.13.2}
@@ -1200,6 +1200,7 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
             products = filter(lambda p: 'eligibleProductsResult' in p.keys(), data)
             coupons = filter(lambda p: 'Coupons' in p.keys(), data)
         for item in products:
+            # specific implementation for python's datetime module
             utcTimestamp = item["acquisition_timestamp"] / 1000
             utcTimestamp = dt.datetime.fromtimestamp(utcTimestamp)
             utcTimestamp = mytz.localize(utcTimestamp).astimezone(pytz.utc)
@@ -1222,20 +1223,31 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
                     productsForCoupons[couponId].add(i.get('UPC'))
 
                 # deconconstuct to prices
-                newPrices.append({'value': i.get('OriginalPrice'), 'type': 'Regular', 'isPurchase': False, 'locationId': storeCode, 'utcTimestamp': utcTimestamp,\
+                newPrices.append({'value': i.get('OriginalPrice'),\
+                    'type': 'Regular', 'isPurchase': False,\
+                         'locationId': storeCode, 'utcTimestamp': utcTimestamp,\
                     'upc': i.get('UPC'), 'quantity': 1 , 'modalities': modalities, })
                 if i.get('OriginalPrice')!=i.get('Price'):
-                    newPrices.append({'value': i.get('Price'), 'type': 'Sale', 'isPurchase': False, 'locationId': storeCode, 'utcTimestamp': utcTimestamp,\
+                    newPrices.append({'value': i.get('Price'),\
+                        'type': 'Sale', 'isPurchase': False,\
+                            'locationId': storeCode, 'utcTimestamp': utcTimestamp,\
                     'upc': i.get('UPC'), 'quantity': 1 , 'modalities': modalities, })
                 # deconstruct to inventories
                 itemStatus = inventoryKeys[str(i.get('InventoryStatus'))]
-                newInventory.append({'stockLevel': itemStatus, 'availableToSell': i.get('AvailableStockStore'), 'locationId': storeCode, 'utcTimestamp': utcTimestamp, 'upc': i.get('upc')})     
+                newInventory.append({'stockLevel': itemStatus,\
+                    'availableToSell': i.get('AvailableStockStore'),\
+                        'locationId': storeCode, 'utcTimestamp': utcTimestamp,\
+                            'upc': i.get('upc')})     
                 # deconstuct into Items
-                itemDoc = {'description': i.get('Description'), 'upc': i.get('UPC'), 'images': [{'url': i.get('Image'), 'perspective': 'front', 'main': True, 'size': 'xlarge'}],\
+                itemDoc = {'description': i.get('Description'),\
+                    'upc': i.get('UPC'),\
+                        'images': [{'url': i.get('Image'), 'perspective': 'front',\
+                            'main': True, 'size': 'xlarge'}],\
                     'soldInStore': i.get('IsSellable'),"modalities": modalities}
 
                 if i.get('RatingReviewCount')!=0:
-                    itemDoc['ratings'] = {'avg': i.get('AverageRating'), 'ct': i.get('RatingReviewCount')}
+                    itemDoc['ratings'] = {'avg': i.get('AverageRating'),\
+                        'ct': i.get('RatingReviewCount')}
     
                 if 'Category' in i:
                     itemDoc['categories'] = i.get('Category').split('|')

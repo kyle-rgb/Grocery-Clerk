@@ -29,6 +29,10 @@ function cleanup(object){
     return object
 }
 
+function setEquivalent(setA, setB){
+    return setA.size === setB.size && [...setA].every((x)=> setB.has(x))
+}
+
 function insertData(listOfObjects, collectionName){
     if (listOfObjects.length===0) {
         throw new Error("bulkWrite Operations Cannot Write an Empty list!")
@@ -943,36 +947,262 @@ function processFamilyDollarItems(target, defaultLocation="2394"){
     return null
 }
 
+function processDollarGeneralItems(target, couponParser, itemParser){
+    // Items from promotion scrapes currently: items => as defined below and prices and inventories
+        // [description: String, upc: String, images: [{url: String | null, perspective: String, main: Boolean, size: String "xlarge" }]]
+        // soldInStore: Boolean , IsBopisEligible: Boolean, modalities: Array = ["IN_STORE", "PICKUP", "SHIP"]
+    /**
+     * length = 104;
+     * url : "https://www.dollargeneral.com/bin/omni/pickup/categories?_=1664128677608&pageSize=12&pageStartIndex=0&storeNumber=13141&sort=0&inStock=false&dgPickup=false&brand=&inStoreOnly=false&dgShipToHome=false&mode=1&categoryId=1184&includeProducts=true&deviceId={salt}&clientOriginStoreNumber="
+     * acquisition_timestamp : Int+ 
+     * categoriesResult : {
+        categories: {
+            ItemCount: 1237, 
+            children_data: [
+                {
+                    "id": 2385: [1005, 3076],
+                    parent_id: 1184,
+                    name: "dollar deals",
+                    image: "https://commerce.dollargeneral.com/media/catalog/category/dollardeals.jpg"
+                }
+            ],
+            caregoryId: 1184,  
+        }, 
+        ItemList: {
+            Items: [
+                {
+                    Description: "Dunkin Donuts K-Cups Original - 10 Ct",
+                    UPC: 881334002980,
+                    Price: 21.50,
+                    OriginalPrice: 26.25,
+                    Image: "https://dggo.dollargeneral.com/images/16/01/16014001_0.jpg",
+                    DealsAvailable: false,
+                    IsGenericBrand: false, :: Items
+                    IsSellable: true, :: Items
+                    IsBopisEligible: true, :: Items
+                    AvailableQty: 0 [0, 480], :: Inventories
+                    AvailableStockStore: 0 [0, 480], :: Inventories 
+                    CartQuantity: 0 [0, 0], :: delete
+                    DealsStatus: 5 [3, 5], :: Prices 
+                    AverageRating: 4.5 [0, 5], :: Items
+                    RatingReviewCount: 1820 [0, 38464], :: Items
+                    Category: "Coffee & Tea|Week Long Deals|Deals on Coffee", :: Items
+                    InventoryStatus: 1 [1,3], :: Inventories
+                    SponsoredProductId: 0 [0,0], :: delete
+                    SponsoredAgreementId: 0 [0,0], :: delete
+                    SponsoredDisplayRow: 0 [0,0], :: delete
+                    shipToHomeQuantity: 0 [0, 0], :: delete
+                    isShipToHome: true, :: Items
+                    isPopshelfShipToHome: false, ::
+                    RecordType: 0 [0,0]
+                }
+            ],
+            PaginationInfo: {
+                "StartRecordIndex": 0 [0, 1236],
+                "ExpectedRecordsPerPage": 12,
+                "TotalRecords": 1237
+            },
+            FilterBrands: [{
+                Name: "321 Party!",
+                ItemCount: 1 [1, 83]
+            }],
+            HasProducts: false
+        },
+        infoMessage: "Due to higher than usual demand ..."
+    }
+     
+     * includeShipToHome : false 
+     */
+    
+    var coupons = [], items = [], prices=[], inventories=[], mapWithItemKeys={}, utcTimestamp, locationId, offerId;
+    var couponsForDB = [], itemsForDB = [], setSet = true; 
+    let scrapedArray = fs.readFileSync(target)
+    scrapedArray = JSON.parse(scrapedArray);
+    scrapedArray.sort((a, b) => {
+        return a.url.includes("products") && !b.url.includes("products") ? -1 : 0; 
+    })
+    // separate coupons from items
+    scrapedArray.filter((object)=> {
+        if ("categoriesResult" in object){
+            // items from on-sale page
+            items = items.concat(object.categoriesResult.ItemList.Items)
+        } else if ("eligibleProductsResult" in object){
+            // products from coupon scrapes
+            utcTimestamp = object.acquisition_timestamp;
+            locationId = object.url.match(/store=(\d+)/)[1];
+            offerId = object.url.match(/couponId=([^&]+)/)[1];
+            // all items in list will belong to same location and offerId
+            object.eligibleProductsResult.Items.map((item)=> {
+                item.UPC = String(item.UPC)
+                item["modalities"] = itemParser["modalities"].create(item);
+                if (offerId in mapWithItemKeys){
+                    mapWithItemKeys[offerId].add(item.UPC)
+                } else{
+                    mapWithItemKeys[offerId] = new Set([item.UPC])
+                 }
+                let newItem = {};
+                let relevantKeys = Object.keys(itemParser)
+                for (key of relevantKeys){
+                    let actions = itemParser[key]
+                    if (key === "OfferID"){
+                        item[key] = actions.convert(item[key], mapWithItemKeys)
+                    } else if (key === "RatingReviewCount") {
+                        item[key] = actions.convert(item[key], item["AverageRating"])
+                    } else if (key === "_prices"){
+                        prices = prices.concat(actions.convert(item, locationId, utcTimestamp))
+                    } else if (key==="_inventories"){
+                        inventories.push(actions.convert(item, locationId, utcTimestamp))
+                    } else {
+                        actions.convert && item[key]? item[key] = actions.convert(item[key]) : 0;
+                    }
+                    actions.to ? newItem[actions.to] = item[key] : 0;
+                    actions.keep ? newItem[key] = item[key] : 0;
+                    actions.bool && item[key] ? newItem[key] = item[key]: 0;
+                };
+                itemsForDB.push(newItem)    
 
-processInstacartItems('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
-summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons/", {
-    "id": {keep: true},
-    "dcId": {keep: true},
-    "waId": {keep: true},
-    "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
-    "description": {to: "shortDescription"},
-    "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
-    "minimumPurchase": {to: "requirementQuantity"},
-    "categories": {keep: true},
-    "imageUrl": {keep: true},
-    "brand": {to: "brandName"},
-    "savingType": {to: "type"},
-    "dc_popularity": {to: "popularity"}
-}, uuid="id")
-processInstacartItems('../../../scripts/requests/server/collections/aldi/items/', "23150", uuid="legacyId")
-summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
-summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
-    "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
-    "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
-    "effectiveDate": {to: "endDate", convert: function (x) {return new Date(x)}},
-    "offerId": {keep: true},
-    "targetOfferId": {keep: true},
-    "category": {to: "categories", convert: function(x) {return [x]}},
-    "image": {to: "imageUrl", convert: function (x){return x.links.lg}},
-    "brand": {to: "brandName"},
-    "details": {to: "terms"},
-    "offerType": {to: "type" }
-}, uuid="targetOfferId")
-processInstacartItems('../../../scripts/requests/server/collections/familydollar/instacartItems/', "2394", uuid="legacyId")
-processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
-zipUp()
+            })
+        } else if ("Coupons" in object) {
+            utcTimestamp = object.acquisition_timestamp;
+            object.Coupons.map((coupon)=> {
+                let newPromo = {};
+                let relevantKeys = Object.keys(coupon).filter((c)=> c in couponParser)
+                for (key of relevantKeys){
+                    let actions = couponParser[key]
+                    if (key === "OfferID"){
+                        console.log(coupon[key] in Object.keys(mapWithItemKeys))
+                        actions.convert ? coupon[key] = actions.convert(coupon[key], mapWithItemKeys) : 0;
+                    } else if (key === "OfferDescription") {
+                        actions.convert ? coupon[key] = actions.convert(coupon) : 0;
+                    }
+                    else {
+                        actions.convert ? coupon[key] = actions.convert(coupon[key]) : 0;
+                    }
+                    
+                    actions.to ? newPromo[actions.to] = coupon[key] : 0;
+                    actions.keep ? newPromo[key] = coupon[key] : 0;
+                    actions.bool && coupon[key] ? newPromo[key] = coupon[key]: 0;
+                };
+                couponsForDB.push(newPromo)    
+            })
+
+        }
+    })
+    // iteration for items => items, prices, inventories
+    // itetation for coupons => coupons
+    // coupons.map((coupon)=> {
+    
+    // })
+
+    // console.log(couponsForDB.length)
+    // console.log(itemsForDB.slice(0, 3))
+    // console.log(prices.slice(0, 3))
+    // console.log(inventories.slice(0, 3))
+    console.log(couponsForDB.slice(0 , 3))
+
+    return;
+}
+processDollarGeneralItems("./073022.json",
+couponParser={
+    OfferID: {to: "id"},
+    OfferCode: {to: "offerCode"},
+    OfferGS1: {to: "offerGS1", bool: true},
+    OfferDescription: {to: "shortDescription", convert: (x)=> {
+        return x.OfferDescription.match(/^save/i) ? x.OfferDescription : x.OfferSummary + x.OfferDescription;
+    }},
+    BrandName: {to: "brandName"},
+    CompanyName: {to: "companyName"},
+    OfferType: {to: "offerType"},
+    OfferDisclaimer: {to: "terms", bool: true},
+    IsManufacturerCoupon: {to: "isManufacturerCoupon"},
+    RewaredCategoryName: {to: "categories"},
+    OfferActivationDate: {to: "startDate"},
+    OfferExpirationDate: {to: "expirationDate"},
+    RewaredOfferValue: {to: "value"},
+    MinQuantity: {to: "requirementQuantity"},
+    RedemptionLimitQuantity: {to: "redemptionsAllowed"},
+    RecemptionFrequency: {to: "redemptionFreq"},
+    Image1: {to: "imageUrl"},
+    Image2: {to: "imageUrl2"},
+    MinTripCount: {bool: true},
+    MinBasketValue: {bool: true},
+    TimesShopQuantity: {bool: true},
+    OfferID: {to:"productUpcs", convert: (offerId, mapWithItemKeys) => {
+        return offerId in mapWithItemKeys ? Array.from(mapWithItemKeys[offerId]) : [];
+    }}
+},
+itemParser={
+    UPC: {to: "upc"},
+    Description: {to: "description"},
+    Image: {to: "images", convert: (img)=> {
+        return [{url: img, perspective: 'front', main: true, size: "xlarge"}]
+    }},
+    IsSellable: {to: "soldInStore"}, 
+    IsBopisEligible: { keep: 1},
+    IsGenericBrand: {keep: 1},
+    modalities: {create: (item)=> {
+        let mParse = {"IsSellable": "IN_STORE", "isShipToHome": "SHIP", "isPopshelfShipToHome": "SHIP", "IsBopisEligible": "PICKUP"}
+        return Object.entries(item).map(([k, v])=> {return k in mParse && v? k : 0;}).filter((k)=>k).map((truthyKey)=> {return mParse[truthyKey]})
+    }},
+    RatingReviewCount: {bool: 0, to: "ratings", convert: (ratingCount, ratingAverage)=> {
+        if (ratingCount){
+            return {avg: ratingAverage, ct: ratingCount}
+        }
+    }},
+    Categories: {bool:true, convert: (x)=> {
+        return x.split("|")
+    }},
+    _prices: {convert: (full_item, locationId, utcTimestamp) => { 
+        let returnValues = [];
+        returnValues.push({"value": full_item.OriginalPrice, "type": "Regular", "isPurchase": false,
+        "locationId": locationId, "utcTimestamp": utcTimestamp, "upc": full_item.UPC, "quantity": 1,
+        modalities: full_item.modalities });
+        if (full_item.OriginalPrice !== full_item.Price){
+            returnValues.push({"value": full_item.Price, "type": "Sale", "isPurchase": false,
+            "locationId": locationId, "utcTimestamp": utcTimestamp, "upc": full_item.UPC, "quantity": 1,
+            modalities: full_item.modalities });
+        }
+        return returnValues;
+    }},
+    _inventories: {convert: (full_item, locationId, utcTimestamp)=> {
+        let itemStatus = full_item.InventoryStatus; 
+        itemStatus = itemStatus ==="1"? "TEMPORARILY_OUT_OF_STOCK" : itemStatus === "2" ? "LOW" : "HIGH"; 
+        return {"stockLevel": itemStatus, "availableToSell": full_item.AvailableStockStore, "locationId": locationId,
+        "utcTimestamp": utcTimestamp, "upc": full_item.UPC}
+    }}
+})
+// processDollarGeneralItems("../../../scripts/requests/server/collections/dollargeneral/items/9_25_2022.json")
+// processDollarGeneralItems("./073022.json")
+
+// processInstacartItems('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
+// summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons/", {
+//     "id": {keep: true},
+//     "dcId": {keep: true},
+//     "waId": {keep: true},
+//     "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
+//     "description": {to: "shortDescription"},
+//     "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
+//     "minimumPurchase": {to: "requirementQuantity"},
+//     "categories": {keep: true},
+//     "imageUrl": {keep: true},
+//     "brand": {to: "brandName"},
+//     "savingType": {to: "type"},
+//     "dc_popularity": {to: "popularity"}
+// }, uuid="id")
+// processInstacartItems('../../../scripts/requests/server/collections/aldi/items/', "23150", uuid="legacyId")
+// summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
+// summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
+//     "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
+//     "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
+//     "effectiveDate": {to: "endDate", convert: function (x) {return new Date(x)}},
+//     "offerId": {keep: true},
+//     "targetOfferId": {keep: true},
+//     "category": {to: "categories", convert: function(x) {return [x]}},
+//     "image": {to: "imageUrl", convert: function (x){return x.links.lg}},
+//     "brand": {to: "brandName"},
+//     "details": {to: "terms"},
+//     "offerType": {to: "type" }
+// }, uuid="targetOfferId")
+// processInstacartItems('../../../scripts/requests/server/collections/familydollar/instacartItems/', "2394", uuid="legacyId")
+// processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
+// zipUp()
