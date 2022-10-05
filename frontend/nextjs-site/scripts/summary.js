@@ -21,7 +21,7 @@ function cleanup(object){
         if (v && typeof v ==='object' && !Object.keys(v).length || v===null || v === undefined || v === '' || k === '__typename' || v === 'none' || (Object.keys(object).length===1 && typeof v === 'boolean' && !v)) {
             if (Array.isArray(object)) {
                 object.splice(k, 1)
-            } else {
+            } else if (!(v instanceof Date)) {
                 delete object[k];
             }
         }
@@ -33,7 +33,7 @@ function setEquivalent(setA, setB){
     return setA.size === setB.size && [...setA].every((x)=> setB.has(x))
 }
 
-function insertData(listOfObjects, collectionName){
+function insertData(listOfObjects, collectionName, mock=false){
     if (listOfObjects.length===0) {
         throw new Error("bulkWrite Operations Cannot Write an Empty list!")
     }
@@ -45,8 +45,13 @@ function insertData(listOfObjects, collectionName){
         console.log('Connected successfully to server')
         const db = client.db(dbName)
         const collection = db.collection(collectionName);
-        let cursor = await collection.insertMany(listOfObjects)
-        console.log(`inserted ${cursor.insertedCount} into ${collectionName}`)
+        if (!mock){
+            let cursor = await collection.insertMany(listOfObjects)
+            console.log(`inserted ${cursor.insertedCount} into ${collectionName}`)
+        } else {
+            console.log("wouldve inserted ", listOfObjects.length, " into ", collectionName)
+        }
+        
         return 'done.'
     }
 
@@ -56,7 +61,7 @@ function insertData(listOfObjects, collectionName){
         .finally(()=> client.close())
 }
 
-async function insertFilteredData(id, collectionName, newData = undefined, dbName = 'new'){
+async function insertFilteredData(id, collectionName, newData = undefined, dbName = 'new', mock=false){
     const client = new MongoClient(process.env.MONGO_CONN_URL)
     await client.connect();
     console.log('Connected successfully to server')
@@ -70,14 +75,30 @@ async function insertFilteredData(id, collectionName, newData = undefined, dbNam
     const results = await cursor.toArray()
     const currentSet = new Set(results.map((d)=> d[id]))
     newData = newData.filter((d)=> !currentSet.has(d[id]))
-    if (newData.length===0){
+    if (newData.length===0 && !mock){
         console.log('no new data to enter')
-    } else {
+    } else if (!mock){
         let ct = await collection.insertMany(newData)
         console.log('inserted ', ct.insertedCount, ' into ', collectionName)
+    } else {
+        console.log("wouldve inserted ", newData.length , " into ", collectionName)
     }
     client.close()
     return results
+}
+
+async function queryDB(id="imageUrl2", collectionName, dbName='new'){
+    const client = new MongoClient(process.env.MONGO_CONN_URL);
+    await client.connect();
+    console.log("Connected to server....");
+    const db = client.db(dbName);
+    const collection = db.collection(collectionName);
+    var filter;
+    typeof id === "string" ? filter[id] = {$exists: true} : filter = id; 
+    var results = collection.find(filter, {limit: 5});
+    results = await results.toArray();
+    console.log(results);
+    client.close(); 
 }
 
 function processInstacartItems(target, defaultLocation=null, uuid){
@@ -1013,31 +1034,35 @@ function processDollarGeneralItems(target, couponParser, itemParser){
      
      * includeShipToHome : false 
      */
-    
-    var coupons = [], items = [], prices=[], inventories=[], mapWithItemKeys={}, utcTimestamp, locationId, offerId;
-    var couponsForDB = [], itemsForDB = [], setSet = true; 
-    let scrapedArray = fs.readFileSync(target)
-    scrapedArray = JSON.parse(scrapedArray);
+    let scrapedArray = new Array(); 
+    if (!target.endsWith("/")) target+="/"; 
+    let files = fs.readdirSync(target, {encoding: 'utf8', withFileTypes: true}).filter((d)=> d.isFile()).map((d)=> d.name);
+    let targetHeirarchy = target.slice(target.indexOf("dollargeneral"))
+    scrapedArray = files.map((d)=> JSON.parse(fs.readFileSync(target+d))).flat();
+
+    var couponsForDB = [], items = [], prices=[], inventories=[], mapWithItemKeys={}, utcTimestamp, locationId, offerId;
+    var itemsForDB = [];
     scrapedArray.sort((a, b) => {
         return a.url.includes("products") && !b.url.includes("products") ? -1 : 0; 
     })
     // separate coupons from items
     scrapedArray.filter((object)=> {
-        if ("categoriesResult" in object){
-            // items from on-sale page
-            items = items.concat(object.categoriesResult.ItemList.Items)
-        } else if ("eligibleProductsResult" in object){
+        if ("eligibleProductsResult" in object || 'categoriesResult' in object){
+            // needs modalities, cleanup ratings
+            items = object.eligibleProductsResult?.Items || object.categoriesResult?.ItemList.Items; 
             // products from coupon scrapes
             utcTimestamp = object.acquisition_timestamp;
-            locationId = object.url.match(/store=(\d+)/)[1];
-            offerId = object.url.match(/couponId=([^&]+)/)[1];
+            locationId = object.url.match(/(?:store|storeNumber)=(\d+)/)[1];
+            if ("eligibleProductsResult" in object){
+                offerId = object.url.match(/couponId=([^&]+)/);
+            }
             // all items in list will belong to same location and offerId
-            object.eligibleProductsResult.Items.map((item)=> {
+            items.map((item)=> {
                 item.UPC = String(item.UPC)
                 item["modalities"] = itemParser["modalities"].create(item);
-                if (offerId in mapWithItemKeys){
+                if (offerId && offerId in mapWithItemKeys){
                     mapWithItemKeys[offerId].add(item.UPC)
-                } else{
+                } else if (offerId) {
                     mapWithItemKeys[offerId] = new Set([item.UPC])
                  }
                 let newItem = {};
@@ -1055,10 +1080,12 @@ function processDollarGeneralItems(target, couponParser, itemParser){
                     } else {
                         actions.convert && item[key]? item[key] = actions.convert(item[key]) : 0;
                     }
+                
                     actions.to ? newItem[actions.to] = item[key] : 0;
                     actions.keep ? newItem[key] = item[key] : 0;
                     actions.bool && item[key] ? newItem[key] = item[key]: 0;
                 };
+                newItem = cleanup(newItem)
                 itemsForDB.push(newItem)    
 
             })
@@ -1070,7 +1097,7 @@ function processDollarGeneralItems(target, couponParser, itemParser){
                 for (key of relevantKeys){
                     let actions = couponParser[key]
                     if (key === "OfferID"){
-                        console.log(coupon[key] in Object.keys(mapWithItemKeys))
+                        newPromo.id = coupon[key]
                         actions.convert ? coupon[key] = actions.convert(coupon[key], mapWithItemKeys) : 0;
                     } else if (key === "OfferDescription") {
                         actions.convert ? coupon[key] = actions.convert(coupon) : 0;
@@ -1081,34 +1108,40 @@ function processDollarGeneralItems(target, couponParser, itemParser){
                     
                     actions.to ? newPromo[actions.to] = coupon[key] : 0;
                     actions.keep ? newPromo[key] = coupon[key] : 0;
-                    actions.bool && coupon[key] ? newPromo[key] = coupon[key]: 0;
+                    actions.bool && coupon[key] ? newPromo[actions.to] = coupon[key]: 0;
                 };
+                newPromo = cleanup(newPromo)
                 couponsForDB.push(newPromo)    
             })
 
         }
-    })
-    // iteration for items => items, prices, inventories
-    // itetation for coupons => coupons
-    // coupons.map((coupon)=> {
-    
-    // })
+    });
+    //  will handle entering in items, prices, inventories from getDollarGeneralItems;
+    // and handle entering in promotions, items, prices & inventories from getDollarGeneralCoupons;
+    // promotions, items => insertFilteredData(id="id", collectionName="promotions", newData=this, dbName='new' )
+    couponsForDB.length>0 ? insertFilteredData("id", "promotions", couponsForDB, "new", false): 0; 
+    itemsForDB.length>0 ? insertFilteredData("upc", "items", itemsForDB, "new", false):0;
+    prices.length>0 ? insertData(prices, "prices", false):0;
+    inventories.length>0 ? insertData(inventories, "inventories", false):0;
 
-    // console.log(couponsForDB.length)
-    // console.log(itemsForDB.slice(0, 3))
-    // console.log(prices.slice(0, 3))
-    // console.log(inventories.slice(0, 3))
-    console.log(couponsForDB.slice(0 , 3))
-
+    fs.mkdirSync('../../../data/collections/'+targetHeirarchy, {recursive: true})
+    for (let file of files){
+        fs.renameSync(target+file, `../../../data/collections/${targetHeirarchy}`+file)
+    }
     return;
 }
-processDollarGeneralItems("./073022.json",
+processDollarGeneralItems("../../../scripts/requests/server/collections/dollargeneral/items",
 couponParser={
-    OfferID: {to: "id"},
     OfferCode: {to: "offerCode"},
     OfferGS1: {to: "offerGS1", bool: true},
     OfferDescription: {to: "shortDescription", convert: (x)=> {
-        return x.OfferDescription.match(/^save/i) ? x.OfferDescription : x.OfferSummary + x.OfferDescription;
+        if (x.OfferSummary.match(/^save/i)){
+            if (x.OfferDescription.match(/^on[^e]/i)) x.OfferDescription = " " + x.OfferDescription;
+            else x.OfferDescription = " on " + x.OfferDescription;
+            return x.OfferSummary + x.OfferDescription
+        } else {
+            return x.OfferDescription 
+        }
     }},
     BrandName: {to: "brandName"},
     CompanyName: {to: "companyName"},
@@ -1116,17 +1149,14 @@ couponParser={
     OfferDisclaimer: {to: "terms", bool: true},
     IsManufacturerCoupon: {to: "isManufacturerCoupon"},
     RewaredCategoryName: {to: "categories"},
-    OfferActivationDate: {to: "startDate"},
-    OfferExpirationDate: {to: "expirationDate"},
+    OfferActivationDate: {to: "startDate", convert: (dateMyTz)=> {return new Date(dateMyTz)}},
+    OfferExpirationDate: {to: "expirationDate", convert: (dateMyTz)=> {return new Date(dateMyTz)}},
     RewaredOfferValue: {to: "value"},
     MinQuantity: {to: "requirementQuantity"},
     RedemptionLimitQuantity: {to: "redemptionsAllowed"},
     RecemptionFrequency: {to: "redemptionFreq"},
     Image1: {to: "imageUrl"},
     Image2: {to: "imageUrl2"},
-    MinTripCount: {bool: true},
-    MinBasketValue: {bool: true},
-    TimesShopQuantity: {bool: true},
     OfferID: {to:"productUpcs", convert: (offerId, mapWithItemKeys) => {
         return offerId in mapWithItemKeys ? Array.from(mapWithItemKeys[offerId]) : [];
     }}
@@ -1143,7 +1173,7 @@ itemParser={
     modalities: {create: (item)=> {
         let mParse = {"IsSellable": "IN_STORE", "isShipToHome": "SHIP", "isPopshelfShipToHome": "SHIP", "IsBopisEligible": "PICKUP"}
         return Object.entries(item).map(([k, v])=> {return k in mParse && v? k : 0;}).filter((k)=>k).map((truthyKey)=> {return mParse[truthyKey]})
-    }},
+    }, to: "modalities"},
     RatingReviewCount: {bool: 0, to: "ratings", convert: (ratingCount, ratingAverage)=> {
         if (ratingCount){
             return {avg: ratingAverage, ct: ratingCount}
@@ -1166,30 +1196,28 @@ itemParser={
     }},
     _inventories: {convert: (full_item, locationId, utcTimestamp)=> {
         let itemStatus = full_item.InventoryStatus; 
-        itemStatus = itemStatus ==="1"? "TEMPORARILY_OUT_OF_STOCK" : itemStatus === "2" ? "LOW" : "HIGH"; 
+        itemStatus = itemStatus ==1? "TEMPORARILY_OUT_OF_STOCK" : itemStatus == 2 ? "LOW" : "HIGH"; 
         return {"stockLevel": itemStatus, "availableToSell": full_item.AvailableStockStore, "locationId": locationId,
-        "utcTimestamp": utcTimestamp, "upc": full_item.UPC}
+        "utcTimestamp": new Date(utcTimestamp), "upc": full_item.UPC}
     }}
 })
-// processDollarGeneralItems("../../../scripts/requests/server/collections/dollargeneral/items/9_25_2022.json")
-// processDollarGeneralItems("./073022.json")
 
-// processInstacartItems('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
-// summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons/", {
-//     "id": {keep: true},
-//     "dcId": {keep: true},
-//     "waId": {keep: true},
-//     "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
-//     "description": {to: "shortDescription"},
-//     "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
-//     "minimumPurchase": {to: "requirementQuantity"},
-//     "categories": {keep: true},
-//     "imageUrl": {keep: true},
-//     "brand": {to: "brandName"},
-//     "savingType": {to: "type"},
-//     "dc_popularity": {to: "popularity"}
-// }, uuid="id")
-// processInstacartItems('../../../scripts/requests/server/collections/aldi/items/', "23150", uuid="legacyId")
+processInstacartItems('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
+summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons/", {
+    "id": {keep: true},
+    "dcId": {keep: true},
+    "waId": {keep: true},
+    "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
+    "description": {to: "shortDescription"},
+    "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
+    "minimumPurchase": {to: "requirementQuantity"},
+    "categories": {keep: true},
+    "imageUrl": {keep: true},
+    "brand": {to: "brandName"},
+    "savingType": {to: "type"},
+    "dc_popularity": {to: "popularity"}
+}, uuid="id")
+processInstacartItems('../../../scripts/requests/server/collections/aldi/items/', "23150", uuid="legacyId")
 // summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
 // summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
 //     "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
@@ -1205,4 +1233,4 @@ itemParser={
 // }, uuid="targetOfferId")
 // processInstacartItems('../../../scripts/requests/server/collections/familydollar/instacartItems/', "2394", uuid="legacyId")
 // processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
-// zipUp()
+zipUp()

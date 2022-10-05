@@ -6,7 +6,7 @@ const fs = require("fs")
 const readline = require("readline");
 const EventEmitter = require('node:events');
 const { spawn } = require('child_process');
-const {MongoClient} = require('mongodb');
+const {MongoClient, UnorderedBulkOperation} = require('mongodb');
 // add stealth plugin and use defaults 
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { ProtocolError, TimeoutError } = require('puppeteer');
@@ -210,6 +210,11 @@ async function setUpBrowser(task) {
    * @note : request interception should occur only once page has setup been completed to prevent wrong location data.
    * @param  task : a camelCase string that is franchise + {wantedScrapedPageCategory} 
    */
+  let dbArgs = {};
+  dbArgs["task"] = task
+  let entryID = await insertRun(setUpBrowser, "runs", "node_call", dbArgs, false, undefined,
+  `Puppeteer Node.js Call for Scrape of ${setUpBrowser.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+
   async function checkForErrorModal(){
     let errorVisible  = await page.$eval("#global-message-modal", (el)=>el.getAttribute("aria-hidden"));
     console.log("type from getAttribute", typeof errorVisible, ' ', errorVisible)
@@ -804,7 +809,9 @@ async function setUpBrowser(task) {
 } catch (e) {
     console.log(e)
   }
-  return [browser, page];
+  await insertRun(setUpBrowser, "runs", "node_call", dbArgs, false, entryID,
+  `Puppeteer Node.js Call for Scrape of ${setUpBrowser.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  return [browser, page, entryID];
 }
 
 function getStoreData() {
@@ -848,7 +855,7 @@ async function wrapFile(fileName){
   return "Done"
 }
 
-async function getKrogerTrips(browser, page){
+async function getKrogerTrips(browser, page, _id){
   /**
    * @param page : PageElement from Successfully Launched Browser. 
    * @param browser : the current browser instance
@@ -858,6 +865,10 @@ async function getKrogerTrips(browser, page){
    * 2 - Await Load of User Trips... Carousel Cards are Rendered and Requests are Complete.
    * 3 - Press Arrow. Repeat Until Arrow is Unavailable via CSS class  
   */
+  let dbArgs = {};
+  ["browser", "page"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
+  insertRun(getKrogerTrips, "runs", "node_call", dbArgs, false, _id,
+  `Puppeteer Node.js Call for Scrape of ${getKrogerTrips.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   var path = "../requests/server/collections/kroger/trips/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var wantedResponseRegex = /\/mypurchases\/api\/v.\/receipt\/details|\/atlas\/v1\/product\/v2\/products/
@@ -906,10 +917,12 @@ async function getKrogerTrips(browser, page){
   console.log("file finished : ", fileName);
   await browser.close();
   console.log("exiting....")
+  insertRun(getKrogerTrips, "runs", "node_call", dbArgs, false, _id,
+  `Puppeteer Node.js Call for Scrape of ${getKrogerTrips.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   return null;
 }
 
-async function getKrogerCoupons(browser, page, type){
+async function getKrogerCoupons(browser, page, type, _id){
     /**
    * @param page : PageElement from Successfully Launched Browser. 
    * @param brower : The current Browser instance. 
@@ -922,6 +935,11 @@ async function getKrogerCoupons(browser, page, type){
     if (!['cashback', 'digital'].includes(type)){
       throw new Error(`Type is not right . Avaialable Values: 'cashback' or 'digital' `)
     }
+    let dbArgs = {};
+    ["browser", "page", "type"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
+    insertRun(getKrogerCoupons, "runs", "node_call", dbArgs, false, _id,
+    `Puppeteer Node.js Call for Scrape of ${getKrogerCoupons.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+    
     // set url based on type 
     var promotionUrl = type === "digital" ? "https://www.kroger.com/savings/cl/coupons" : "https://www.kroger.com/savings/cbk/cashback" ;  
     var apiEmitter = new EventEmitter(); 
@@ -977,10 +995,12 @@ async function getKrogerCoupons(browser, page, type){
     await browser.close();
     await wrapFile(fileName);
     console.log("file finished : ", fileName) ;
+    insertRun(getKrogerCoupons, "runs", "node_call", dbArgs, false, _id,
+    `Puppeteer Node.js Call for Scrape of ${getKrogerCoupons.replace("get", "")} for ${new Date().toLocaleDateString()}`)
     return null;
 }
 
-async function getInstacartItems(browser, page){
+async function getInstacartItems(browser, page, _id){
   /**
    * @param page : PageElement from Successfully Launched Browser. 
    * @param browser : the current browser instance. 
@@ -989,6 +1009,11 @@ async function getInstacartItems(browser, page){
    * & =RecipesByProductId (links to recipes page on instacart site, which provide all items for recipes and their prices)
         * given that this data is mostly static, It could be collected Incrementally Over Scrapes. It would have to occur over time given the large catalogue of items (1000+ items). 
    */
+  let dbArgs = {};
+  ["browser", "page"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
+  insertRun(getInstacartItems, "runs", "node_call", dbArgs, false, _id,
+  `Puppeteer Node.js Call for Scrape of ${getInstacartItems.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+
   let unwantedPattern = /(outdoor|toys|bed|electronics|clothing-shoes-accessories|office-crafts-party-supplies|greeting-cards|storm-prep|tailgating|popular|floral|shop-now)$/
   let storePatterns = /(aldi|familydollar|publix)/
   let currentUrl = await page.url();
@@ -1073,10 +1098,12 @@ async function getInstacartItems(browser, page){
   await browser.close();
   await wrapFile(fileName);
   console.log("file finished : ", fileName) ; 
+  insertRun(getInstacartItems, "runs", "node_call", dbArgs, false, _id,
+  `Puppeteer Node.js Call for Scrape of ${getInstacartItems.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   return null;
 }
 
-async function getPublixCoupons(browser, page){ 
+async function getPublixCoupons(browser, page, _id){ 
   /**
    * @param browser : the currnet browser instance . 
    * @param page : the current page instance. 
@@ -1088,6 +1115,11 @@ async function getPublixCoupons(browser, page){
   //   if (req.isInterceptResolutionHandled()) return;
   //   else req.continue()
   // })
+  let dbArgs = {};
+  ["browser", "page"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
+  let entryID = await insertRun(getPublixCoupons, "runs", "node_call", dbArgs, false, undefined,
+  `Puppeteer Node.js Call for Scrape of ${getPublixCoupons.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+
   var path = "../requests/server/collections/publix/coupons/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
@@ -1112,16 +1144,23 @@ async function getPublixCoupons(browser, page){
   await page.waitForNetworkIdle({idleTime: 8000});
   await wrapFile(fileName);
   await browser.close();
-  console.log("file finished : ", fileName) ; 
+  console.log("file finished : ", fileName) ;
+  insertRun(getPublixCoupons, "runs", "node_call", dbArgs, false, _id,
+  `Puppeteer Node.js Call for Scrape of ${getPublixCoupons.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   return null; 
 }
 
-async function getDollarGeneralCoupons(browser, page){ 
+async function getDollarGeneralCoupons(browser, page, _id){ 
   /**
    * @param browser: the passed browser instance from SetupBrowser()
    * @param page: the passed page instance from SetupBrowser()
   */
   // set request interception on page
+  let dbArgs = {};
+  ["browser", "page"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
+  insertRun(getDollarGeneralCoupons, "runs", "node_call", dbArgs, false, _id,
+  `Puppeteer Node.js Call for Scrape of ${getDollarGeneralCoupons.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  
   var badRequests = [];
   var path = "../requests/server/collections/dollargeneral/promotions/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
@@ -1208,27 +1247,28 @@ async function getDollarGeneralCoupons(browser, page){
       let br = JSON.stringify(badRequests);
       await fs.promises.writeFile("./temp.json", br)
     }
-  
+  insertRun(getDollarGeneralCoupons, "runs", "node_call", dbArgs, false, _id,
+  `Puppeteer Node.js Call for Scrape of ${getDollarGeneralCoupons.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   return null;
 }
 
-async function getDollarGeneralItems(browser, page){
+async function getDollarGeneralItems(browser, page, _id){
   /**
    * @prerequisite : setUpBrowser() successfully set location. 
    * @param browser : the current browser instance.
    * @param page : the current page instance.
    */
   // set request interception on page
-  await page.setRequestInterception(true);
+  let dbArgs = {};
+  ["browser", "page"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
+  insertRun(getDollarGeneralItems, "runs", "node_call", dbArgs, false, _id,
+  `Puppeteer Node.js Call for Scrape of ${getDollarGeneralItems.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+
   var path = "../requests/server/collections/dollargeneral/items/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   fileName = path+fileName ; 
   var wantedResponseRegex = /https\:\/\/www\.dollargeneral\.com\/bin\/omni\/pickup\/categories\?/
-  page.on('request', (req)=> {
-    if (req.isInterceptResolutionHandled()) return;
-    else req.continue()
-  })
   page.on("response", async (res)=> {
     let url = await res.url() ;
     if (url.match(wantedResponseRegex)){
@@ -1256,7 +1296,9 @@ async function getDollarGeneralItems(browser, page){
   await page.waitForNetworkIdle({idleTime: 3000});
   await browser.close();
   await wrapFile(fileName);
-  console.log("file finished : ", fileName) ; 
+  console.log("file finished : ", fileName) ;
+  insertRun(getDollarGeneralItems, "runs", "node_call", dbArgs, false, _id,
+  `Puppeteer Node.js Call for Scrape of ${getDollarGeneralItems.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   return null
 }
 
@@ -1267,16 +1309,17 @@ async function getFamilyDollarCoupons(browser, page){
    * @param page : the starting page ; 
    */
   // set request interception on page
-  await page.setRequestInterception(true);
+  let dbArgs = {};
+  ["browser", "page"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
+  let entryID = await insertRun(getFamilyDollarCoupons, "runs", "node_call", dbArgs, false, undefined,
+  `Puppeteer Node.js Call for Scrape of ${getFamilyDollarCoupons.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  
   var path = "../requests/server/collections/familydollar/coupons/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   fileName = path+fileName ; 
   var wantedRequestRegex = /ice-familydollar\.dpn\.inmar\.com\/v2\/offers\?/
-  page.on('request', (req)=> {
-    if (req.isInterceptResolutionHandled()) return;
-    else req.continue();
-  })  
+  
   page.on("response", async (res)=> {
     let url = await res.url() ;
     if (url.match(wantedRequestRegex)){
@@ -1292,18 +1335,25 @@ async function getFamilyDollarCoupons(browser, page){
   ])
   //await browser.close();
   await wrapFile(fileName);
-  console.log("file finished : ", fileName) ; 
+  console.log("file finished : ", fileName) ;
+  await insertRun(getFamilyDollarCoupons, "runs", "node_call", dbArgs, false, entryID,
+  `Puppeteer Node.js Call for Scrape of ${getFamilyDollarCoupons.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   return null; 
 }
 
-async function getFamilyDollarItems(browser, page){
+async function getFamilyDollarItems(browser, page, _id){
   /**
     * @param browser: the current browser instance .
     * @param page : PageElement from Successfully Launched Browser. 
     * @prequisite setUpBrowser() successful. Iterations Set to 96. 
     */
     // set request interception on page
-    await page.setRequestInterception(true);
+    let dbArgs = {};
+    ["browser", "page"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
+    let entryID = await insertRun(getFamilyDollarItems, "runs", "node_call", dbArgs, false, undefined,
+    `Puppeteer Node.js Call for Scrape of ${getFamilyDollarItems.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+    
+
     var offset = 0;
     var wantedRequestRegex = /dollartree-cors\.groupbycloud\.com\/api/
     let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
@@ -1316,10 +1366,7 @@ async function getFamilyDollarItems(browser, page){
       }
       return ; 
     })
-    page.on("request", (request)=> {
-      if (request.isInterceptResolutionHandled()) return;
-      else request.continue();
-    })
+    
     let selectDiv = await page.$$(".oc3-select > div > select");
     selectDiv = selectDiv[1]
     await selectDiv.hover()
@@ -1351,10 +1398,12 @@ async function getFamilyDollarItems(browser, page){
     await wrapFile(fileName);
     //await browser.close(); 
     console.log("finished file", fileName);
+    insertRun(getFamilyDollarItems, "runs", "node_call", dbArgs, false, _id,
+  `Puppeteer Node.js Call for Scrape of ${getFamilyDollarItems.replace("get", "")} for ${new Date().toLocaleDateString()}`)
     return null
 }
 
-async function getFoodDepotItems(browser, page){
+async function getFoodDepotItems(browser, page, _id){
   /**
    * @param browser : the current browser instance
    * @param page : the current page instance
@@ -1368,6 +1417,11 @@ async function getFoodDepotItems(browser, page){
    */
   // set request interception on page
   //await page.setRequestInterception(true);
+  let dbArgs = {};
+  ["browser", "page"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
+  insertRun(getFoodDepotItems, "runs", "node_call", dbArgs, false, _id,
+  `Puppeteer Node.js Call for Scrape of ${getFoodDepotItems.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+
   await page.setDefaultTimeout(0)
   var path = "../requests/server/collections/fooddepot/items/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
@@ -1439,10 +1493,12 @@ async function getFoodDepotItems(browser, page){
   await wrapFile(fileName);
   await browser.close(); 
   console.log("finished file", fileName);
+  insertRun(getFoodDepotItems, "runs", "node_call", dbArgs, false, _id,
+  `Puppeteer Node.js Call for Scrape of ${getFoodDepotItems.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   return null
 }
 
-async function getFoodDepotCoupons(browser, page){ 
+async function getFoodDepotCoupons(browser, page, _id){ 
   /**
    * @param browser : the current browser instance. 
    * @param page : the current page instance.
@@ -1451,6 +1507,11 @@ async function getFoodDepotCoupons(browser, page){
   // note : navigation to other stores promotions can only occur after MFA login 
   // page = await browser.pages()
   // page = page[0]
+  let dbArgs = {};
+  ["browser", "page"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
+  insertRun(getFoodDepotCoupons, "runs", "node_call", dbArgs, false, _id,
+  `Puppeteer Node.js Call for Scrape of ${getFoodDepotCoupons.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+
   await page.waitForNetworkIdle({idleTime:3000});
   var path = "../requests/server/collections/fooddepot/coupons/"
   var fileName = new Date().toLocaleDateString().replaceAll("/", "_") + ".json";
@@ -1469,10 +1530,16 @@ async function getFoodDepotCoupons(browser, page){
   await wrapFile(fileName);
   await browser.close();
   console.log("finished file", fileName);
+  insertRun(getFoodDepotCoupons, "runs", "node_call", dbArgs, false, _id,
+  `Puppeteer Node.js Call for Scrape of ${getFoodDepotCoupons.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   return null;
 }
 
-const getFoodDepotCode = async () => {
+const getFoodDepotCode = async (_id) => {
+  let dbArgs = {};
+  let entryID = await insertRun(getFoodDepotCode, "runs", "node_call", dbArgs, false, _id,
+  `Puppeteer Node.js Call for Scrape of ${getFoodDepotCode.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+
   var SERVER_IP = process.env.SERVER_IP;
   var passedValidateCode; 
   cmd = spawn("C:\\Users\\Kyle\\anaconda3\\python", ["../requests/server/app.py"]);
@@ -1495,6 +1562,8 @@ const getFoodDepotCode = async () => {
 return new Promise((resolve, reject) => {
   cmd.on("close", (code, signal)=>{
     console.log(`child process exited with a code of ${code} due to receipt of ${signal}`)
+    insertRun(getFoodDepotCode, "runs", "node_call", dbArgs, false, _id,
+    `Puppeteer Node.js Call for Scrape of ${getFoodDepotCode.replace("get", "")} for ${new Date().toLocaleDateString()}`)
     resolve(passedValidateCode)
   })
   cmd.on("error", (e)=>{
@@ -1523,7 +1592,7 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
   const collection = db.collection(collectionName);
   // wrap functions metadata, determine type, get min started at, get total duration 
   if (close){
-    if (!_id) throw new Error("_id must be present for update operations");
+    if (!_id) throw new Error("_id must be present for update operations"); // updates top-level run time metrics and closes function
     // @ every close function time must be incremented, duration must be incremented
     // subtract time to log function execution time
     // increment duration by this difference
@@ -1543,7 +1612,7 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
                 input: "$functions",
                 in:{
                   $cond: {
-                    if: {$eq: ["$$this.function", "yox"]},
+                    if: {$eq: ["$$this.function", functionObject.name]},
                     then: {$mergeObjects: ["$$this", {"endedAt": "$$NOW", "duration": {"$divide" : [{$subtract: ["$$NOW", "$$this.startedAt"]}, 1000]}}]},
                     else: "$$this"}
                   } 
@@ -1553,7 +1622,7 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
       await collection.updateOne(filter, [updateElementPipeline]);
       console.log("updated 1 document into ", collectionName)
       result = _id
-    } else if (_id) {
+    } else if (_id) { // pushes next embedded function document into functions array of Run Document
     let filter = {"_id": _id} 
     let timestamp = new Date()
     result = _id
@@ -1567,7 +1636,7 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
     };
     await collection.updateOne(filter, [update]);
     update = {"$push": {"functions": {
-      function: 'billybean',
+      function: functionObject.name,
       description: description,
       vars: funcArgs,
       duration: 0,
@@ -1575,7 +1644,7 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
     }}};
     await collection.updateOne(filter, update);
     console.log("updated 1")
-  }else {
+  }else { // creates original run document 
     let startedAt = new Date(); 
     document = {
       executeVia: executionType,
@@ -1616,10 +1685,8 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
   
 //   })
 // })
-setUpBrowser(task='foodDepotCoupons').then(async ([browser, page])=> {
-  let _id = insertRun(getFoodDepotCoupons, "runs", "node_call", [], false, undefined, "Puppeteer Node.Js Call to All Food Depot Coupons")
-  await getFoodDepotCoupons(browser, page);
-  _id = insertRun(getFoodDepotCoupons, "runs", "node_call", [], true, _id)
-  await getFoodDepotItems(browser, page);
-  _id = insertRun(getFoodDepotItems, "runs", "node_call", [], true, _id, "Puppeteer Node.js Call to All Food Depot Items Pages")
+
+setUpBrowser(task="krogerCoupons").then(async ([browser, page, entryID])=> {
+  await getKrogerCoupons(browser, page, "digital", entryID)
+  await getKrogerCoupons(browser, page, "cashback", entryID)
 })
