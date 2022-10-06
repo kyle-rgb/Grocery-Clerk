@@ -1,0 +1,8 @@
+version: '3.1'
+
+services:
+  mycontainer:
+    image: node:16.17.1-bullseye-slim
+    volumes:
+      - "./scraper:/app/"
+    command: node

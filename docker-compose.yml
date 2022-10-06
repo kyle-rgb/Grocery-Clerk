@@ -20,7 +20,7 @@ services:
     volumes:
       - ./frontend:/app
       # One-way volume to use node_modules from inside image
-      - /app/node_modules
+      - /frontend/nextjs-site/node_modules:/app/node_modules
     ports:
       - "80:80"
     environment:
