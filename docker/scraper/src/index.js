@@ -12,7 +12,7 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { ProtocolError, TimeoutError } = require('puppeteer');
 
 
-puppeteer.use(StealthPlugin())
+// puppeteer.use(StealthPlugin())
 
 async function getTestWebsite() {
   // for testing request interception and loading elements from DOM
@@ -1691,4 +1691,4 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
 //   await getKrogerCoupons(browser, page, "cashback", entryID)
 // })
 
-console.log("passed through unscaved!", process.env.ZIPCODE, "hello in there!?!?0x0>?>?")
+console.log("passed through unscaved!", process.env.ZIPCODE, "hello in there beautiful <:>")
