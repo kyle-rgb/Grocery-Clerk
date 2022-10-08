@@ -1,0 +1,11 @@
+FROM node:16.17.1-bullseye-slim
+
+WORKDIR /app
+
+COPY . /app/
+
+ENV GPG_TTY=${tty}
+
+RUN apt-get update && apt-get install -y gnupg
+
+CMD node
