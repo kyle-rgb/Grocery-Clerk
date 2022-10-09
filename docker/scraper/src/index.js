@@ -308,8 +308,6 @@ async function setUpBrowser(task) {
           // kroger trips: click account button, my purchases select drop down link, unselect persist login check box, click sign in
           // requires credentials to be saved in browser profile
           // @requires: login
-          await page.goto("chrome://settings")
-          await page.waitForTimeout(9999)
           const USERNAME_KROGER = process.env.USERNAME_KROGER;
           const PASSWORD_KROGER = process.env.PASSWORD_KROGER;
           await page.goto("https://www.kroger.com");
@@ -1667,28 +1665,36 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
   await client.close()
   return result
 }
-// puppeteer.launch({
-//   headless: false,
-//   slowMo: 0, 
-//   executablePath:
-//     "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-//   dumpio: true,
-//   args: ["--start-maximized","--profile-directory=Profile 1"],
-//   userDataDir: "C:\\c\\Profiles",
-//   defaultViewport: {width: 1920, height: 1080},
-//   devtools: false,
-//   timeout: 0
-// }).then((browser)=> {
-//   browser.pages().then((pages)=>{
-//     let page = pages[0]
-//     page.goto("chrome://settings")
-  
-//   })
-// })
 
+async function testContainerBrowser(){
+  var browser = await puppeteer.launch({
+    headless: true,
+    slowMo: 0,
+    dumpio: true,
+    args: ["--start-maximized"],
+    defaultViewport: {width: 1920, height: 1080 },
+    executablePath: "/app/node_modules/puppeteer/.local-firefox/win64-106.0a1/firefox.exe",
+    devtools: false,
+    timeout: 0
+  });
+  console.log("successfully launched browser"); 
+  var [page] = await browser.pages(); 
+  console.log("opened page"); 
+  await page.goto("https://www.google.com");
+  console.log("went to gooogle"); 
+  await page.waitForTimeout(7000);
+  console.log("waited for 7 seconds"); 
+  await page.screenshot({
+    path: "./headlessScreen.png",
+    fullPage: true,
+  })
+  console.log("took screenshot"); 
+  await browser.close();
+  console.log("closed")
+  return null
+}
 // setUpBrowser(task="krogerCoupons").then(async ([browser, page, entryID])=> {
 //   await getKrogerCoupons(browser, page, "digital", entryID)
 //   await getKrogerCoupons(browser, page, "cashback", entryID)
 // })
-
-console.log("passed through unscaved!", process.env.ZIPCODE, "hello in there beautiful <:>")
+testContainerBrowser();

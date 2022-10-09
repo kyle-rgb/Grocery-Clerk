@@ -1,9 +1,20 @@
 version: '3.1'
 
 services:
-  mycontainer:
-    image: node:16.17.1-bullseye-slim
+  scraper:
+    build: "./scraper"
     volumes:
       - "./scraper:/app/"
-      - "./config/keys:/app/config"
+      - "/app/node_modules"
     stdin_open: true
+    environment:
+      GPG_TTY: /dev/pts/0
+    secrets:
+      - puppet-keys
+      - encryption-key
+
+secrets:
+  puppet-keys:
+    file: ./config/keys/env.txt
+  encryption-key:
+    file: ./config/keys/kyleA.gpg
