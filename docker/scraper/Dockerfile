@@ -1,7 +1,5 @@
 FROM node:16.17.1-bullseye-slim
 
-ENV PUPPETEER_PRODUCT=chrome
-
 WORKDIR /app
 
 COPY . /app/
@@ -15,13 +13,15 @@ RUN apt-get update \
       --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD true
+
 RUN npm install \
     && groupadd -r pptruser && useradd -r -g pptruser -G audio,video pptruser \
     && mkdir -p /home/pptruser/Downloads \
     && chown -R pptruser:pptruser /home/pptruser \
-    && chown -R pptruser:pptruser /node_modules \
-    && chown -R pptruser:pptruser /package.json \
-    && chown -R pptruser:pptruser /package-lock.json
+    && chown -R pptruser:pptruser /app/node_modules \
+    && chown -R pptruser:pptruser /app/package.json \
+    && chown -R pptruser:pptruser /app/package-lock.json
 
 USER pptruser
 

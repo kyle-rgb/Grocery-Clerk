@@ -234,7 +234,7 @@ async function setUpBrowser(task) {
   var browser, page;
   try { 
     browser = await puppeteer.launch({
-      headless: task==="foodDepotCoupons"? true : false,
+      headless: task===""? true : false,
       slowMo: 888, 
       executablePath:
         "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
@@ -539,6 +539,10 @@ async function setUpBrowser(task) {
         console.log(frameCoupons.url())
         if (appCardIFrame){
           let phoneInput = await frameCoupons.$("#phone");
+          if (!phoneInput){
+            await page.screenshot({fullPage: true, "path": "./pic.png"})
+            throw new Error("no id phone. already logged in")
+          }
           console.log(phoneInput)
           await phoneInput.type(PHONE_NUMBER, {delay: 400})
           console.log("wrote phone number")
@@ -546,7 +550,7 @@ async function setUpBrowser(task) {
             await el.click();
           })
           console.log("clicked login button")
-          var parsedVerificationCode = await getFoodDepotCode(); 
+          var parsedVerificationCode = await getFoodDepotCode(entryID); 
           let codeInput = await frameCoupons.waitForSelector("code-input")
           await codeInput.type(parsedVerificationCode, {delay: 200})
           // will send code typeFinish on completed 
@@ -1511,8 +1515,6 @@ async function getFoodDepotCoupons(browser, page, _id){
   ["browser", "page"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
   insertRun(getFoodDepotCoupons, "runs", "node_call", dbArgs, false, _id,
   `Puppeteer Node.js Call for Scrape of ${getFoodDepotCoupons.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
-
-  await page.waitForNetworkIdle({idleTime:3000});
   var path = "../requests/server/collections/fooddepot/coupons/"
   var fileName = new Date().toLocaleDateString().replaceAll("/", "_") + ".json";
   var offset = 0;
@@ -1525,8 +1527,8 @@ async function getFoodDepotCoupons(browser, page, _id){
     }
     return ;
   })
-  await page.waitForNetworkIdle({idleTime: 15000});
-  await page.waitForTimeout(13000)
+  await page.goto("https://www.fooddepot.com/coupons/")
+  await page.waitForTimeout(23000)
   await wrapFile(fileName);
   await browser.close();
   console.log("finished file", fileName);
@@ -1686,7 +1688,6 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
 //   })
 // })
 
-setUpBrowser(task="familyDollarItems").then(async ([browser, page, entryID])=> {
-  await getFamilyDollarItems(browser, page, entryID)
-  await getFamilyDollarCoupons(browser, page, entryID)
+setUpBrowser(task="").then(async ([browser, page, entryID])=> {
+  await getFoodDepotCoupons(browser, page, entryID)
 })

@@ -1,4 +1,4 @@
-version: '3.1'
+version: '3.8'
 
 services:
   scraper:
@@ -9,6 +9,9 @@ services:
     stdin_open: true
     environment:
       GPG_TTY: /dev/pts/0
+    init: true
+    security_opt:
+      - seccomp=./scraper/chrome.json
     secrets:
       - puppet-keys
       - encryption-key

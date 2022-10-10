@@ -1226,19 +1226,19 @@ itemParser={
 //     "dc_popularity": {to: "popularity"}
 // }, uuid="id")
 // processInstacartItems('../../../scripts/requests/server/collections/aldi/items/', "23150", uuid="legacyId")
-// // summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
-// // summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
-// //     "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
-// //     "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
-// //     "effectiveDate": {to: "endDate", convert: function (x) {return new Date(x)}},
-// //     "offerId": {keep: true},
-// //     "targetOfferId": {keep: true},
-// //     "category": {to: "categories", convert: function(x) {return [x]}},
-// //     "image": {to: "imageUrl", convert: function (x){return x.links.lg}},
-// //     "brand": {to: "brandName"},
-// //     "details": {to: "terms"},
-// //     "offerType": {to: "type" }
-// // }, uuid="targetOfferId")
+summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
+summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
+    "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
+    "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
+    "effectiveDate": {to: "endDate", convert: function (x) {return new Date(x)}},
+    "offerId": {keep: true},
+    "targetOfferId": {keep: true},
+    "category": {to: "categories", convert: function(x) {return [x]}},
+    "image": {to: "imageUrl", convert: function (x){return x.links.lg}},
+    "brand": {to: "brandName"},
+    "details": {to: "terms"},
+    "offerType": {to: "type" }
+}, uuid="targetOfferId")
 // processInstacartItems('../../../scripts/requests/server/collections/familydollar/instacartItems/', "2394", uuid="legacyId")
 // processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
-// zipUp()
+zipUp()

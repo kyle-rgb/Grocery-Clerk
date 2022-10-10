@@ -12,7 +12,7 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { ProtocolError, TimeoutError } = require('puppeteer');
 
 
-// puppeteer.use(StealthPlugin())
+puppeteer.use(StealthPlugin())
 
 async function getTestWebsite() {
   // for testing request interception and loading elements from DOM
@@ -213,7 +213,7 @@ async function setUpBrowser(task) {
   let dbArgs = {};
   dbArgs["task"] = task
   let entryID = await insertRun(setUpBrowser, "runs", "node_call", dbArgs, false, undefined,
-  `Puppeteer Node.js Call for Scrape of ${setUpBrowser.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  `Puppeteer Node.js Call for Scrape of ${setUpBrowser.name} for ${new Date().toLocaleDateString()}`)
 
   async function checkForErrorModal(){
     let errorVisible  = await page.$eval("#global-message-modal", (el)=>el.getAttribute("aria-hidden"));
@@ -308,6 +308,8 @@ async function setUpBrowser(task) {
           // kroger trips: click account button, my purchases select drop down link, unselect persist login check box, click sign in
           // requires credentials to be saved in browser profile
           // @requires: login
+          await page.goto("chrome://settings")
+          await page.waitForTimeout(9999)
           const USERNAME_KROGER = process.env.USERNAME_KROGER;
           const PASSWORD_KROGER = process.env.PASSWORD_KROGER;
           await page.goto("https://www.kroger.com");
@@ -807,8 +809,8 @@ async function setUpBrowser(task) {
 } catch (e) {
     console.log(e)
   }
-  await insertRun(setUpBrowser, "runs", "node_call", dbArgs, false, entryID,
-  `Puppeteer Node.js Call for Scrape of ${setUpBrowser.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  insertRun(setUpBrowser, "runs", "node_call", dbArgs, true, entryID,
+  `Puppeteer Node.js Call for Scrape of ${setUpBrowser.name} for ${new Date().toLocaleDateString()}`)
   return [browser, page, entryID];
 }
 
@@ -866,7 +868,7 @@ async function getKrogerTrips(browser, page, _id){
   let dbArgs = {};
   ["browser", "page"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
   insertRun(getKrogerTrips, "runs", "node_call", dbArgs, false, _id,
-  `Puppeteer Node.js Call for Scrape of ${getKrogerTrips.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  `Puppeteer Node.js Call for Scrape of ${getKrogerTrips.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   var path = "../requests/server/collections/kroger/trips/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var wantedResponseRegex = /\/mypurchases\/api\/v.\/receipt\/details|\/atlas\/v1\/product\/v2\/products/
@@ -915,8 +917,8 @@ async function getKrogerTrips(browser, page, _id){
   console.log("file finished : ", fileName);
   await browser.close();
   console.log("exiting....")
-  insertRun(getKrogerTrips, "runs", "node_call", dbArgs, false, _id,
-  `Puppeteer Node.js Call for Scrape of ${getKrogerTrips.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  insertRun(getKrogerTrips, "runs", "node_call", dbArgs, true, _id,
+  `Puppeteer Node.js Call for Scrape of ${getKrogerTrips.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   return null;
 }
 
@@ -936,7 +938,7 @@ async function getKrogerCoupons(browser, page, type, _id){
     let dbArgs = {};
     ["browser", "page", "type"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
     insertRun(getKrogerCoupons, "runs", "node_call", dbArgs, false, _id,
-    `Puppeteer Node.js Call for Scrape of ${getKrogerCoupons.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+    `Puppeteer Node.js Call for Scrape of ${getKrogerCoupons.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
     
     // set url based on type 
     var promotionUrl = type === "digital" ? "https://www.kroger.com/savings/cl/coupons" : "https://www.kroger.com/savings/cbk/cashback" ;  
@@ -993,8 +995,8 @@ async function getKrogerCoupons(browser, page, type, _id){
     await browser.close();
     await wrapFile(fileName);
     console.log("file finished : ", fileName) ;
-    insertRun(getKrogerCoupons, "runs", "node_call", dbArgs, false, _id,
-    `Puppeteer Node.js Call for Scrape of ${getKrogerCoupons.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+    insertRun(getKrogerCoupons, "runs", "node_call", dbArgs, true, _id,
+    `Puppeteer Node.js Call for Scrape of ${getKrogerCoupons.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
     return null;
 }
 
@@ -1010,7 +1012,7 @@ async function getInstacartItems(browser, page, _id){
   let dbArgs = {};
   ["browser", "page"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
   insertRun(getInstacartItems, "runs", "node_call", dbArgs, false, _id,
-  `Puppeteer Node.js Call for Scrape of ${getInstacartItems.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  `Puppeteer Node.js Call for Scrape of ${getInstacartItems.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
 
   let unwantedPattern = /(outdoor|toys|bed|electronics|clothing-shoes-accessories|office-crafts-party-supplies|greeting-cards|storm-prep|tailgating|popular|floral|shop-now)$/
   let storePatterns = /(aldi|familydollar|publix)/
@@ -1096,8 +1098,8 @@ async function getInstacartItems(browser, page, _id){
   await browser.close();
   await wrapFile(fileName);
   console.log("file finished : ", fileName) ; 
-  insertRun(getInstacartItems, "runs", "node_call", dbArgs, false, _id,
-  `Puppeteer Node.js Call for Scrape of ${getInstacartItems.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  insertRun(getInstacartItems, "runs", "node_call", dbArgs, true, _id,
+  `Puppeteer Node.js Call for Scrape of ${getInstacartItems.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   return null;
 }
 
@@ -1115,8 +1117,8 @@ async function getPublixCoupons(browser, page, _id){
   // })
   let dbArgs = {};
   ["browser", "page"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
-  let entryID = await insertRun(getPublixCoupons, "runs", "node_call", dbArgs, false, undefined,
-  `Puppeteer Node.js Call for Scrape of ${getPublixCoupons.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  let entryID = await insertRun(getPublixCoupons, "runs", "node_call", dbArgs, false, _id,
+  `Puppeteer Node.js Call for Scrape of ${getPublixCoupons.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
 
   var path = "../requests/server/collections/publix/coupons/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
@@ -1143,8 +1145,8 @@ async function getPublixCoupons(browser, page, _id){
   await wrapFile(fileName);
   await browser.close();
   console.log("file finished : ", fileName) ;
-  insertRun(getPublixCoupons, "runs", "node_call", dbArgs, false, _id,
-  `Puppeteer Node.js Call for Scrape of ${getPublixCoupons.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  insertRun(getPublixCoupons, "runs", "node_call", dbArgs, true, _id,
+  `Puppeteer Node.js Call for Scrape of ${getPublixCoupons.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   return null; 
 }
 
@@ -1157,7 +1159,7 @@ async function getDollarGeneralCoupons(browser, page, _id){
   let dbArgs = {};
   ["browser", "page"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
   insertRun(getDollarGeneralCoupons, "runs", "node_call", dbArgs, false, _id,
-  `Puppeteer Node.js Call for Scrape of ${getDollarGeneralCoupons.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  `Puppeteer Node.js Call for Scrape of ${getDollarGeneralCoupons.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   
   var badRequests = [];
   var path = "../requests/server/collections/dollargeneral/promotions/"
@@ -1245,8 +1247,8 @@ async function getDollarGeneralCoupons(browser, page, _id){
       let br = JSON.stringify(badRequests);
       await fs.promises.writeFile("./temp.json", br)
     }
-  insertRun(getDollarGeneralCoupons, "runs", "node_call", dbArgs, false, _id,
-  `Puppeteer Node.js Call for Scrape of ${getDollarGeneralCoupons.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  insertRun(getDollarGeneralCoupons, "runs", "node_call", dbArgs, true, _id,
+  `Puppeteer Node.js Call for Scrape of ${getDollarGeneralCoupons.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   return null;
 }
 
@@ -1260,7 +1262,7 @@ async function getDollarGeneralItems(browser, page, _id){
   let dbArgs = {};
   ["browser", "page"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
   insertRun(getDollarGeneralItems, "runs", "node_call", dbArgs, false, _id,
-  `Puppeteer Node.js Call for Scrape of ${getDollarGeneralItems.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  `Puppeteer Node.js Call for Scrape of ${getDollarGeneralItems.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
 
   var path = "../requests/server/collections/dollargeneral/items/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
@@ -1284,23 +1286,23 @@ async function getDollarGeneralItems(browser, page, _id){
   while (!disabled){
     await Promise.all([
       button.click(),
-      page.waitForNavigation({waitUntil: 'load'})
+      page.waitForTimeout(9000)
     ])
-    await page.waitForNetworkIdle({idleTime: 3500});
+    await page.waitForTimeout(7000);
     button = await page.$("button[data-target='pagination-right-arrow']") ; 
     disabled = await button.getProperty("disabled").then((jsHandle)=>jsHandle.jsonValue())
     console.log(button, disabled)
   };
-  await page.waitForNetworkIdle({idleTime: 3000});
+  await page.waitForTimeout(6000);
   await browser.close();
   await wrapFile(fileName);
   console.log("file finished : ", fileName) ;
-  insertRun(getDollarGeneralItems, "runs", "node_call", dbArgs, false, _id,
-  `Puppeteer Node.js Call for Scrape of ${getDollarGeneralItems.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  insertRun(getDollarGeneralItems, "runs", "node_call", dbArgs, true, _id,
+  `Puppeteer Node.js Call for Scrape of ${getDollarGeneralItems.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   return null
 }
 
-async function getFamilyDollarCoupons(browser, page){
+async function getFamilyDollarCoupons(browser, page, _id){
   /**
    * @prerequisite : setUpBrowser() worked. 
    * @param browser : the existing browser instance
@@ -1309,8 +1311,8 @@ async function getFamilyDollarCoupons(browser, page){
   // set request interception on page
   let dbArgs = {};
   ["browser", "page"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
-  let entryID = await insertRun(getFamilyDollarCoupons, "runs", "node_call", dbArgs, false, undefined,
-  `Puppeteer Node.js Call for Scrape of ${getFamilyDollarCoupons.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  let entryID = await insertRun(getFamilyDollarCoupons, "runs", "node_call", dbArgs, false, _id,
+  `Puppeteer Node.js Call for Scrape of ${getFamilyDollarCoupons.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   
   var path = "../requests/server/collections/familydollar/coupons/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
@@ -1334,8 +1336,8 @@ async function getFamilyDollarCoupons(browser, page){
   //await browser.close();
   await wrapFile(fileName);
   console.log("file finished : ", fileName) ;
-  await insertRun(getFamilyDollarCoupons, "runs", "node_call", dbArgs, false, entryID,
-  `Puppeteer Node.js Call for Scrape of ${getFamilyDollarCoupons.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  await insertRun(getFamilyDollarCoupons, "runs", "node_call", dbArgs, true, _id,
+  `Puppeteer Node.js Call for Scrape of ${getFamilyDollarCoupons.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   return null; 
 }
 
@@ -1348,8 +1350,8 @@ async function getFamilyDollarItems(browser, page, _id){
     // set request interception on page
     let dbArgs = {};
     ["browser", "page"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
-    let entryID = await insertRun(getFamilyDollarItems, "runs", "node_call", dbArgs, false, undefined,
-    `Puppeteer Node.js Call for Scrape of ${getFamilyDollarItems.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+    insertRun(getFamilyDollarItems, "runs", "node_call", dbArgs, false, _id,
+    `Puppeteer Node.js Call for Scrape of ${getFamilyDollarItems.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
     
 
     var offset = 0;
@@ -1396,8 +1398,8 @@ async function getFamilyDollarItems(browser, page, _id){
     await wrapFile(fileName);
     //await browser.close(); 
     console.log("finished file", fileName);
-    insertRun(getFamilyDollarItems, "runs", "node_call", dbArgs, false, _id,
-  `Puppeteer Node.js Call for Scrape of ${getFamilyDollarItems.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+    insertRun(getFamilyDollarItems, "runs", "node_call", dbArgs, true, _id,
+  `Puppeteer Node.js Call for Scrape of ${getFamilyDollarItems.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
     return null
 }
 
@@ -1418,7 +1420,7 @@ async function getFoodDepotItems(browser, page, _id){
   let dbArgs = {};
   ["browser", "page"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
   insertRun(getFoodDepotItems, "runs", "node_call", dbArgs, false, _id,
-  `Puppeteer Node.js Call for Scrape of ${getFoodDepotItems.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  `Puppeteer Node.js Call for Scrape of ${getFoodDepotItems.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
 
   await page.setDefaultTimeout(0)
   var path = "../requests/server/collections/fooddepot/items/"
@@ -1491,8 +1493,8 @@ async function getFoodDepotItems(browser, page, _id){
   await wrapFile(fileName);
   await browser.close(); 
   console.log("finished file", fileName);
-  insertRun(getFoodDepotItems, "runs", "node_call", dbArgs, false, _id,
-  `Puppeteer Node.js Call for Scrape of ${getFoodDepotItems.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  insertRun(getFoodDepotItems, "runs", "node_call", dbArgs, true, _id,
+  `Puppeteer Node.js Call for Scrape of ${getFoodDepotItems.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   return null
 }
 
@@ -1508,7 +1510,7 @@ async function getFoodDepotCoupons(browser, page, _id){
   let dbArgs = {};
   ["browser", "page"].map((kwarg, i)=>  dbArgs[kwarg] = arguments[i])
   insertRun(getFoodDepotCoupons, "runs", "node_call", dbArgs, false, _id,
-  `Puppeteer Node.js Call for Scrape of ${getFoodDepotCoupons.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  `Puppeteer Node.js Call for Scrape of ${getFoodDepotCoupons.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
 
   await page.waitForNetworkIdle({idleTime:3000});
   var path = "../requests/server/collections/fooddepot/coupons/"
@@ -1528,15 +1530,15 @@ async function getFoodDepotCoupons(browser, page, _id){
   await wrapFile(fileName);
   await browser.close();
   console.log("finished file", fileName);
-  insertRun(getFoodDepotCoupons, "runs", "node_call", dbArgs, false, _id,
-  `Puppeteer Node.js Call for Scrape of ${getFoodDepotCoupons.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  insertRun(getFoodDepotCoupons, "runs", "node_call", dbArgs, true, _id,
+  `Puppeteer Node.js Call for Scrape of ${getFoodDepotCoupons.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   return null;
 }
 
 const getFoodDepotCode = async (_id) => {
   let dbArgs = {};
-  let entryID = await insertRun(getFoodDepotCode, "runs", "node_call", dbArgs, false, _id,
-  `Puppeteer Node.js Call for Scrape of ${getFoodDepotCode.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+  insertRun(getFoodDepotCode, "runs", "node_call", dbArgs, false, _id,
+  `Puppeteer Node.js Call for Scrape of ${getFoodDepotCode.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
 
   var SERVER_IP = process.env.SERVER_IP;
   var passedValidateCode; 
@@ -1560,8 +1562,8 @@ const getFoodDepotCode = async (_id) => {
 return new Promise((resolve, reject) => {
   cmd.on("close", (code, signal)=>{
     console.log(`child process exited with a code of ${code} due to receipt of ${signal}`)
-    insertRun(getFoodDepotCode, "runs", "node_call", dbArgs, false, _id,
-    `Puppeteer Node.js Call for Scrape of ${getFoodDepotCode.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+    insertRun(getFoodDepotCode, "runs", "node_call", dbArgs, true, _id,
+    `Puppeteer Node.js Call for Scrape of ${getFoodDepotCode.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
     resolve(passedValidateCode)
   })
   cmd.on("error", (e)=>{
@@ -1672,8 +1674,8 @@ async function testContainerBrowser(){
     slowMo: 0,
     dumpio: true,
     args: ["--start-maximized"],
+    executablePath: "google-chrome-stable",
     defaultViewport: {width: 1920, height: 1080 },
-    executablePath: "/app/node_modules/puppeteer/.local-firefox/win64-106.0a1/firefox.exe",
     devtools: false,
     timeout: 0
   });
@@ -1688,7 +1690,7 @@ async function testContainerBrowser(){
     path: "./headlessScreen.png",
     fullPage: true,
   })
-  console.log("took screenshot"); 
+  console.log("took screenshots"); 
   await browser.close();
   console.log("closed")
   return null
