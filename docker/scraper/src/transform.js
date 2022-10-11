@@ -1210,22 +1210,43 @@ itemParser={
     }}
 })
 
-// processInstacartItems('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
-// summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons/", {
-//     "id": {keep: true},
-//     "dcId": {keep: true},
-//     "waId": {keep: true},
-//     "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
-//     "description": {to: "shortDescription"},
-//     "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
-//     "minimumPurchase": {to: "requirementQuantity"},
-//     "categories": {keep: true},
-//     "imageUrl": {keep: true},
-//     "brand": {to: "brandName"},
-//     "savingType": {to: "type"},
-//     "dc_popularity": {to: "popularity"}
-// }, uuid="id")
-// processInstacartItems('../../../scripts/requests/server/collections/aldi/items/', "23150", uuid="legacyId")
+async function createDBStats(dbName='new'){
+	const client = new MongoClient(process.env.MONGO_CONN_URL);
+	await client.connect();
+	console.log('Connected successfully to Server');
+	const db = client.db(dbName)
+	var stats = await db.stats()
+	stats.collectionStats = [];
+    var collections = db.listCollections({}, {nameOnly: true})
+    for await (let col of collections){
+        let stat = await db.collection(col.name).stats()
+        stats.collectionStats.push((({ns, size, count, avgObjSize, storageSize, freeStorageSize, capped, nindexes, indexBuilds,
+        totalIndexSize, totalSize, indexSizes, scaleFactor, ok})=> ({ns, size, count, avgObjSize, storageSize, freeStorageSize, capped, nindexes, indexBuilds,
+            totalIndexSize, totalSize, indexSizes, scaleFactor, ok}))(stat))
+    }
+    await client.close()
+    await fs.promises.writeFile("../../../data/stats.json", JSON.stringify(stats, null, 4))
+    console.log('stats updated')
+	return null
+}
+
+
+/** processInstacartItems('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
+ summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons/", {
+     "id": {keep: true},
+     "dcId": {keep: true},
+     "waId": {keep: true},
+     "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
+     "description": {to: "shortDescription"},
+     "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
+     "minimumPurchase": {to: "requirementQuantity"},
+     "categories": {keep: true},
+     "imageUrl": {keep: true},
+     "brand": {to: "brandName"},
+     "savingType": {to: "type"},
+     "dc_popularity": {to: "popularity"}
+ }, uuid="id")
+ processInstacartItems('../../../scripts/requests/server/collections/aldi/items/', "23150", uuid="legacyId")
 summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
 summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
     "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
@@ -1239,6 +1260,8 @@ summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coup
     "details": {to: "terms"},
     "offerType": {to: "type" }
 }, uuid="targetOfferId")
-// processInstacartItems('../../../scripts/requests/server/collections/familydollar/instacartItems/', "2394", uuid="legacyId")
-// processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
+ processInstacartItems('../../../scripts/requests/server/collections/familydollar/instacartItems/', "2394", uuid="legacyId")
+processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
 zipUp()
+*/ 
+createDBStats()

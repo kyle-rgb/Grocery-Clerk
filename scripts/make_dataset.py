@@ -40,49 +40,88 @@ from tzwhere import tzwhere
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 # Data processing helpers for common flaws in data : [ 
-#   normalizeDay(string), updateGasoline(data), findAndInsertExtraPromotions(head) 
+#   normalizeDay(string), << normalizeStoreData()
+#   updateGasoline(data), << deconstructExtensions()
+#   findAndInsertExtraPromotions(head) << insertFilteredData()
 #  ]
-# Data collection helpers for scraping functions : [
-#   switchUrl(x,y,url), eatThisPage(reset=False), loadExtension(),
-#   setUpBrowser(n, initialSetup, url), loadMoreAppears(png), getArrow(sleep),
-#   scrollDown(sleep=10), 
+# Data collection helpers for scraping functions <supseded by puppeteer container>: [
+#   switchUrl(x,y,url),
+#   eatThisPage(reset=False),
+#   loadExtension(),
+#   setUpBrowser(n, initialSetup, url),
+#   loadMoreAppears(png),
+#   getArrow(sleep),
+#   scrollDown(sleep=10) 
 #  ]
 # Queries to Database : [
-#   retrieveData(collection_name, db),
-#   getCollectionFeatureTypes(),
-#   getCollectionFeatureCounts(db, collection),
-#   queryDB(db, collections, pipeline, filterObj, stop)
+#   retrieveData(collection_name, db), << [os, env.MONGO_CONN_URL, pymongo]
+#   getCollectionFeatureTypes(), << [os, env.MONGO_CONN_URL, pymongo]
+#   getCollectionFeatureCounts(db, collection), << [os, env.MONGO_CONN_URL, pymongo]
+#   queryDB(db, collections, pipeline, filterObj, stop) << [os, env.MONGO_CONN_URL, pymongo]
 # ]
 # Data Entry Functions of Processed Data + Data Dumps : [ 
-#   insertData(entries, collection_name, db),
-#   insertFilteredData(entries, collection_name, db, uuid),
-#   runAndDocument(funcs, callNames, kwargs, callback),
-#   createDBSummaries(db)
+#   insertData(entries, collection_name, db), << [os, env.MONGO_CONN_URL, pymongo,]
+#   insertFilteredData(entries, collection_name, db, uuid), << [os, env.MONGO_CONN_URL, pymongo, time, ]
+#   runAndDocument(funcs, callNames, kwargs, callback), << [pytz, time, ^insertData]
+#   createDBSummaries(db) << [os, env.MONGO_CONN_URL, pymongo, json]
 # ]
 # Backup DB : [ 
-#   backupDatabase(), 
+#   backupDatabase(), << [subprocess, os, shutil, *7z, *mongodump, env.EXTENSION_ARCHIVE_KEY, env.DB_ARCHIVE_KEY]
 #  ]
 # Data Transformation Functions : [
-#  deconstructDollars(file), deconstructExtensions(filename), normalizeStoreData(),
-#  createDecompositions(dataRepoPath, wantedPaths, additionalPaths, setStores)
+#  deconstructDollars(file), << [pytz, re, json, datetime, urllib, ^insertData, ^insertFilteredData]
+#  deconstructExtensions(filename), << [pytz, re, json, datetime, ^retrieveData, ^updateGasoline, ^insertData, ^insertFilteredData]
+#  normalizeStoreData(), << [os, json, urllib, math, datetime, ^normalizeDay, re, ^insertData]
+#  createDecompositions(dataRepoPath, wantedPaths, additionalPaths, setStores) #wrapper for decompositions of fd.coupons, dg.coupons, kroger.trips.coupons.specialPromos
+#   << [os, pytz, json, ^insertFilteredData, datetime, os, ^deconstructExtensions, ^deconstructDollars, ^normalizeStoreData, ^backupDB, ^createDBSummaries]
 # ]
 # Data Collection Functions : [
-#   getStoreData(chain), simulateUser(link), getKrogerTrips(), getFamilyDollarItems(),
-#   getScrollingData(chain), getPublixCouponData, getDGItems(), getStores() 
+#   getStoreData(chain),
+#   simulateUser(link),
+#   getKrogerTrips(),
+#   getFamilyDollarItems(),
+#   getScrollingData(chain),
+#   getPublixCouponData,
+#   getDGItems(),
+#   getStores() 
 # ]
 # Decomposition AGs: [
-    # "krogerTrips": { setUpBrowser >> getKrogerTrips >> createDecompositions:py3.7 },
-    # "krogerCoupons": {setUpBrowser >> getKrogerCoupons >> createDecompositions:py3.7},
-    # "familyDollarCoupons" : {setUpBrowser >> getFamilyDollarCoupons >> deconstructDollars:py3.7},
-    # "dollarGeneralCoupons": {setUpBrowser >> getDollarGeneralCoupons >> deconstructDollars:py3.7},
-    # "aldiItems": {setUpBrowser >> getInstacartItems >> processInstacartItems:node16.13.2 },
-    # "publixItems" : {setUpBrowser >> getInstacartItems >> processInstacartItems:node16.13.2},
-    # "publixCoupons": {setUpBrowser >> getPublixCoupons >> summarizeNewCoupons:node16.13.2},
-    # "familyDollarInstacartItems": {setUpBrowser >> getInstacartItems >> processInstacartItems:node16.13.2},
-    # "familyDollarItems": {setUpBrowser >> getFamilyDollarItems >> processFamilyDollarItems:node16.13.2},
-    # "dollarGeneralItems": {setUpBrowser >> getDollarGeneralItems >> ....}
-    # "foodDepotItems": {setUpBrowser >> getFoodDepotItems >> summarizeFoodDepot:node16.13.2}
-    # "foodDepotCoupons": {setUpBrowser >> getFoodDepotCoupons >> summarizeNewCoupons:node16.13.2}
+    # "krogerTrips": {
+    #   setUpBrowser >> getKrogerTrips >> createDecompositions:py3.7
+    # },
+    # "krogerCoupons": {
+    #   setUpBrowser >> getKrogerCoupons >> createDecompositions:py3.7
+    # },
+    # "familyDollarCoupons" : {
+    #   setUpBrowser >> getFamilyDollarCoupons >> deconstructDollars:py3.7
+    # },
+    # "dollarGeneralCoupons":{
+    #   setUpBrowser >> getDollarGeneralCoupons >> deconstructDollars:py3.7
+    # },
+    # "aldiItems":{
+    #   setUpBrowser >> getInstacartItems >> processInstacartItems:node16.13.2
+    # },
+    # "publixItems" :{
+    #   setUpBrowser >> getInstacartItems >> processInstacartItems:node16.13.2
+    # },
+    # "publixCoupons":{
+    #   setUpBrowser >> getPublixCoupons >> summarizeNewCoupons:node16.13.2
+    # },
+    # "familyDollarInstacartItems":{
+    #   setUpBrowser >> getInstacartItems >> processInstacartItems:node16.13.2
+    # },
+    # "familyDollarItems":{
+    #   setUpBrowser >> getFamilyDollarItems >> processFamilyDollarItems:node16.13.2
+    # },
+    # "dollarGeneralItems":{
+    #   setUpBrowser >> getDollarGeneralItems >> processDollarGeneralItems:node16.13.2
+    # },
+    # "foodDepotItems":{
+    #   setUpBrowser >> getFoodDepotItems >> summarizeFoodDepot:node16.13.2
+    # },
+    # "foodDepotCoupons":{
+    #   setUpBrowser >> getFoodDepotCoupons >> summarizeNewCoupons:node16.13.2
+    # }
 # ]
 
 # --------------------------------------------------------------------- Node.js summary.js---------------------------------------------------------------------
@@ -651,7 +690,8 @@ def createDBSummaries(db='new'):
         dbStats = db.command('dbstats')
         dbStats.setdefault('collectionStats', [])
         for col in db.list_collections():
-            dbStats['collectionStats'].append({k:v for k, v in db.command('collstats', col.get('name')).items() if k!='wiredTiger' and k!='indexDetails'})
+            dbStats['collectionStats'].append({k:v for k, v in db.command('collstats', col.get('name')).items()\
+                 if k!='wiredTiger' and k!='indexDetails'})
         file.write(json.dumps(dbStats, indent=3))
 
     print('updated stats')
@@ -2468,5 +2508,6 @@ def findAndInsertExtraPromotions(head):
 # findAndInsertExtraPromotions("./requests/server/collections/kroger/digital/")
 # findAndInsertExtraPromotions("./requests/server/collections/kroger/cashback/")
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=[], additionalPaths=["dollargeneral/promotions"])
-backupDatabase()
-createDBSummaries('new')
+# backupDatabase()
+# createDBSummaries('new')
+print(win32gui.__file__)
