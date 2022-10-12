@@ -235,7 +235,7 @@ async function setUpBrowser(task) {
   try { 
     browser = await puppeteer.launch({
       headless: task===""? true : false,
-      slowMo: 888, 
+      slowMo: 909, 
       executablePath:
         "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
       dumpio: true,
@@ -916,10 +916,8 @@ async function getKrogerTrips(browser, page, _id){
     console.log(element, yy, ' ', (Date.now()-st)/1000, ' seconds')
   }
   await page.waitForNetworkIdle({idleTime: 5500});
-  await browser.close();
   await wrapFile(fileName);
   console.log("file finished : ", fileName);
-  await browser.close();
   console.log("exiting....")
   insertRun(getKrogerTrips, "runs", "node_call", dbArgs, true, _id,
   `Puppeteer Node.js Call for Scrape of ${getKrogerTrips.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
@@ -996,7 +994,6 @@ async function getKrogerCoupons(browser, page, type, _id){
       console.log("CCs Length", currentCoupons.length, " finished @", i)
     }
     await page.waitForNetworkIdle({idleTime: 3000});
-    await browser.close();
     await wrapFile(fileName);
     console.log("file finished : ", fileName) ;
     insertRun(getKrogerCoupons, "runs", "node_call", dbArgs, true, _id,
@@ -1028,7 +1025,7 @@ async function getInstacartItems(browser, page, _id){
   let offset = 0;
   var wantedResponseRegex =  /item_attributes|operationName=Items|operationName=CollectionProductsWithFeaturedProducts/;
   let allCategoryLinks = await page.$$eval("ul[aria-labelledby='sm-departments'] > li > a", (elems)=> elems.map((a)=>a.href)) // departments side panel
-  allCategoryLinks = allCategoryLinks.filter((a)=>!a.match(unwantedPattern)).slice(1)
+  allCategoryLinks = allCategoryLinks.filter((a)=>!a.match(unwantedPattern))
   let apiEmitter = new EventEmitter();
 
   async function setFlag(ee, waitTime = 4500, timeout = 45000){
@@ -1063,7 +1060,7 @@ async function getInstacartItems(browser, page, _id){
       }, timeout)
     })
   }
-
+  console.log("categories = " , allCategoryLinks)
   for (let link of allCategoryLinks){
     // navigate to page ;
     // wait for request where (collections_all_items_grid) in wanted request
@@ -1099,7 +1096,6 @@ async function getInstacartItems(browser, page, _id){
     console.log("finished ", link)
   }
   await page.waitForTimeout(10000)
-  await browser.close();
   await wrapFile(fileName);
   console.log("file finished : ", fileName) ; 
   insertRun(getInstacartItems, "runs", "node_call", dbArgs, true, _id,
@@ -1147,7 +1143,6 @@ async function getPublixCoupons(browser, page, _id){
   await page.goto("https://www.publix.com/savings/all-deals");
   await page.waitForNetworkIdle({idleTime: 8000});
   await wrapFile(fileName);
-  await browser.close();
   console.log("file finished : ", fileName) ;
   insertRun(getPublixCoupons, "runs", "node_call", dbArgs, true, _id,
   `Puppeteer Node.js Call for Scrape of ${getPublixCoupons.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
@@ -1298,7 +1293,6 @@ async function getDollarGeneralItems(browser, page, _id){
     console.log(button, disabled)
   };
   await page.waitForTimeout(6000);
-  await browser.close();
   await wrapFile(fileName);
   console.log("file finished : ", fileName) ;
   insertRun(getDollarGeneralItems, "runs", "node_call", dbArgs, true, _id,
@@ -1337,7 +1331,6 @@ async function getFamilyDollarCoupons(browser, page, _id){
     page.waitForNavigation({waitUntil: "load"}),
     page.waitForNetworkIdle({idleTime: 3000})
   ])
-  //await browser.close();
   await wrapFile(fileName);
   console.log("file finished : ", fileName) ;
   await insertRun(getFamilyDollarCoupons, "runs", "node_call", dbArgs, true, _id,
@@ -1400,7 +1393,6 @@ async function getFamilyDollarItems(browser, page, _id){
 
     await page.waitForNetworkIdle({idleTime: 3000}); 
     await wrapFile(fileName);
-    //await browser.close(); 
     console.log("finished file", fileName);
     insertRun(getFamilyDollarItems, "runs", "node_call", dbArgs, true, _id,
   `Puppeteer Node.js Call for Scrape of ${getFamilyDollarItems.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
@@ -1495,7 +1487,6 @@ async function getFoodDepotItems(browser, page, _id){
   }
   await page.waitForNetworkIdle({idleTime: 3000}); 
   await wrapFile(fileName);
-  await browser.close(); 
   console.log("finished file", fileName);
   insertRun(getFoodDepotItems, "runs", "node_call", dbArgs, true, _id,
   `Puppeteer Node.js Call for Scrape of ${getFoodDepotItems.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
@@ -1530,7 +1521,6 @@ async function getFoodDepotCoupons(browser, page, _id){
   await page.goto("https://www.fooddepot.com/coupons/")
   await page.waitForTimeout(23000)
   await wrapFile(fileName);
-  await browser.close();
   console.log("finished file", fileName);
   insertRun(getFoodDepotCoupons, "runs", "node_call", dbArgs, true, _id,
   `Puppeteer Node.js Call for Scrape of ${getFoodDepotCoupons.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
@@ -1688,6 +1678,39 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
 //   })
 // })
 
-setUpBrowser(task="").then(async ([browser, page, entryID])=> {
-  await getFoodDepotCoupons(browser, page, entryID)
+async function testHeadless(browser, page, entryID){
+  // set url based on type 
+  var promotionUrl = "https://www.kroger.com/savings/cl/coupons" ;  
+  let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
+  // fileName = `../requests/server/collections/kroger/${type}/` + fileName; 
+  await page.goto(promotionUrl);
+  console.log("went to ", promotionUrl)
+  await page.waitForTimeout(6000);
+  console.log("waited for 6. waiting for 8")
+  await page.waitForTimeout(8000)
+  await page.screenshot({path: "./ss.png"})
+  await browser.close()
+  console.log("done....")
+  return null 
+}
+
+setUpBrowser(task="krogerCoupons").then(async ([browser, page, entryID])=> {
+  await getKrogerCoupons(browser, page, "digital", entryID);
+  await getKrogerCoupons(browser, page, "cashback", entryID);
+  await browser.close(); 
+})
+
+setUpBrowser(task="aldiItems").then(async ([browser, page, entryID])=> {
+  await getInstacartItems(browser, page, entryID)
+  await browser.close(); 
+})
+
+setUpBrowser(task="publixItems").then(async ([browser, page, entryID])=> {
+  await getInstacartItems(browser, page, entryID)
+  await browser.close(); 
+})
+
+setUpBrowser(task="publixCoupons").then(async ([browser, page, entryID])=> {
+  await getPublixCoupons(browser, page, entryID)
+  await browser.close(); 
 })

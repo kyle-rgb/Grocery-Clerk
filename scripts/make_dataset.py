@@ -5,6 +5,8 @@ import subprocess, shutil, requests
 import pyautogui as pag
 import win32gui
 
+# pprint|time|re|random|dt|os|json|urllib|pytz|sys|math|subprocess|shutil|requests|pag|win32gui|MongoClient|CollectionInvalid|clip|tzwhere
+# DB_ARCHIVE_KEY|EXTENSION_ARCHIVE_KEY|ZIPCODE|PHONE_NUMBER|VERIFICATION_CODE
 
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
@@ -629,8 +631,6 @@ def insertFilteredData(entries, collection_name, db, uuid) -> None:
     ])
     currentIds = [tuple(x['fields']) for x in res][0]
     client.close()
-    keys = list(filters.keys())
-
     entriesForDb = filter(lambda x: x[uuid] not in currentIds, entries)
     entriesForDb = [x for x in entriesForDb]
     if len(entriesForDb)==0:
@@ -2507,7 +2507,6 @@ def findAndInsertExtraPromotions(head):
 
 # findAndInsertExtraPromotions("./requests/server/collections/kroger/digital/")
 # findAndInsertExtraPromotions("./requests/server/collections/kroger/cashback/")
-# createDecompositions('./requests/server/collections/kroger', wantedPaths=[], additionalPaths=["dollargeneral/promotions"])
+createDecompositions('./requests/server/collections/kroger', wantedPaths=["digital", "cashback"], additionalPaths=[])
 # backupDatabase()
 # createDBSummaries('new')
-print(win32gui.__file__)

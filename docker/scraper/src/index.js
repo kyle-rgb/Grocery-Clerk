@@ -234,17 +234,12 @@ async function setUpBrowser(task) {
   var browser, page;
   try { 
     browser = await puppeteer.launch({
-      headless: task==="foodDepotCoupons"? true : false,
-      slowMo: 888, 
-      executablePath:
-        "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+      headless: task === "foodDepotCoupons"? true : false,
+      slowMo: 888,
       dumpio: true,
-      args: [
-        "--start-maximized",
-        "--profile-directory=Profile 1",
-      ],
-      userDataDir: "C:\\c\\Profiles",
-      defaultViewport: {width: 1920, height: 1080},
+      args: ["--start-maximized", "--no-sandbox"],
+      executablePath: "google-chrome-stable",
+      defaultViewport: {width: 1920, height: 1080 },
       devtools: false,
       timeout: 0
     });
@@ -1670,10 +1665,10 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
 
 async function testContainerBrowser(){
   var browser = await puppeteer.launch({
-    headless: true,
+    headless: false,
     slowMo: 0,
     dumpio: true,
-    args: ["--start-maximized"],
+    args: ["--start-maximized", "--no-sandbox"],
     executablePath: "google-chrome-stable",
     defaultViewport: {width: 1920, height: 1080 },
     devtools: false,
@@ -1695,8 +1690,24 @@ async function testContainerBrowser(){
   console.log("closed")
   return null
 }
-// setUpBrowser(task="krogerCoupons").then(async ([browser, page, entryID])=> {
-//   await getKrogerCoupons(browser, page, "digital", entryID)
-//   await getKrogerCoupons(browser, page, "cashback", entryID)
-// })
-testContainerBrowser();
+
+setUpBrowser(task="krogerCoupons").then(async ([browser, page, entryID])=> {
+  await getKrogerCoupons(browser, page, "digital", entryID);
+  await getKrogerCoupons(browser, page, "cashback", entryID);
+  await browser.close(); 
+})
+
+setUpBrowser(task="aldiItems").then(async ([browser, page, entryID])=> {
+  await getInstacartItems(browser, page, entryID)
+  await browser.close(); 
+})
+
+setUpBrowser(task="publixItems").then(async ([browser, page, entryID])=> {
+  await getInstacartItems(browser, page, entryID)
+  await browser.close(); 
+})
+
+setUpBrowser(task="publixCoupons").then(async ([browser, page, entryID])=> {
+  await getPublixCoupons(browser, page, entryID)
+  await browser.close(); 
+})

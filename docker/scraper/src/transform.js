@@ -1263,5 +1263,22 @@ summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coup
  processInstacartItems('../../../scripts/requests/server/collections/familydollar/instacartItems/', "2394", uuid="legacyId")
 processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
 zipUp()
-*/ 
+*/
+processInstacartItems('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
+summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons/", {
+     "id": {keep: true},
+     "dcId": {keep: true},
+     "waId": {keep: true},
+     "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
+     "description": {to: "shortDescription"},
+     "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
+     "minimumPurchase": {to: "requirementQuantity"},
+     "categories": {keep: true},
+     "imageUrl": {keep: true},
+     "brand": {to: "brandName"},
+     "savingType": {to: "type"},
+     "dc_popularity": {to: "popularity"}
+ }, uuid="id")
+processInstacartItems('../../../scripts/requests/server/collections/aldi/items/', "23150", uuid="legacyId")
+zipUp() 
 createDBStats()
