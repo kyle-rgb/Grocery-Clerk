@@ -9,9 +9,11 @@ services:
     stdin_open: true
     environment:
       GPG_TTY: /dev/pts/0
+      DISPLAY: "$IP:0.0"
+    ports:
+      - "8080:8080"
+      - "9229:9229"
     init: true
-    security_opt:
-      - seccomp=./scraper/chrome.json
     secrets:
       - puppet-keys
       - encryption-key

@@ -6,7 +6,7 @@ const fs = require("fs")
 const readline = require("readline");
 const EventEmitter = require('node:events');
 const { spawn } = require('child_process');
-const {MongoClient, UnorderedBulkOperation} = require('mongodb');
+const {MongoClient} = require('mongodb');
 // add stealth plugin and use defaults 
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { ProtocolError, TimeoutError } = require('puppeteer');
@@ -1666,11 +1666,11 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
 async function testContainerBrowser(){
   var browser = await puppeteer.launch({
     headless: false,
-    slowMo: 0,
-    dumpio: true,
+    slowMo: 1000,
+    dumpio: false,
     args: ["--start-maximized", "--no-sandbox"],
     executablePath: "google-chrome-stable",
-    defaultViewport: {width: 1920, height: 1080 },
+    defaultViewport: {width: 1024, height: 768 },
     devtools: false,
     timeout: 0
   });
@@ -1678,19 +1678,20 @@ async function testContainerBrowser(){
   var [page] = await browser.pages(); 
   console.log("opened page"); 
   await page.goto("https://www.google.com");
-  console.log("went to gooogle"); 
-  await page.waitForTimeout(7000);
-  console.log("waited for 7 seconds"); 
+  console.log("went to google"); 
+  await page.waitForTimeout(4000);
+  console.log("waited for 4 seconds"); 
   await page.screenshot({
     path: "./headlessScreen.png",
     fullPage: true,
-  })
-  console.log("took screenshots"); 
-  await browser.close();
-  console.log("closed")
+  });
+  
+  console.log("took screenshots");
+  //await browser.close();
+  // console.log("closed")
   return null
 }
-
+/*
 setUpBrowser(task="krogerCoupons").then(async ([browser, page, entryID])=> {
   await getKrogerCoupons(browser, page, "digital", entryID);
   await getKrogerCoupons(browser, page, "cashback", entryID);
@@ -1710,4 +1711,5 @@ setUpBrowser(task="publixItems").then(async ([browser, page, entryID])=> {
 setUpBrowser(task="publixCoupons").then(async ([browser, page, entryID])=> {
   await getPublixCoupons(browser, page, entryID)
   await browser.close(); 
-})
+})*/
+testContainerBrowser();
