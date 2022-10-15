@@ -30,10 +30,10 @@ RUN npm install \
     && chown -R pptruser:pptruser /app/package.json \
     && chown -R pptruser:pptruser /app/package-lock.json
 
+RUN apt-get -y install wmctrl 
+
 COPY . /app/
 
 USER pptruser
 
-EXPOSE 3000
-
-CMD node
+CMD '/app/bootstrap.sh'

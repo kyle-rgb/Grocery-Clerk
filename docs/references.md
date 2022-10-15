@@ -25,6 +25,7 @@
 # docker puppeteer.js headful helpers
 - [puppeteer headful overwrite entrypoint.sh](https://github.com/mujo-code/puppeteer-headful/blob/master/entrypoint.sh)
 - [puppeteer headful monitoring with x11vnc + fluxbox](https://stackoverflow.com/questions/12050021/how-to-make-xvfb-display-visible)
+- [xvfd start with fluxbox bash script + article](https://medium.com/dot-debug/running-chrome-in-a-docker-container-a55e7f4da4a8)
 
 # Bash Scripting
 - [Bash Man Page](https://tiswww.case.edu/php/chet/bash/bashref.html#Special-Parameters)
