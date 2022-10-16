@@ -1138,7 +1138,62 @@ function processDollarGeneralItems(target, couponParser, itemParser){
     }
     return;
 }
-processDollarGeneralItems("../../../scripts/requests/server/collections/dollargeneral/items",
+
+async function createDBStats(dbName='new'){
+	const client = new MongoClient(process.env.MONGO_CONN_URL);
+	await client.connect();
+	console.log('Connected successfully to Server');
+	const db = client.db(dbName)
+	var stats = await db.stats()
+	stats.collectionStats = [];
+    var collections = db.listCollections({}, {nameOnly: true})
+    for await (let col of collections){
+        let stat = await db.collection(col.name).stats()
+        stats.collectionStats.push((({ns, size, count, avgObjSize, storageSize, freeStorageSize, capped, nindexes, indexBuilds,
+        totalIndexSize, totalSize, indexSizes, scaleFactor, ok})=> ({ns, size, count, avgObjSize, storageSize, freeStorageSize, capped, nindexes, indexBuilds,
+            totalIndexSize, totalSize, indexSizes, scaleFactor, ok}))(stat))
+    }
+    await client.close()
+    await fs.promises.writeFile("../../../data/stats.json", JSON.stringify(stats, null, 4))
+    console.log('stats updated')
+	return null
+}
+
+/** processInstacartItems('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
+ summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons/", {
+     "id": {keep: true},
+     "dcId": {keep: true},
+     "waId": {keep: true},
+     "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
+     "description": {to: "shortDescription"},
+     "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
+     "minimumPurchase": {to: "requirementQuantity"},
+     "categories": {keep: true},
+     "imageUrl": {keep: true},
+     "brand": {to: "brandName"},
+     "savingType": {to: "type"},
+     "dc_popularity": {to: "popularity"}
+ }, uuid="id")
+ processInstacartItems('../../../scripts/requests/server/collections/aldi/items/', "23150", uuid="legacyId")
+summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
+summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
+    "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
+    "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
+    "effectiveDate": {to: "endDate", convert: function (x) {return new Date(x)}},
+    "offerId": {keep: true},
+    "targetOfferId": {keep: true},
+    "category": {to: "categories", convert: function(x) {return [x]}},
+    "image": {to: "imageUrl", convert: function (x){return x.links.lg}},
+    "brand": {to: "brandName"},
+    "details": {to: "terms"},
+    "offerType": {to: "type" }
+}, uuid="targetOfferId")
+processInstacartItems('../../../scripts/requests/server/collections/familydollar/instacartItems/', "2394", uuid="legacyId")
+processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
+zipUp()
+*/
+
+processDollarGeneralItems("../../../scripts/requests/server/collections/dollargeneral/promotions",
 couponParser={
     OfferCode: {to: "offerCode"},
     OfferGS1: {to: "offerGS1", bool: true},
@@ -1210,75 +1265,77 @@ itemParser={
     }}
 })
 
-async function createDBStats(dbName='new'){
-	const client = new MongoClient(process.env.MONGO_CONN_URL);
-	await client.connect();
-	console.log('Connected successfully to Server');
-	const db = client.db(dbName)
-	var stats = await db.stats()
-	stats.collectionStats = [];
-    var collections = db.listCollections({}, {nameOnly: true})
-    for await (let col of collections){
-        let stat = await db.collection(col.name).stats()
-        stats.collectionStats.push((({ns, size, count, avgObjSize, storageSize, freeStorageSize, capped, nindexes, indexBuilds,
-        totalIndexSize, totalSize, indexSizes, scaleFactor, ok})=> ({ns, size, count, avgObjSize, storageSize, freeStorageSize, capped, nindexes, indexBuilds,
-            totalIndexSize, totalSize, indexSizes, scaleFactor, ok}))(stat))
-    }
-    await client.close()
-    await fs.promises.writeFile("../../../data/stats.json", JSON.stringify(stats, null, 4))
-    console.log('stats updated')
-	return null
-}
-
-
-/** processInstacartItems('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
- summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons/", {
-     "id": {keep: true},
-     "dcId": {keep: true},
-     "waId": {keep: true},
-     "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
-     "description": {to: "shortDescription"},
-     "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
-     "minimumPurchase": {to: "requirementQuantity"},
-     "categories": {keep: true},
-     "imageUrl": {keep: true},
-     "brand": {to: "brandName"},
-     "savingType": {to: "type"},
-     "dc_popularity": {to: "popularity"}
- }, uuid="id")
- processInstacartItems('../../../scripts/requests/server/collections/aldi/items/', "23150", uuid="legacyId")
-summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
-summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
-    "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
-    "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
-    "effectiveDate": {to: "endDate", convert: function (x) {return new Date(x)}},
-    "offerId": {keep: true},
-    "targetOfferId": {keep: true},
-    "category": {to: "categories", convert: function(x) {return [x]}},
-    "image": {to: "imageUrl", convert: function (x){return x.links.lg}},
-    "brand": {to: "brandName"},
-    "details": {to: "terms"},
-    "offerType": {to: "type" }
-}, uuid="targetOfferId")
- processInstacartItems('../../../scripts/requests/server/collections/familydollar/instacartItems/', "2394", uuid="legacyId")
+processDollarGeneralItems("../../../scripts/requests/server/collections/dollargeneral/promotions",
+couponParser={
+    OfferCode: {to: "offerCode"},
+    OfferGS1: {to: "offerGS1", bool: true},
+    OfferDescription: {to: "shortDescription", convert: (x)=> {
+        if (x.OfferSummary.match(/^save/i)){
+            if (x.OfferDescription.match(/^on[^e]/i)) x.OfferDescription = " " + x.OfferDescription;
+            else x.OfferDescription = " on " + x.OfferDescription;
+            return x.OfferSummary + x.OfferDescription
+        } else {
+            return x.OfferDescription 
+        }
+    }},
+    BrandName: {to: "brandName"},
+    CompanyName: {to: "companyName"},
+    OfferType: {to: "offerType"},
+    OfferDisclaimer: {to: "terms", bool: true},
+    IsManufacturerCoupon: {to: "isManufacturerCoupon"},
+    RewaredCategoryName: {to: "categories"},
+    OfferActivationDate: {to: "startDate", convert: (dateMyTz)=> {return new Date(dateMyTz)}},
+    OfferExpirationDate: {to: "expirationDate", convert: (dateMyTz)=> {return new Date(dateMyTz)}},
+    RewaredOfferValue: {to: "value"},
+    MinQuantity: {to: "requirementQuantity"},
+    RedemptionLimitQuantity: {to: "redemptionsAllowed"},
+    RecemptionFrequency: {to: "redemptionFreq"},
+    Image1: {to: "imageUrl"},
+    Image2: {to: "imageUrl2"},
+    OfferID: {to:"productUpcs", convert: (offerId, mapWithItemKeys) => {
+        return offerId in mapWithItemKeys ? Array.from(mapWithItemKeys[offerId]) : [];
+    }}
+},
+itemParser={
+    UPC: {to: "upc"},
+    Description: {to: "description"},
+    Image: {to: "images", convert: (img)=> {
+        return [{url: img, perspective: 'front', main: true, size: "xlarge"}]
+    }},
+    IsSellable: {to: "soldInStore"}, 
+    IsBopisEligible: { keep: 1},
+    IsGenericBrand: {keep: 1},
+    modalities: {create: (item)=> {
+        let mParse = {"IsSellable": "IN_STORE", "isShipToHome": "SHIP", "isPopshelfShipToHome": "SHIP", "IsBopisEligible": "PICKUP"}
+        return Object.entries(item).map(([k, v])=> {return k in mParse && v? k : 0;}).filter((k)=>k).map((truthyKey)=> {return mParse[truthyKey]})
+    }, to: "modalities"},
+    RatingReviewCount: {bool: 0, to: "ratings", convert: (ratingCount, ratingAverage)=> {
+        if (ratingCount){
+            return {avg: ratingAverage, ct: ratingCount}
+        }
+    }},
+    Categories: {bool:true, convert: (x)=> {
+        return x.split("|")
+    }},
+    _prices: {convert: (full_item, locationId, utcTimestamp) => { 
+        let returnValues = [];
+        returnValues.push({"value": full_item.OriginalPrice, "type": "Regular", "isPurchase": false,
+        "locationId": locationId, "utcTimestamp": utcTimestamp, "upc": full_item.UPC, "quantity": 1,
+        modalities: full_item.modalities });
+        if (full_item.OriginalPrice !== full_item.Price){
+            returnValues.push({"value": full_item.Price, "type": "Sale", "isPurchase": false,
+            "locationId": locationId, "utcTimestamp": utcTimestamp, "upc": full_item.UPC, "quantity": 1,
+            modalities: full_item.modalities });
+        }
+        return returnValues;
+    }},
+    _inventories: {convert: (full_item, locationId, utcTimestamp)=> {
+        let itemStatus = full_item.InventoryStatus; 
+        itemStatus = itemStatus ==1? "TEMPORARILY_OUT_OF_STOCK" : itemStatus == 2 ? "LOW" : "HIGH"; 
+        return {"stockLevel": itemStatus, "availableToSell": full_item.AvailableStockStore, "locationId": locationId,
+        "utcTimestamp": new Date(utcTimestamp), "upc": full_item.UPC}
+    }}
+})
 processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
 zipUp()
-*/
-processInstacartItems('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
-summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons/", {
-     "id": {keep: true},
-     "dcId": {keep: true},
-     "waId": {keep: true},
-     "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
-     "description": {to: "shortDescription"},
-     "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
-     "minimumPurchase": {to: "requirementQuantity"},
-     "categories": {keep: true},
-     "imageUrl": {keep: true},
-     "brand": {to: "brandName"},
-     "savingType": {to: "type"},
-     "dc_popularity": {to: "popularity"}
- }, uuid="id")
-processInstacartItems('../../../scripts/requests/server/collections/aldi/items/', "23150", uuid="legacyId")
-zipUp() 
 createDBStats()

@@ -1666,29 +1666,29 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
 async function testContainerBrowser(){
   var browser = await puppeteer.launch({
     headless: false,
-    slowMo: 1000,
+    slowMo: 2000,
     dumpio: false,
     args: ["--start-maximized", "--no-sandbox"],
     executablePath: "google-chrome-stable",
-    defaultViewport: {width: 1024, height: 768 },
+    defaultViewport: {width: 1920, height: 1080 },
     devtools: false,
     timeout: 0
   });
   console.log("successfully launched browser"); 
   var [page] = await browser.pages(); 
   console.log("opened page"); 
-  await page.goto("https://www.google.com");
-  console.log("went to google"); 
-  await page.waitForTimeout(4000);
+  await page.goto("https://www.kroger.com");
+  console.log("went to kroger.com"); 
+  await page.waitForTimeout(6000);
   console.log("waited for 4 seconds"); 
   await page.screenshot({
     path: "./headlessScreen.png",
     fullPage: true,
   });
-  
+  // await browser.close();
   console.log("took screenshots");
   //await browser.close();
-  // console.log("closed")
+  console.log("closed")
   return null
 }
 /*

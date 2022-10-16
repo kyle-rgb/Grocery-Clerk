@@ -1714,3 +1714,8 @@ setUpBrowser(task="publixCoupons").then(async ([browser, page, entryID])=> {
   await getPublixCoupons(browser, page, entryID)
   await browser.close(); 
 })
+
+setUpBrowser(task="familyDollarItems").then(async ([browser, page, entryID])=> {
+  await getFamilyDollarItems(browser, page, entryID)
+  await getFamilyDollarCoupons(browser, page, entryID)
+})
