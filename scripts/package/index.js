@@ -234,7 +234,7 @@ async function setUpBrowser(task) {
   var browser, page;
   try { 
     browser = await puppeteer.launch({
-      headless: task===""? true : false,
+      headless: task==="" || task==="foodDepotCoupons"? true : false,
       slowMo: 909, 
       executablePath:
         "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
@@ -540,8 +540,8 @@ async function setUpBrowser(task) {
         if (appCardIFrame){
           let phoneInput = await frameCoupons.$("#phone");
           if (!phoneInput){
-            await page.screenshot({fullPage: true, "path": "./pic.png"})
-            throw new Error("no id phone. already logged in")
+            console.log("Already Logged in")
+            break;
           }
           console.log(phoneInput)
           await phoneInput.type(PHONE_NUMBER, {delay: 400})
@@ -1678,44 +1678,64 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
 //   })
 // })
 
-async function testHeadless(browser, page, entryID){
+async function testHeadless(){
   // set url based on type 
+  browser = await puppeteer.launch({
+    headless: true,
+    slowMo: 909, 
+    executablePath:
+      "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+    dumpio: true,
+    args: [
+      "--start-maximized",
+      "--profile-directory=Profile 1",
+    ],
+    userDataDir: "C:\\c\\Profiles",
+    defaultViewport: {width: 1920, height: 1080},
+    devtools: false,
+    timeout: 0
+  });
+  let [page] = await browser.pages()
   var promotionUrl = "https://www.kroger.com/savings/cl/coupons" ;  
   let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   // fileName = `../requests/server/collections/kroger/${type}/` + fileName; 
-  await page.goto(promotionUrl);
-  console.log("went to ", promotionUrl)
+  await page.goto(`https://www.fooddepot.com/coupons/`, {waitUntil: "load"})
+  console.log("went to ", "https://www.fooddepot.com/coupons/")
   await page.waitForTimeout(6000);
   console.log("waited for 6. waiting for 8")
   await page.waitForTimeout(8000)
-  await page.screenshot({path: "./ss.png"})
+  await page.screenshot({path: "./ss1.png"})
   await browser.close()
   console.log("done....")
   return null 
 }
 
-setUpBrowser(task="krogerCoupons").then(async ([browser, page, entryID])=> {
-  await getKrogerCoupons(browser, page, "digital", entryID);
-  await getKrogerCoupons(browser, page, "cashback", entryID);
-  await browser.close(); 
-})
+// setUpBrowser(task="krogerCoupons").then(async ([browser, page, entryID])=> {
+//   await getKrogerCoupons(browser, page, "digital", entryID);
+//   await getKrogerCoupons(browser, page, "cashback", entryID);
+//   await browser.close(); 
+// })
 
-setUpBrowser(task="aldiItems").then(async ([browser, page, entryID])=> {
-  await getInstacartItems(browser, page, entryID)
-  await browser.close(); 
-})
+// setUpBrowser(task="aldiItems").then(async ([browser, page, entryID])=> {
+//   await getInstacartItems(browser, page, entryID)
+//   await browser.close(); 
+// })
 
-setUpBrowser(task="publixItems").then(async ([browser, page, entryID])=> {
-  await getInstacartItems(browser, page, entryID)
-  await browser.close(); 
-})
+// setUpBrowser(task="publixItems").then(async ([browser, page, entryID])=> {
+//   await getInstacartItems(browser, page, entryID)
+//   await browser.close(); 
+// })
 
-setUpBrowser(task="publixCoupons").then(async ([browser, page, entryID])=> {
-  await getPublixCoupons(browser, page, entryID)
-  await browser.close(); 
-})
+// setUpBrowser(task="publixCoupons").then(async ([browser, page, entryID])=> {
+//   await getPublixCoupons(browser, page, entryID)
+//   await browser.close(); 
+// })
 
-setUpBrowser(task="familyDollarItems").then(async ([browser, page, entryID])=> {
-  await getFamilyDollarItems(browser, page, entryID)
-  await getFamilyDollarCoupons(browser, page, entryID)
+// setUpBrowser(task="familyDollarItems").then(async ([browser, page, entryID])=> {
+//   await getFamilyDollarItems(browser, page, entryID)
+//   await getFamilyDollarCoupons(browser, page, entryID)
+// })
+
+setUpBrowser(task="foodDepotCoupons").then(async ([browser, page, entryID])=> {
+  await getFoodDepotCoupons(browser, page, entryID);
 })

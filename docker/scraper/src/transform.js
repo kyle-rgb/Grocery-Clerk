@@ -549,7 +549,7 @@ function summarizeNewCoupons(target, parser, uuid){
     let files = fs.readdirSync(target, {encoding: 'utf-8', withFileTypes: true})
     files = files.filter((d)=>d.isFile())
     allCoupons = []
-    let storesRegex = /fooddepot|publix/
+    let storesRegex = /fooddepot|publix|familydollar/
     var parserKeys = Object.keys(parser)
     let targetHeirarchy = target.match(storesRegex)
     targetHeirarchy = target.slice(targetHeirarchy.index)
@@ -567,17 +567,20 @@ function summarizeNewCoupons(target, parser, uuid){
             chunk = chunk.filter((d)=>d.url.includes('appcard'))
             chunk = chunk.map((d)=>{return d.offers})
             chunk = chunk.flat()
-        } else {
+        } else if (target.includes('publix')){
             chunk = chunk.map((c)=>{return c.Savings}).flat()
+        } else {
+            chunk = chunk.map((c)=>c.data).flat()
         }
-        
+        console.log("chunk length = ", chunk.length)
         chunk.map((d)=> {
             let newPromo = {}
             let relKeys = parserKeys.filter((pk)=> pk in d)
             for (let key of relKeys){
+                console.log(d[key], key, newPromo)
                 let actions = parser[key]
                 actions.convert ? d[key] = actions.convert(d[key]) : 0;
-                actions.to ? newPromo[actions.to] = d[key] : 0;
+                actions.to ? actions.to in newPromo ? newPromo[actions.to] = [newPromo[actions.to], ...d[key]]: newPromo[actions.to] = d[key] : 0;
                 actions.keep ? newPromo[key] = d[key] : 0;
             }
             allCoupons.push(newPromo)
@@ -1159,8 +1162,9 @@ async function createDBStats(dbName='new'){
 	return null
 }
 
-/** processInstacartItems('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
- summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons/", {
+/** 
+processInstacartItems('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
+summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons/", {
      "id": {keep: true},
      "dcId": {keep: true},
      "waId": {keep: true},
@@ -1174,7 +1178,7 @@ async function createDBStats(dbName='new'){
      "savingType": {to: "type"},
      "dc_popularity": {to: "popularity"}
  }, uuid="id")
- processInstacartItems('../../../scripts/requests/server/collections/aldi/items/', "23150", uuid="legacyId")
+processInstacartItems('../../../scripts/requests/server/collections/aldi/items/', "23150", uuid="legacyId")
 summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
 summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
     "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
@@ -1190,9 +1194,6 @@ summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coup
 }, uuid="targetOfferId")
 processInstacartItems('../../../scripts/requests/server/collections/familydollar/instacartItems/', "2394", uuid="legacyId")
 processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
-zipUp()
-*/
-
 processDollarGeneralItems("../../../scripts/requests/server/collections/dollargeneral/promotions",
 couponParser={
     OfferCode: {to: "offerCode"},
@@ -1337,5 +1338,42 @@ itemParser={
     }}
 })
 processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
+*/
+summarizeNewCoupons("../../../scripts/requests/server/collections/familydollar/coupons",
+parser={
+    "mdid": {to: "id"},
+    "brand": {to: "brandName"},
+    "offerType": {to: "type"},
+    "description": {to: "shortDescription"},
+    "terms": {keep:true},
+    "category": {convert: (cat)=> {
+        return cat.name
+    }, to: "categories"},
+    "tags": {to: "categories" , convert: (tags)=> {
+        return tags.map((tag)=>tag.replace("fd-", "").trim().split(" ").map((word)=> word.slice(0, 1).toUpperCase()+word.slice(1).toLowerCase()).join(" "))
+    }},
+    "redemptionStartDateTime": {to: "startDate", convert: (x)=>new Date(x.iso)}, // 
+    "expirationDateTime": {to: "expirationDate", convert: (x)=>new Date(x.iso)}, // 
+    "clipStartDateTime": {to: "clipStartDate", convert: (x)=>new Date(x.iso)}, // 
+    "clipEndDateTime": {to: "clipEndDate", convert: (x)=>new Date(x.iso)}, // 
+    "offerSortValue": {to: "value", convert: (x)=>+x},
+    "minPurchase": {to: "requirementQuantity", convert: (x)=>+x},
+    "redemptionsPerTransaction": {to: "redemptionsAllowed"},
+    "imageUrl": {keep: true},
+    "enhancedImageUrl": {keep: true},
+    "type": {to: "isManufacturerCoupon", convert: (x)=>x==="mfg"}
+}, "id") 
+summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
+summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
+    "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
+    "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
+    "effectiveDate": {to: "startDate", convert: function (x) {return new Date(x)}},
+    "offerId": {keep: true},
+    "targetOfferId": {keep: true},
+    "category": {to: "categories", convert: function(x) {return [x]}},
+    "image": {to: "imageUrl", convert: function (x){return x.links.lg}},
+    "brand": {to: "brandName"},
+    "details": {to: "terms"},
+    "offerType": {to: "type" }
+}, uuid="targetOfferId")
 zipUp()
-createDBStats()

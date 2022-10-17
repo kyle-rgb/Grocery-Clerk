@@ -534,11 +534,15 @@ async function setUpBrowser(task) {
         console.log(frameCoupons.url())
         if (appCardIFrame){
           let phoneInput = await frameCoupons.$("#phone");
+          if (!phoneInput){
+            console.log("already logged in")
+            break;
+          }
           console.log(phoneInput)
           await phoneInput.type(PHONE_NUMBER, {delay: 400})
           console.log("wrote phone number")
           await frameCoupons.$eval("button.button-login.default", async (el)=>{
-            await el.click();
+            el.click();
           })
           console.log("clicked login button")
           var parsedVerificationCode = await getFoodDepotCode(); 
@@ -1682,13 +1686,18 @@ async function testContainerBrowser(){
   await page.waitForTimeout(6000);
   console.log("waited for 4 seconds"); 
   await page.screenshot({
-    path: "./headlessScreen.png",
+    path: "./img/headlessScreenKrogerHome.png",
     fullPage: true,
   });
-  // await browser.close();
-  console.log("took screenshots");
-  //await browser.close();
+  console.log("took home screenshot");
+  await page.waitForTimeout(6000);
+  await page.goto("https://www.kroger.com/savings/cl/coupons")
+  await page.screenshot({
+    path: "./img/headlessScreenKrogerCoupons.png",
+    fullPage: true,
+  });
   console.log("closed")
+  await browser.close()
   return null
 }
 /*
