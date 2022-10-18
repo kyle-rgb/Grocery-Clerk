@@ -34,8 +34,11 @@ function setEquivalent(setA, setB){
 
 function insertData(listOfObjects, collectionName, mock=false){
     if (listOfObjects.length===0) {
-        throw new Error("bulkWrite Operations Cannot Write an Empty list!")
-    }
+        throw new Error("bulkWrite Operations Cannot Write an Empty list or Parse an empty string!")
+    } else if (typeof(listOfObjects)==='string' ){
+        if (!fs.existsSync(listOfObjects)) throw new Err("file does not exist");
+        listOfObjects = JSON.parse(fs.readFileSync(listOfObjects))
+    } 
     const client = new MongoClient(process.env.MONGO_CONN_URL)
     const dbName = 'new'
 
@@ -61,6 +64,13 @@ function insertData(listOfObjects, collectionName, mock=false){
 }
 
 async function insertFilteredData(id, collectionName, newData = undefined, dbName = 'new', mock=false){
+    if (newData.length===0) {
+        throw new Error("bulkWrite Operations Cannot Write an Empty list or Parse an empty string!")
+    } else if (typeof(newData)==='string' ){
+        if (!fs.existsSync(newData)) throw new Err("file does not exist");
+        newData = JSON.parse(fs.readFileSync(newData))
+    } 
+    
     const client = new MongoClient(process.env.MONGO_CONN_URL)
     await client.connect();
     console.log('Connected successfully to server')
