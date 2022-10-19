@@ -20,47 +20,71 @@ with DAG(
     # [START kroger_operator_setup_node]
     @task(task_id="setup_browser")
     def setup_browser(ds=None, **kwargs):
-        """Starts the Browser and Runs Setup in Container"""
-        pass
+        """Starts the Browser and Runs Node.js Setup in Container"""
+        
+        # has to connect to docker network running on host via docker module 
+        
+        # connect to docker and poke awake container; airflow worker should have docker module installed 
+
+        # run setUpBrowser from app/src/index.js with proper task argument
+        
+        # wait for confirmation of task completion, forward any logging to airflow logs
+
+        # mark as success and move on to next task
+        print("passed through setup_browser")
+        time.sleep(1)
+        return 0
     # [END kroger_operator_setup_node]
-    setUp = setup_browser()
+    setUpTask = setup_browser()
 
     # [START kroger_operator_run_data_extraction]
-    @task(task_id='extract_coupon_data_via_browser')
+    @task(task_id='extract_coupon_data_via_container_browser')
     def extract():
-        """This function handles data extract via node script in docker network"""
-        pass
+        """ This function handles data extract via Node.js script in Docker network."""
+        # attach back to successfully handled browser and run core extraction script -> (getKrogerCoupons, getKrogerTrips)
 
-    extract_task = extract()
+        # forward logs to airflow, monitor container health & resorces and wait for completion 
 
-    setUp >> sleep_task
+        # on completion, file for date should show in proper folder
+
+        # mark as success and move on to python decomposition of created file
+        print("passed through kroger-operator-run-data-extraction")
+        time.sleep(2)
+        return 0
+
+    extractTask = extract()
+
     # [END kroger_operator_run_data_extraction]
 
-    # [START kroger_operator_transform_api]
-    if shutil.which("virtualenv"):
-        log.warning("The virtualenv_python task require the virtualenv module, please install it")
-    else:
-        @task.virtualenv(
-            task_id="virtualenv_transform_python", requirements=["pymongo==3.11.0", "pytz==2021.3"], system_site_packages=False
-        )
-        def callable_virtualenv():
-            """
-                Task will be performed in a virtual environment that mirrors my own environment.
+    # [START kroger_operator_transform_file]
+    @task.virtualenv(
+        task_id="virtualenv_transform_python", requirements=["pymongo==3.11.0"], system_site_packages=True
+    )
+    def callable_virtualenv():
+        """
+            Task will be performed in a virtual environment that mirrors my own environment.
 
-                Importing at the module level ensures that it will not attempt to import the
-                library before it is installed.
-            """
-            import sys
+            Importing at the module level ensures that it will not attempt to import the
+            library before it is installed.
+        """
+        import sys, os
+        from pyGrocery.transformers.kroger import deconstructKrogerFiles
+        
+        print("correctly loaded transformer package in virtual env", deconstructKrogerFiles)
+        
+        deconstructKrogerFiles("./dags/pyGrocery/10_11_2022.json")
 
-            sys.path.append("opt/***/dags")
-            
-            from pyGrocery.transformers.kroger import deconstructKrogerFiles
-            
-            deconstructKrogerFiles("/app/temp/kroger/10_18_22.json")
+        import docker
 
-            print('finished from virtual env function. exiting with status code 0.')
-            virtualenv_task = callable_virtualenv()
+        client = docker.from_env()
+        print(client.containers.list())
+
+        print('finished from virtual env function. exiting with status code 0.')
+
+        return 0
+    transformTask = callable_virtualenv()
     # [END kroger_operator_transform_api]
 
-
-
+    # [START main_flow]
+    setUpTask >> extractTask >> transformTask
+    # [END main_flow]

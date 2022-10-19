@@ -587,7 +587,6 @@ function summarizeNewCoupons(target, parser, uuid){
             let newPromo = {}
             let relKeys = parserKeys.filter((pk)=> pk in d)
             for (let key of relKeys){
-                console.log(d[key], key, newPromo)
                 let actions = parser[key]
                 actions.convert ? d[key] = actions.convert(d[key]) : 0;
                 actions.to ? actions.to in newPromo ? newPromo[actions.to] = [newPromo[actions.to], ...d[key]]: newPromo[actions.to] = d[key] : 0;
@@ -1348,42 +1347,22 @@ itemParser={
     }}
 })
 processFamilyDollarItems("../../../scripts/requests/server/collections/familydollar/items/", defaultLocation="2394")
-*/
-summarizeNewCoupons("../../../scripts/requests/server/collections/familydollar/coupons",
-parser={
-    "mdid": {to: "id"},
-    "brand": {to: "brandName"},
-    "offerType": {to: "type"},
-    "description": {to: "shortDescription"},
-    "terms": {keep:true},
-    "category": {convert: (cat)=> {
-        return cat.name
-    }, to: "categories"},
-    "tags": {to: "categories" , convert: (tags)=> {
-        return tags.map((tag)=>tag.replace("fd-", "").trim().split(" ").map((word)=> word.slice(0, 1).toUpperCase()+word.slice(1).toLowerCase()).join(" "))
-    }},
-    "redemptionStartDateTime": {to: "startDate", convert: (x)=>new Date(x.iso)}, // 
-    "expirationDateTime": {to: "expirationDate", convert: (x)=>new Date(x.iso)}, // 
-    "clipStartDateTime": {to: "clipStartDate", convert: (x)=>new Date(x.iso)}, // 
-    "clipEndDateTime": {to: "clipEndDate", convert: (x)=>new Date(x.iso)}, // 
-    "offerSortValue": {to: "value", convert: (x)=>+x},
-    "minPurchase": {to: "requirementQuantity", convert: (x)=>+x},
-    "redemptionsPerTransaction": {to: "redemptionsAllowed"},
-    "imageUrl": {keep: true},
-    "enhancedImageUrl": {keep: true},
-    "type": {to: "isManufacturerCoupon", convert: (x)=>x==="mfg"}
-}, "id") 
-summarizeFoodDepot('../../../scripts/requests/server/collections/fooddepot/items/')
-summarizeNewCoupons("../../../scripts/requests/server/collections/fooddepot/coupons/", {
-    "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
-    "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
-    "effectiveDate": {to: "startDate", convert: function (x) {return new Date(x)}},
-    "offerId": {keep: true},
-    "targetOfferId": {keep: true},
-    "category": {to: "categories", convert: function(x) {return [x]}},
-    "image": {to: "imageUrl", convert: function (x){return x.links.lg}},
-    "brand": {to: "brandName"},
-    "details": {to: "terms"},
-    "offerType": {to: "type" }
-}, uuid="targetOfferId")
+// zipUp() */ 
+
+processInstacartItems('../../../scripts/requests/server/collections/aldi/items/', "23170", uuid="legacyId")
+processInstacartItems('../../../scripts/requests/server/collections/publix/items/', "121659", uuid="legacyId")
+summarizeNewCoupons("../../../scripts/requests/server/collections/publix/coupons/", {
+     "id": {keep: true},
+     "dcId": {keep: true},
+     "waId": {keep: true},
+     "savings": {to: "value", convert: function(x){let n =  Number(x.replaceAll(/.+\$/g, '')); if (isNaN(n)){n=x} return n}},
+     "description": {to: "shortDescription"},
+     "redemptionsPerTransaction" : {to: "redemptionsAllowed"},
+     "minimumPurchase": {to: "requirementQuantity"},
+     "categories": {keep: true},
+     "imageUrl": {keep: true},
+     "brand": {to: "brandName"},
+     "savingType": {to: "type"},
+     "dc_popularity": {to: "popularity"}
+ }, uuid="id")
 zipUp()

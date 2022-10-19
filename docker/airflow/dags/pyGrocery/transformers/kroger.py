@@ -1,7 +1,8 @@
 import json, re, os, datetime as dt
-
+from pprint import pprint
 from pymongo import MongoClient
 import pytz
+
 
 def deconstructKrogerFiles(filename):
     mytz=pytz.timezone('America/New_York')
@@ -39,6 +40,8 @@ def deconstructKrogerFiles(filename):
         sellerCollection = []
         forGeneralItems={}
         connectionErrors = []
+        print("MAXTZ:", max(list(map(lambda x: x["acquisition_timestamp"], startingArray))))
+        print("MINTZ:", min(list(map(lambda x: x["acquisition_timestamp"], startingArray))))
         for apiCall in startingArray:
             url = apiCall.pop('url')
             acquistionTimestamp = mytz.localize(dt.datetime.fromtimestamp(apiCall.pop('acquisition_timestamp')/1000))
@@ -339,24 +342,28 @@ def deconstructKrogerFiles(filename):
                         isProcessed = bool(list(filter(lambda x: x.get('upc')==itemDoc.get('upc'), itemCollection)))
                         if isProcessed==False:
                             itemCollection.append(itemDoc)
-    if promotionsCollection:
-        insertFilteredData(promotionsCollection, "promotions", "new", "krogerCouponNumber")
-    if itemCollection:
-        insertFilteredData(itemCollection, "items", "new", "upc")
-    if tripCollection:
-        insertFilteredData(tripCollection, "trips", "new", "transactionId")  
-    if priceModifierCollection:
-        insertFilteredData(priceModifierCollection, "priceModifiers", "new", "promotionId")
-    if userCollection:
-        insertFilteredData(userCollection, "users", "new", "loyaltyId") 
-    if sellerCollection:
-        insertFilteredData(sellerCollection, "sellers", "new", "sellerId")
+    # if promotionsCollection:
+    #     insertFilteredData(promotionsCollection, "promotions", "new", "krogerCouponNumber")
+    # if itemCollection:
+    #     insertFilteredData(itemCollection, "items", "new", "upc")
+    # if tripCollection:
+    #     insertFilteredData(tripCollection, "trips", "new", "transactionId")  
+    # if priceModifierCollection:
+    #     insertFilteredData(priceModifierCollection, "priceModifiers", "new", "promotionId")
+    # if userCollection:
+    #     insertFilteredData(userCollection, "users", "new", "loyaltyId") 
+    # if sellerCollection:
+    #     insertFilteredData(sellerCollection, "sellers", "new", "sellerId")
 
-    if pricesCollection:
-        insertData(pricesCollection, "prices", "new")
-    if inventoryCollection:
-        insertData(inventoryCollection, "inventories", "new")
+    # if pricesCollection:
+    #     insertData(pricesCollection, "prices", "new")
+    # if inventoryCollection:
+    #     insertData(inventoryCollection, "inventories", "new")
     
+    pprint(promotionsCollection[-2:])
+    pprint(pricesCollection[-2:])
+    pprint(itemCollection[-2:])
+    pprint(inventoryCollection[-2:])
     print("decomposed {}".format(filename))
     return None
 
@@ -419,3 +426,4 @@ def insertFilteredData(entries, collection_name, db, uuid) -> None:
      
     print(f"ended in {time.perf_counter()-start} seconds")
 
+{'isPurchase': False,'locationId': '01100685','modalities': ['IN_STORE'],'quantity': 1,'sellerKey': 0,'type': 'WhiteTag','upc': '0361630297084',}

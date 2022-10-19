@@ -1502,7 +1502,12 @@ def deconstructKrogerFiles(filename):
     print(filename)
     if os.path.exists(filename):
         with open(filename, 'r', encoding='utf-8') as file:
-            startingArray = json.loads(file.read())
+            jsonString = file.read()
+            try:
+                startingArray = json.loads(jsonString)
+            except json.decoder.JSONDecodeError as err:
+                print(jsonString[err.pos-50:err.pos], jsonString[err.pos-0:err.pos+50])
+                
 
         cDict={}
         try:
@@ -2507,6 +2512,6 @@ def findAndInsertExtraPromotions(head):
 
 # findAndInsertExtraPromotions("./requests/server/collections/kroger/digital/")
 # findAndInsertExtraPromotions("./requests/server/collections/kroger/cashback/")
-# createDecompositions('./requests/server/collections/kroger', wantedPaths=[], additionalPaths=["familydollar/coupons"])
-backupDatabase()
-createDBSummaries('new')
+createDecompositions('./requests/server/collections/kroger', wantedPaths=["digital", "cashback"], additionalPaths=[])
+# backupDatabase()
+# createDBSummaries('new')

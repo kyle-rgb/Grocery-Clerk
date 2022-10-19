@@ -109,6 +109,8 @@ venv.bak/
 report_unittest.xml
 api_keys.*
 config/
+logs/
+docker/airflow/dags/pyGrocery/*.json
 scripts/requests/server/collections/
 collection.json
 scripts/data/
