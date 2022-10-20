@@ -27,5 +27,10 @@
 - [puppeteer headful monitoring with x11vnc + fluxbox](https://stackoverflow.com/questions/12050021/how-to-make-xvfb-display-visible)
 - [xvfd start with fluxbox bash script + article](https://medium.com/dot-debug/running-chrome-in-a-docker-container-a55e7f4da4a8)
 
+# docker airflow custom configuration for windows & managing containers via another container (airflow network as defined in docker/airflow/)
+- [enable docker commands to host via airflow container](https://towardsdev.com/using-docker-inside-airflow-when-running-through-docker-compose-835364d11d3c)
+- 
+
+
 # Bash Scripting
 - [Bash Man Page](https://tiswww.case.edu/php/chet/bash/bashref.html#Special-Parameters)

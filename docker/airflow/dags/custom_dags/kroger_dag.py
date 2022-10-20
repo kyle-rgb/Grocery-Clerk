@@ -21,17 +21,12 @@ with DAG(
     @task(task_id="setup_browser")
     def setup_browser(ds=None, **kwargs):
         """Starts the Browser and Runs Node.js Setup in Container"""
-        
         # has to connect to docker network running on host via docker module 
-        
-        # connect to docker and poke awake container; airflow worker should have docker module installed 
-
+        # connect to docker and poke awake container; airflow worker should have docker module installed and access to host socket via volume
+        # TODO: DOCKER_HOST env variable will be used in later versions for ssh connections to remote container instances of scraper container network.
         # run setUpBrowser from app/src/index.js with proper task argument
-        
         # wait for confirmation of task completion, forward any logging to airflow logs
-
         # mark as success and move on to next task
-        print("passed through setup_browser")
         time.sleep(1)
         return 0
     # [END kroger_operator_setup_node]
@@ -67,7 +62,6 @@ with DAG(
             Importing at the module level ensures that it will not attempt to import the
             library before it is installed.
         """
-        import sys, os
         from pyGrocery.transformers.kroger import deconstructKrogerFiles
         
         print("correctly loaded transformer package in virtual env", deconstructKrogerFiles)
@@ -77,8 +71,11 @@ with DAG(
         import docker
 
         client = docker.from_env()
-        print(client.containers.list())
-
+        containerNames = list(map(lambda x: x.name, client.containers.list(all=True))) # to get stopped containers
+        print("Containers running on my Windows 10 Host : ", containerNames)
+        myContainer = client.containers.list(all=True)[0]
+        myContainer.start()
+        print("successfully started stopped node container from airflow worker in separate docker network")
         print('finished from virtual env function. exiting with status code 0.')
 
         return 0
