@@ -16,7 +16,7 @@ RUN apt-get update \
     libgdk-pixbuf2.0-0 libglib2.0-0 libgtk-3-0 libnspr4 libpango-1.0-0 libpangocairo-1.0-0 libstdc++6 libx11-6 \
     libx11-xcb1 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 \
     libxss1 libxtst6 ca-certificates fonts-liberation libappindicator1 libnss3 lsb-release \
-    xdg-utils wget x11vnc x11-xkb-utils xfonts-100dpi xfonts-75dpi xfonts-scalable xfonts-cyrillic x11-apps xvfb
+    xdg-utils wget wmctrl x11vnc x11-xkb-utils xfonts-100dpi xfonts-75dpi xfonts-scalable xfonts-cyrillic x11-apps xvfb
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD true
 
@@ -29,8 +29,6 @@ RUN npm install \
     && chown -R pptruser:pptruser /app/node_modules \
     && chown -R pptruser:pptruser /app/package.json \
     && chown -R pptruser:pptruser /app/package-lock.json
-
-RUN apt-get -y install wmctrl 
 
 COPY . /app/
 

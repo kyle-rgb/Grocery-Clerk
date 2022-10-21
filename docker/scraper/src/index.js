@@ -1,6 +1,5 @@
 // migrating extension, server intermediary and CV based browser scraping into single package 
 const puppeteer = require('puppeteer-extra')
-const axios = require('axios'); 
 require("dotenv").config();
 const fs = require("fs")
 const readline = require("readline");
@@ -10,7 +9,6 @@ const {MongoClient} = require('mongodb');
 // add stealth plugin and use defaults 
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { ProtocolError, TimeoutError } = require('puppeteer');
-
 
 puppeteer.use(StealthPlugin())
 
@@ -231,15 +229,15 @@ async function setUpBrowser(task) {
 
   var ZIPCODE = process.env.ZIPCODE; 
   const PHONE_NUMBER = process.env.PHONE_NUMBER;
-  var browser, page;
+  var browser, page, passDownArgs = {};
   try { 
     browser = await puppeteer.launch({
-      headless: task === "foodDepotCoupons"? true : false,
-      slowMo: 888,
+      headless: task==="" || task==="foodDepotCoupons"? true : false,
+      slowMo: 909, 
+      executablePath:"google-chrome-stable",
       dumpio: true,
       args: ["--start-maximized", "--no-sandbox"],
-      executablePath: "google-chrome-stable",
-      defaultViewport: {width: 1920, height: 1080 },
+      defaultViewport: {width: 1920, height: 1080},
       devtools: false,
       timeout: 0
     });
@@ -336,6 +334,7 @@ async function setUpBrowser(task) {
           var availableModalities = ["Pickup", "Delivery"];
           var wantedStoreAddress = "1669 Scott Boulevard";
           var wantedModality = availableModalities[0]; // @param?
+          let locationIdRegex = /GetRetailerLocationAddress&variables=%7B%22id%22%3A%22(.+?)%22%7D/
           console.log(wantedModality, `div[class$='${wantedModality === "Delivery" ? wantedModality+"Address" : wantedModality+"Location"}Picker'] button[aria-haspopup]`)
           await page.goto("https://shop.aldi.us/store/aldi/storefront")
           await page.waitForNetworkIdle({idleTime: 4000})
@@ -354,7 +353,7 @@ async function setUpBrowser(task) {
             page.waitForNetworkIdle({idleTime:2000}),
             modalityButton.click()
           ]);
-          // click on pickup location picker
+          // click on pickup location picker (store picker)
           let locationPicker = await page.$(`div[class$='${wantedModality === "Delivery" ? wantedModality+"Address" : wantedModality+"Location"}Picker'] button[aria-haspopup]`);
           await locationPicker.click();
           // wait for map modal to appear
@@ -363,9 +362,7 @@ async function setUpBrowser(task) {
           if (wantedModality === "Pickup"){
             // click zip button to launch choose address modal
             await page.$eval("button[class$='AddressButton']", (el)=>el.click());
-
           }
-          
           let inputZip = await page.waitForSelector("#streetAddress");
           // do not have to press enter b/c autocomplete request occurs when typing
           await inputZip.type(ZIPSTREET);
@@ -392,9 +389,17 @@ async function setUpBrowser(task) {
             await targetStoreModal.click();
             // allow time for mapbox requests to complete & so mapbox comes into focus
             await page.waitForNetworkIdle({idleTime: 1000})
+            page.on("response", async (response)=> {
+              if (response.isInterceptResolutionHandled()) return;
+              else {
+                if (Object.keys(passDownArgs).length<1 && response.url().match(locationIdRegex)){
+                  passDownArgs["locationId"] = response.url().match(locationIdRegex)[1];
+                } 
+              }
+            })
             await page.keyboard.press("Enter");
           }
-          await page.waitForNetworkIdle({idleTime: 5500})
+          await page.waitForNetworkIdle({idleTime: 15500})
           break;
       }
       case "publixItems": {
@@ -404,6 +409,8 @@ async function setUpBrowser(task) {
         var ZIPSTREET = "Old Norcross Tucker Rd" ; // street that corresponds to zipcode
         var availableModalities = ["Pickup", "Delivery"];
         var wantedStoreAddress = "4650 Hugh Howell Rd";
+        let locationIdRegex = /GetRetailerLocationAddress&variables=%7B%22id%22%3A%22(.+?)%22%7D/
+        var instacartLocationId; 
         var wantedModality = availableModalities[0]; // @param?
         console.log(wantedModality, `div[class$='${wantedModality === "Delivery" ? wantedModality+"Address" : wantedModality+"Location"}Picker'] button[aria-haspopup]`)
         await page.goto("https://delivery.publix.com/store/publix/storefront")
@@ -453,14 +460,24 @@ async function setUpBrowser(task) {
             let address = await storeItem.getProperty("innerText").then((jsHandle)=> jsHandle.jsonValue());
             if (wantedStoreAddress && address.includes(wantedStoreAddress)){
               return index
+            } else if (!wantedStoreAddress && index<=0){
+              return index // return first entry if wantedAddress not set, i.e. closest store to given address
             }
           });
           await targetStoreModal.click();
           // allow time for mapbox requests to complete & so mapbox comes into focus
           await page.waitForNetworkIdle({idleTime: 1000})
+          page.on("response", async (response)=> {
+            if (response.isInterceptResolutionHandled()) return;
+            else {
+              if (Object.keys(passDownArgs).length<1 && response.url().match(locationIdRegex)){
+                passDownArgs["locationId"] = response.url().match(locationIdRegex)[1];
+              } 
+            }
+          })
           await page.keyboard.press("Enter");
         }
-        await page.waitForNetworkIdle({idleTime: 5500})
+        await page.waitForNetworkIdle({idleTime: 15500})
         break;
       }  
       case "publixCoupons": {
@@ -735,6 +752,8 @@ async function setUpBrowser(task) {
       case "familyDollarInstacartItems": {
         // * family dollar instacart items: differs from other instacart sites as it is delivery only 
         var ZIPSTREET = "Old Norcross Tucker Rd" ;
+        var instacartRegex = /=ShopCollection/
+        var instacartIds = {}; 
         // navigate to store page
         await page.goto("https://sameday.familydollar.com/store/family-dollar/storefront")
         // click on delivery button
@@ -753,9 +772,21 @@ async function setUpBrowser(task) {
         await targetLocation.click(); 
         //click save address button
         var addressSubmit = await page.waitForSelector("div[class$='UserAddressManager'] button[type='submit']");
+        page.on("response", async (res)=> {
+          if (res.isInterceptResolutionHandled()) return;
+          if (Object.keys(passDownArgs).length<1 && res.url().match(instacartRegex)){
+            let shopIdObject = await res.json()
+            shopIdObject = shopIdObject.data.shopCollection;
+            passDownArgs["instacartShopId"] = shopIdObject.id
+            passDownArgs["locationId"] = shopIdObject.shops["0"].id
+            passDownArgs["retailerId"] = shopIdObject.shops["0"].retailer.id
+            passDownArgs["retailerLocationId"] = shopIdObject.shops["0"].retailerLocationId
+          }
+        })
+
+        // click and wait for reload
         await addressSubmit.click()
-        //wait for reload
-        await page.waitForNetworkIdle({idleTime: 3000})
+        await page.waitForNetworkIdle({idleTime: 15500})
         break;
       }
       case "familyDollarCoupons": {
@@ -810,7 +841,11 @@ async function setUpBrowser(task) {
   }
   insertRun(setUpBrowser, "runs", "node_call", dbArgs, true, entryID,
   `Puppeteer Node.js Call for Scrape of ${setUpBrowser.name} for ${new Date().toLocaleDateString()}`)
-  return [browser, page, entryID];
+  // will pass down location ids where applicable and browser, page and run ObjectId  
+  passDownArgs.browser = browser
+  passDownArgs.page = page
+  passDownArgs._id = entryID
+  return passDownArgs;
 }
 
 function getStoreData() {
@@ -1700,25 +1735,7 @@ async function testContainerBrowser(){
   await browser.close()
   return null
 }
-/*
-setUpBrowser(task="krogerCoupons").then(async ([browser, page, entryID])=> {
-  await getKrogerCoupons(browser, page, "digital", entryID);
-  await getKrogerCoupons(browser, page, "cashback", entryID);
-  await browser.close(); 
-})
 
-setUpBrowser(task="aldiItems").then(async ([browser, page, entryID])=> {
-  await getInstacartItems(browser, page, entryID)
-  await browser.close(); 
+setUpBrowser(task="aldiItems").then(async ( { browser , page , _id } )=>{
+  await getInstacartItems(browser, page, _id)
 })
-
-setUpBrowser(task="publixItems").then(async ([browser, page, entryID])=> {
-  await getInstacartItems(browser, page, entryID)
-  await browser.close(); 
-})
-
-setUpBrowser(task="publixCoupons").then(async ([browser, page, entryID])=> {
-  await getPublixCoupons(browser, page, entryID)
-  await browser.close(); 
-})*/
-testContainerBrowser();

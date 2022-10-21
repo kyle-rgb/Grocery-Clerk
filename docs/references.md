@@ -31,6 +31,6 @@
 - [enable docker commands to host via airflow container](https://towardsdev.com/using-docker-inside-airflow-when-running-through-docker-compose-835364d11d3c)
 - 
 
-
-# Bash Scripting
+# Bash Scripting & CLI Guides
 - [Bash Man Page](https://tiswww.case.edu/php/chet/bash/bashref.html#Special-Parameters)
+- [CLI Best Practices](https://clig.dev/)
