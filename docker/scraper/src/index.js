@@ -5,7 +5,8 @@ const fs = require("fs")
 const readline = require("readline");
 const EventEmitter = require('node:events');
 const { spawn } = require('child_process');
-const {MongoClient} = require('mongodb');
+const { MongoClient } = require('mongodb');
+const { Command } = require('commander')
 // add stealth plugin and use defaults 
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { ProtocolError, TimeoutError } = require('puppeteer');
@@ -1238,42 +1239,41 @@ async function getDollarGeneralCoupons(browser, page, _id){
   // now get all carousel nodes and begin 
   var items = await page.$$eval("li.coupons_results-list-item a.deal-card__image-wrapper", (elems)=>elems.map((e)=>{return e.getAttribute("href")}));
   let left = items.length
-    for (let itemlink of items){
-      try {
-        console.log("https://www.dollargeneral.com"+itemlink)
-        await page.goto("https://www.dollargeneral.com" + itemlink)
-        await page.waitForNetworkIdle({
-          idleTime: 8000,
-        })
-        // check for item modal to be present
-        let eligibleItems = await page.$("section[class='couponPickupDetails__products-wrapper row']") ; 
-        console.log(eligibleItems)
-        if (eligibleItems){
-          let loadMoreButton = await eligibleItems.$("button[class='button eligible-products-results__load-more-button']") ;
+  for (let itemlink of items){
+    try {
+      console.log("https://www.dollargeneral.com"+itemlink)
+      await page.goto("https://www.dollargeneral.com" + itemlink)
+      await page.waitForTimeout(10_000)
+      // check for item modal to be present
+      let eligibleItems = await page.$("section[class='couponPickupDetails__products-wrapper row']") ; 
+      console.log(eligibleItems)
+      if (eligibleItems){
+        let loadMoreButton = await eligibleItems.$("button[class='button eligible-products-results__load-more-button']") ;
+        console.log(loadMoreButton)
+        while (loadMoreButton){
+          await loadMoreButton.click();
+          await page.waitForTimeout(7500);
+          loadMoreButton = await eligibleItems.$("button[class='button eligible-products-results__load-more-button']") ; 
           console.log(loadMoreButton)
-          while (loadMoreButton){
-            await loadMoreButton.click();
-            await page.waitForNetworkIdle({idleTime: 6500})
-            loadMoreButton = await eligibleItems.$("button[class='button eligible-products-results__load-more-button']") ; 
-            console.log(loadMoreButton)
-          }
-        };
-        // exit out of page and return page to promotions tab ; 
-        //await newTab.close();
-      } catch (err){
-        if (err instanceof TimeoutError){
-          console.log("Timeout Error => ", err)
-          badRequests.push(itemlink)
-          console.log(reqSet)
-        } else {
-          console.log("New Error", err);
-          badRequests.push(itemlink)
         }
+      };
+      // exit out of page and return page to promotions tab ; 
+      //await newTab.close();
+    } catch (err){
+      if (err instanceof TimeoutError){
+        console.log("Timeout Error => ", err)
+        badRequests.push(itemlink)
+        console.log(reqSet)
+      } else {
+        console.log("New Error", err);
+        badRequests.push(itemlink)
       }
-        left--;    
-        console.log("finished promotion. ", left, " left.")
+    }
+      reqSet = new Set([])
+      left--;    
+      console.log("finished promotion. ", left, " left.")
   };
-    await page.waitForNetworkIdle({idleTime: 3000});
+    await page.waitForTimeout(5000);
     await wrapFile(fileName);
     console.log("file finished : ", fileName) ;
     if (badRequests.length>0){
@@ -1328,7 +1328,6 @@ async function getDollarGeneralItems(browser, page, _id){
     console.log(button, disabled)
   };
   await page.waitForTimeout(6000);
-  await browser.close();
   await wrapFile(fileName);
   console.log("file finished : ", fileName) ;
   insertRun(getDollarGeneralItems, "runs", "node_call", dbArgs, true, _id,
@@ -1735,7 +1734,3 @@ async function testContainerBrowser(){
   await browser.close()
   return null
 }
-
-setUpBrowser(task="aldiItems").then(async ( { browser , page , _id } )=>{
-  await getInstacartItems(browser, page, _id)
-})

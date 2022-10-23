@@ -1429,17 +1429,18 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
 def backupDatabase():
     # more raw to archive and compress,
     # dump database and compress
-    # clean up files 
+    
     # move and compressed extension files to separate archive 
     subprocess.Popen(['7z', "a", "../data/archive.7z", "../data/collections", f"-p{EXTENSION_ARCHIVE_KEY}", "-mhe", "-sdel"])
     # helper to dump bsons and zip files for archive
-    if os.path.exists("../data/archive/"):
-        os.remove('../data/archive/')
     process1 = subprocess.Popen(['mongodump', "-d", "new", "-o", "../data/data"])
     process1.wait(90)
     # 7zip archive mongodumps w/ password
     process2 = subprocess.Popen(['7z', "a", "../data/data.7z", "../data/data", f"-p{DB_ARCHIVE_KEY}", "-mhe", "-sdel"])
     process2.wait(30)
+    # clean up files 
+    if os.path.exists("../data/archive/"):
+        os.remove('../data/archive/')
     if os.path.exists("../data/data"):
         shutil.rmtree('../data/data')
     return None

@@ -232,7 +232,7 @@ async function setUpBrowser(task) {
   var browser, page, passDownArgs = {};
   try { 
     browser = await puppeteer.launch({
-      headless: task==="" || task==="foodDepotCoupons"? true : false,
+      headless: task==="foodDepotCoupons"? true : false,
       slowMo: 909, 
       executablePath:
         "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
@@ -1244,42 +1244,41 @@ async function getDollarGeneralCoupons(browser, page, _id){
   // now get all carousel nodes and begin 
   var items = await page.$$eval("li.coupons_results-list-item a.deal-card__image-wrapper", (elems)=>elems.map((e)=>{return e.getAttribute("href")}));
   let left = items.length
-    for (let itemlink of items){
-      try {
-        console.log("https://www.dollargeneral.com"+itemlink)
-        await page.goto("https://www.dollargeneral.com" + itemlink)
-        await page.waitForNetworkIdle({
-          idleTime: 8000,
-        })
-        // check for item modal to be present
-        let eligibleItems = await page.$("section[class='couponPickupDetails__products-wrapper row']") ; 
-        console.log(eligibleItems)
-        if (eligibleItems){
-          let loadMoreButton = await eligibleItems.$("button[class='button eligible-products-results__load-more-button']") ;
+  for (let itemlink of items){
+    try {
+      console.log("https://www.dollargeneral.com"+itemlink)
+      await page.goto("https://www.dollargeneral.com" + itemlink)
+      await page.waitForTimeout(10_000)
+      // check for item modal to be present
+      let eligibleItems = await page.$("section[class='couponPickupDetails__products-wrapper row']") ; 
+      console.log(eligibleItems)
+      if (eligibleItems){
+        let loadMoreButton = await eligibleItems.$("button[class='button eligible-products-results__load-more-button']") ;
+        console.log(loadMoreButton)
+        while (loadMoreButton){
+          await loadMoreButton.click();
+          await page.waitForTimeout(7500);
+          loadMoreButton = await eligibleItems.$("button[class='button eligible-products-results__load-more-button']") ; 
           console.log(loadMoreButton)
-          while (loadMoreButton){
-            await loadMoreButton.click();
-            await page.waitForNetworkIdle({idleTime: 6500})
-            loadMoreButton = await eligibleItems.$("button[class='button eligible-products-results__load-more-button']") ; 
-            console.log(loadMoreButton)
-          }
-        };
-        // exit out of page and return page to promotions tab ; 
-        //await newTab.close();
-      } catch (err){
-        if (err instanceof TimeoutError){
-          console.log("Timeout Error => ", err)
-          badRequests.push(itemlink)
-          console.log(reqSet)
-        } else {
-          console.log("New Error", err);
-          badRequests.push(itemlink)
         }
+      };
+      // exit out of page and return page to promotions tab ; 
+      //await newTab.close();
+    } catch (err){
+      if (err instanceof TimeoutError){
+        console.log("Timeout Error => ", err)
+        badRequests.push(itemlink)
+        console.log(reqSet)
+      } else {
+        console.log("New Error", err);
+        badRequests.push(itemlink)
       }
-        left--;    
-        console.log("finished promotion. ", left, " left.")
+    }
+      reqSet = new Set([])
+      left--;    
+      console.log("finished promotion. ", left, " left.")
   };
-    await page.waitForNetworkIdle({idleTime: 3000});
+    await page.waitForTimeout(5000);
     await wrapFile(fileName);
     console.log("file finished : ", fileName) ;
     if (badRequests.length>0){
@@ -1334,7 +1333,6 @@ async function getDollarGeneralItems(browser, page, _id){
     console.log(button, disabled)
   };
   await page.waitForTimeout(6000);
-  await browser.close();
   await wrapFile(fileName);
   console.log("file finished : ", fileName) ;
   insertRun(getDollarGeneralItems, "runs", "node_call", dbArgs, true, _id,
@@ -1436,7 +1434,6 @@ async function getFamilyDollarItems(browser, page, _id){
 
     await page.waitForNetworkIdle({idleTime: 3000}); 
     await wrapFile(fileName);
-    //await browser.close(); 
     console.log("finished file", fileName);
     insertRun(getFamilyDollarItems, "runs", "node_call", dbArgs, true, _id,
   `Puppeteer Node.js Call for Scrape of ${getFamilyDollarItems.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
@@ -1742,6 +1739,24 @@ async function testContainerBrowser(){
   return null
 }
 
-setUpBrowser(task="aldiItems").then(async ( { browser , page , _id } )=>{
-  await getInstacartItems(browser, page, _id)
+setUpBrowser(task="").then(async ( { browser , page , _id } )=>{
+  await getDollarGeneralCoupons(browser, page, _id)
 })
+// a = async () => {
+//   browser = await puppeteer.launch({
+//     headless: false,
+//     slowMo: 909, 
+//     executablePath:
+//       "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+//     dumpio: true,
+//     args: [
+//       "--start-maximized",
+//       "--profile-directory=Profile 1",
+//     ],
+//     userDataDir: "C:\\c\\Profiles",
+//     defaultViewport: {width: 1920, height: 1080},
+//     devtools: false,
+//     timeout: 0
+//   })
+// }
+// a()

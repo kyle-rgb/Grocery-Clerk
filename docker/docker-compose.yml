@@ -7,6 +7,7 @@ services:
       - "./scraper:/app/"
       - "browser_dependencies:/app/node_modules"
     stdin_open: true
+    init: true
     environment:
       GPG_TTY: /dev/pts/0
       DISPLAY: ":1"
