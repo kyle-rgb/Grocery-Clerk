@@ -1471,10 +1471,7 @@ async function getFoodDepotItems(browser, page, _id){
     if (url.match(wantedResponseRegex)){
       let req= res.request();
       if (req.method()!=="OPTIONS"){ // filter out preflight request
-        console.log(url, req, req.method(), )  
         offset+=await writeResponse(fileName=fileName, response=res, url=url, offset=offset) 
-      } else {
-        console.log(req.method())
       }
       return;
     }
@@ -1528,7 +1525,6 @@ async function getFoodDepotItems(browser, page, _id){
   }
   await page.waitForNetworkIdle({idleTime: 3000}); 
   await wrapFile(fileName);
-  await browser.close(); 
   console.log("finished file", fileName);
   insertRun(getFoodDepotItems, "runs", "node_call", dbArgs, true, _id,
   `Puppeteer Node.js Call for Scrape of ${getFoodDepotItems.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
@@ -1562,6 +1558,7 @@ async function getFoodDepotCoupons(browser, page, _id){
     }
     return ;
   })
+  await page.reload();
   await page.waitForNetworkIdle({idleTime: 15000});
   await page.waitForTimeout(13000)
   await wrapFile(fileName);
@@ -1739,24 +1736,7 @@ async function testContainerBrowser(){
   return null
 }
 
-setUpBrowser(task="").then(async ( { browser , page , _id } )=>{
-  await getDollarGeneralCoupons(browser, page, _id)
+setUpBrowser(task="foodDepotCoupons").then(async ({browser, page , _id})=>{
+  await getFoodDepotCoupons(browser, page, _id);
+  await browser.close();
 })
-// a = async () => {
-//   browser = await puppeteer.launch({
-//     headless: false,
-//     slowMo: 909, 
-//     executablePath:
-//       "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-//     dumpio: true,
-//     args: [
-//       "--start-maximized",
-//       "--profile-directory=Profile 1",
-//     ],
-//     userDataDir: "C:\\c\\Profiles",
-//     defaultViewport: {width: 1920, height: 1080},
-//     devtools: false,
-//     timeout: 0
-//   })
-// }
-// a()

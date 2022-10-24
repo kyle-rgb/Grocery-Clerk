@@ -6,136 +6,12 @@ const readline = require("readline");
 const EventEmitter = require('node:events');
 const { spawn } = require('child_process');
 const { MongoClient } = require('mongodb');
-const { Command } = require('commander')
+const { Command, Option } = require('commander')
 // add stealth plugin and use defaults 
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { ProtocolError, TimeoutError } = require('puppeteer');
 
 puppeteer.use(StealthPlugin())
-
-async function getTestWebsite() {
-  // for testing request interception and loading elements from DOM
-  // sample request returns gzip encoded stream
-  const browser = await puppeteer.launch({
-    headless: false,
-    slowMo: 500, 
-    executablePath:
-      "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-    dumpio: false,
-    args: [
-      "--start-maximized",
-      "--profile-directory=Profile 1",
-    ],
-    userDataDir: "C:\\c\\Profiles",
-    devtools: false,
-    timeout: 0,
-    defaultViewport: {
-      width: 1920,
-      height: 1080
-    }
-  });
-  try {
-    // process.on("SIGTERM", ()=>{
-    
-    // })
-    if (process.platform === "win32") {
-      var rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-      });
-    }
-    offset = 0;
-    let fileName = "./games.json"
-    let [page] = await browser.pages();
-    await page.setViewport({ width: 1920, height: 1080 });
-    await page.setRequestInterception(true);
-    page
-      // .on("console", (message) => {
-      //   console.log(`${message.type().toUpperCase()} ${message.text()}`);
-      // })
-      //.on("pageerror", ({ message }) => console.log("<MESSAGE>", message))
-      .on("request", (intReq) => {
-        if (intReq.isInterceptResolutionHandled()) return;
-        intReq.continue();
-      })
-      .on("response", async (res) => {
-        try {
-        let wantedUrl = /experience\/v1\/games\?|\/v2\/standings\?|\/v2\/stats\/live\/game-summaries\?/
-        // if (res.isInterceptResolutionHandled()) return; // https://api.nfl.com/football/v2/stats/live/game-summaries?season=2022&seasonType=REG&week=2
-        // https://api.nfl.com/football/v2/standings?seasonType=REG&week=2&season=2022&limit=100
-        let url = await res.url();
-        if (!url.match(wantedUrl)) {
-          return;
-        } else {
-          offset+=await writeResponse(fileName=fileName, response=res, url=url, offset=offset)
-          return; 
-        }} catch (e) {
-          if (e instanceof ProtocolError) return;
-          console.log("error with ", res, "@ ", e) 
-        } 
-      })
-      .on("domcontentloaded", ()=>{
-        console.log("DOM CONTENT HAS LOADED @ ", new Date())
-      });
-      // .on(
-      //   "requestfailed",
-      //   (request) =>
-      //     console.log(`${request.failure().errorText} ${request.url()}`)
-      // );
-
-    await page.waitForTimeout(500000)
-
-    await page.goto(
-      "https://www.nfl.com/"
-    );
-    console.log("Went to NFL.com");
-    let input1 = await page.waitForSelector("input")
-    var value = await input1.getProperty("value").then(async (val)=>await val.jsonValue()) ;
-    console.log("input 1 values was ", value, " !")
-    await page.waitForSelector("ul.d3-o-tabs__wrap").then(()=>{console.log("found tabs")})
-    let els = await page.$$("ul.d3-o-tabs__wrap > li > button ")
-    el = els[1];
-    await el.click();
-    await el.click();
-    let setOnce = 0; 
-    console.log("click registered")
-    y = 5  
-    setTimeout(async ()=> {
-      await browser.close();
-      console.log("closing browser session. <o.0> ");
-      id = setInterval(async (a=y)=>{
-        console.log("exiting in ", a); 
-        y--
-        if(y<1){
-          await wrapFile(fileName)
-          process.exit(); 
-        }
-      }, 1000);
-    }, 120000)
-    page.$x("//a").then((a)=>{
-      a.map(async (z)=>{
-        href = await z.getProperty("href");
-        setOnce++;
-        if (setOnce===3){
-          href = await href.jsonValue();
-          console.log("would be run once... =", href);
-          await page.waitForNetworkIdle({idleTime: 1000});
-          await z.hover();
-          await z.click({button : "middle", delay: 200});
-          await page.waitForTimeout(3000);
-          pages = await browser.pages()
-          pages[1].bringToFront(); 
-        }
-      })
-    })
-  } catch (err){
-    await browser.close();
-    await wrapFile("./games.json");
-    console.log(err)
-    return null;
-  }
-  return null;
-}
 
 const getNestedObject = (nestedObj, pathArr) => {
   return pathArr.reduce(
@@ -233,7 +109,7 @@ async function setUpBrowser(task) {
   var browser, page, passDownArgs = {};
   try { 
     browser = await puppeteer.launch({
-      headless: task==="" || task==="foodDepotCoupons"? true : false,
+      headless: task==="foodDepotCoupons"? true : false,
       slowMo: 909, 
       executablePath:"google-chrome-stable",
       dumpio: true,
@@ -253,7 +129,7 @@ async function setUpBrowser(task) {
       return 
     })
     switch (task) {
-      case "krogerCoupons": {
+      case "krogerPromotions": {
           // * kroger coupons: exit out of promotional modals (usually 1||2), click change store button, click find store, remove default zipcode in input, write wanted zipcode to input, press enter, select wanted modalitiy button (In-Store),
           // wait for page reload, select dropdown for filtering coupons, press arrow down and enter, wait for page reload
           /**
@@ -481,7 +357,7 @@ async function setUpBrowser(task) {
         await page.waitForNetworkIdle({idleTime: 15500})
         break;
       }  
-      case "publixCoupons": {
+      case "publixPromotions": {
       // * publix coupons: navigate to all-deals, wait for api response, wait for copied response
       // needs to be whitelisted for accessing location or (
       // click choose a store button from navbar
@@ -535,7 +411,7 @@ async function setUpBrowser(task) {
         ])
         break;
       }
-      case "foodDepotCoupons":{
+      case "foodDepotPromotions":{
         /**
           * food depot coupons: navigate to coupon site, enter phone number into input#phone, press enter, wait for automation on phone to send verification text,
           * IPhone Automation will extract code and send a request to a temporary server with the code, once the request is recieved, the server will forward it to node and enter it in to
@@ -613,7 +489,7 @@ async function setUpBrowser(task) {
           if (step===0){
             tries++;
             if (tries>4){
-              throw new Error(`Error Modal Continutes on All Setup Pages after ${tries} tries.`)
+              throw new Error(`Error Modal Continues on All Setup Pages after ${tries} tries.`)
             }
             // navigate to homepage : 
             await page.goto("https://www.dollargeneral.com/dgpickup")
@@ -652,7 +528,7 @@ async function setUpBrowser(task) {
         } while (!wasError);
         break; 
         }
-      case "dollarGeneralCoupons": {
+      case "dollarGeneralPromotions": {
         // * dollar general coupons:
         var wantedStoreAddress = "4312 Chamblee Tucker Road";
         var wasError, step = 0, tries = 0;
@@ -790,7 +666,7 @@ async function setUpBrowser(task) {
         await page.waitForNetworkIdle({idleTime: 15500})
         break;
       }
-      case "familyDollarCoupons": {
+      case "familyDollarPromotions": {
       /**
          * @tests passed
          * 
@@ -947,17 +823,15 @@ async function getKrogerTrips(browser, page, _id){
     console.log(element, yy, ' ', (Date.now()-st)/1000, ' seconds')
   }
   await page.waitForNetworkIdle({idleTime: 5500});
-  await browser.close();
   await wrapFile(fileName);
   console.log("file finished : ", fileName);
-  await browser.close();
   console.log("exiting....")
   insertRun(getKrogerTrips, "runs", "node_call", dbArgs, true, _id,
   `Puppeteer Node.js Call for Scrape of ${getKrogerTrips.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   return null;
 }
 
-async function getKrogerCoupons(browser, page, type, _id){
+async function getKrogerPromotions(browser, page, type, _id){
     /**
    * @param page : PageElement from Successfully Launched Browser. 
    * @param brower : The current Browser instance. 
@@ -1027,7 +901,6 @@ async function getKrogerCoupons(browser, page, type, _id){
       console.log("CCs Length", currentCoupons.length, " finished @", i)
     }
     await page.waitForNetworkIdle({idleTime: 3000});
-    await browser.close();
     await wrapFile(fileName);
     console.log("file finished : ", fileName) ;
     insertRun(getKrogerCoupons, "runs", "node_call", dbArgs, true, _id,
@@ -1130,7 +1003,6 @@ async function getInstacartItems(browser, page, _id){
     console.log("finished ", link)
   }
   await page.waitForTimeout(10000)
-  await browser.close();
   await wrapFile(fileName);
   console.log("file finished : ", fileName) ; 
   insertRun(getInstacartItems, "runs", "node_call", dbArgs, true, _id,
@@ -1138,7 +1010,7 @@ async function getInstacartItems(browser, page, _id){
   return null;
 }
 
-async function getPublixCoupons(browser, page, _id){ 
+async function getPublixPromotions(browser, page, _id){ 
   /**
    * @param browser : the currnet browser instance . 
    * @param page : the current page instance. 
@@ -1178,14 +1050,13 @@ async function getPublixCoupons(browser, page, _id){
   await page.goto("https://www.publix.com/savings/all-deals");
   await page.waitForNetworkIdle({idleTime: 8000});
   await wrapFile(fileName);
-  await browser.close();
   console.log("file finished : ", fileName) ;
   insertRun(getPublixCoupons, "runs", "node_call", dbArgs, true, _id,
   `Puppeteer Node.js Call for Scrape of ${getPublixCoupons.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   return null; 
 }
 
-async function getDollarGeneralCoupons(browser, page, _id){ 
+async function getDollarGeneralPromotions(browser, page, _id){ 
   /**
    * @param browser: the passed browser instance from SetupBrowser()
    * @param page: the passed page instance from SetupBrowser()
@@ -1335,7 +1206,7 @@ async function getDollarGeneralItems(browser, page, _id){
   return null
 }
 
-async function getFamilyDollarCoupons(browser, page, _id){
+async function getFamilyDollarPromotions(browser, page, _id){
   /**
    * @prerequisite : setUpBrowser() worked. 
    * @param browser : the existing browser instance
@@ -1366,7 +1237,6 @@ async function getFamilyDollarCoupons(browser, page, _id){
     page.waitForNavigation({waitUntil: "load"}),
     page.waitForNetworkIdle({idleTime: 3000})
   ])
-  //await browser.close();
   await wrapFile(fileName);
   console.log("file finished : ", fileName) ;
   await insertRun(getFamilyDollarCoupons, "runs", "node_call", dbArgs, true, _id,
@@ -1429,7 +1299,6 @@ async function getFamilyDollarItems(browser, page, _id){
 
     await page.waitForNetworkIdle({idleTime: 3000}); 
     await wrapFile(fileName);
-    //await browser.close(); 
     console.log("finished file", fileName);
     insertRun(getFamilyDollarItems, "runs", "node_call", dbArgs, true, _id,
   `Puppeteer Node.js Call for Scrape of ${getFamilyDollarItems.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
@@ -1524,14 +1393,13 @@ async function getFoodDepotItems(browser, page, _id){
   }
   await page.waitForNetworkIdle({idleTime: 3000}); 
   await wrapFile(fileName);
-  await browser.close(); 
   console.log("finished file", fileName);
   insertRun(getFoodDepotItems, "runs", "node_call", dbArgs, true, _id,
   `Puppeteer Node.js Call for Scrape of ${getFoodDepotItems.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   return null
 }
 
-async function getFoodDepotCoupons(browser, page, _id){ 
+async function getFoodDepotPromotions(browser, page, _id){ 
   /**
    * @param browser : the current browser instance. 
    * @param page : the current page instance.
@@ -1558,10 +1426,10 @@ async function getFoodDepotCoupons(browser, page, _id){
     }
     return ;
   })
+  await page.reload();
   await page.waitForNetworkIdle({idleTime: 15000});
   await page.waitForTimeout(13000)
   await wrapFile(fileName);
-  await browser.close();
   console.log("finished file", fileName);
   insertRun(getFoodDepotCoupons, "runs", "node_call", dbArgs, true, _id,
   `Puppeteer Node.js Call for Scrape of ${getFoodDepotCoupons.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
@@ -1731,6 +1599,52 @@ async function testContainerBrowser(){
     fullPage: true,
   });
   console.log("closed")
-  await browser.close()
   return null
 }
+
+// allow for temporary setup to show success and mark setup process as a success by airflow
+
+const program = new Command();
+// cli specifications
+program
+  .name("grocery-clerkify")
+  .description("A Powerful Containerized Webscraping Package to Access Promotional, Price, Inventory, Item-Level Data Across Multiple Different Stores")
+  .version("1.0.0");
+
+program
+  .command("scrape")
+  .description("scrapes specified data throught containerized browser")
+  .option("-a, --aldi <procedure>", "scrape aldi items")
+  .option("-fd --family-dollar <procedure>", "scrape family dollar items, instacartItems, promotions")
+  .option("-k, --kroger <procedure>", "scrape kroger promotions and trips")
+  .option("-p, --publix <procedure>", "scrape publix promotions and items")
+  .option("-dg, --dollar-general <procedure>", "scrape dollar general promotions and items")
+  .option("--food-depot <procedure>", "scrape food depot items and promotions")
+  .option("--no-setup", "bypass setup task for browser (for debugging purposes only)")
+  .action(async (options)=>{
+    var taskParser = {
+      aldiItems: getInstacartItems,
+      familyDollarItems: getFamilyDollarItems,
+      familyDollarInstacartItems: getInstacartItems,
+      familyDollarPromotions: getFamilyDollarPromotions,
+      krogerPromotions: getKrogerPromotions,
+      krogerTrips: getKrogerTrips,
+      publixPromotions: getPublixPromotions,
+      publixItems: getInstacartItems,
+      dollarGeneralItems: getDollarGeneralItems,
+      dollarGeneralPromotions: getDollarGeneralPromotions,
+      foodDepotItems: getFoodDepotItems,
+      foodDepotPromotions: getFoodDepotPromotions
+    };
+    let [taskName] = Object.entries(([k, v])=>k!=='setup').map(([k, v])=>k+v[0].toUpperCase()+v.slice(1))
+    let taskArgs;
+    if (options.setup){
+      taskArgs = await setUpBrowser(taskName)
+    } else {
+      taskArgs = await setUpBrowser(task="")
+    }
+    await taskParser[taskName](...taskArgs)
+    await taskArgs.browser.close();
+    return undefined
+  })
+program.parse();
