@@ -5,6 +5,7 @@ services:
     build: "./scraper"
     volumes:
       - "./scraper:/app/"
+      - "../airflow/dags/pyGrocery/tmp:/tmp/collections/kroger"
       - "browser_dependencies:/app/node_modules"
     stdin_open: true
     init: true
@@ -16,7 +17,6 @@ services:
       - "8081:8080"
       - "9229:9229"
       - "5900:5900"
-    init: true
     secrets:
       - puppet-keys
       - encryption-key

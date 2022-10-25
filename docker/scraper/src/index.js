@@ -79,6 +79,42 @@ async function asyncFilter(arr, predicate){
   })
 }
 
+async function writeJSONs(path, data, offset){
+  /**
+   * @param path : path to new file
+   * @param dataToAdd: string represenation of newly acquired Response Jsons.
+   */
+  fs.open(path, "a", (err, fd)=> {
+    if (err?.code === "EEXIST"){
+      // data can be appended
+      console.log("File already Exists")
+    } else if (err){
+      throw err;
+    }
+    // write to file 
+    console.log("Writing to File...");
+    buffer = data;
+    fs.write(fd, buffer, 0, buffer.length, positon=offset, (err)=>{
+      if (err) throw err ; 
+      fs.close(fd, ()=> {
+        console.log("file wrote successfully")
+      })
+    });
+  })
+ return null; 
+
+}
+
+async function wrapFile(fileName){
+  let bytes = fs.statSync(fileName).size;
+  let buffer = new Buffer.from("]")
+  const fd = await fs.promises.open(fileName, "r+");
+  await fd.write(buffer, 0, 1, positon=bytes-1);
+  await fd.close();
+  return "Done"
+}
+
+
 async function setUpBrowser(task) {
   /**
    * @for starting browser task, loading extension and handling location based services on websites on new browser instance
@@ -725,51 +761,10 @@ async function setUpBrowser(task) {
   return passDownArgs;
 }
 
-function getStoreData() {
-  /** intercepts and copies store level data
-   */
-  return null;
-}
-
-async function writeJSONs(path, data, offset){
-  /**
-   * @param path : path to new file
-   * @param dataToAdd: string represenation of newly acquired Response Jsons.
-   */
-  fs.open(path, "a", (err, fd)=> {
-    if (err?.code === "EEXIST"){
-      // data can be appended
-      console.log("File already Exists")
-    } else if (err){
-      throw err;
-    }
-    // write to file 
-    console.log("Writing to File...");
-    buffer = data;
-    fs.write(fd, buffer, 0, buffer.length, positon=offset, (err)=>{
-      if (err) throw err ; 
-      fs.close(fd, ()=> {
-        console.log("file wrote successfully")
-      })
-    });
-  })
- return null; 
-
-}
-
-async function wrapFile(fileName){
-  let bytes = fs.statSync(fileName).size;
-  let buffer = new Buffer.from("]")
-  const fd = await fs.promises.open(fileName, "r+");
-  await fd.write(buffer, 0, 1, positon=bytes-1);
-  await fd.close();
-  return "Done"
-}
-
-async function getKrogerTrips(browser, page, _id){
+async function getKrogerTrips({ page, _id}){
   /**
    * @param page : PageElement from Successfully Launched Browser. 
-   * @param browser : the current browser instance
+   * 
    * @prerequisite : login was successful, setUpBrowser was successful 
    * @steps : 
    * 1 - can get iterations via DOM pagination elements now. Get Them
@@ -831,7 +826,7 @@ async function getKrogerTrips(browser, page, _id){
   return null;
 }
 
-async function getKrogerPromotions(browser, page, type, _id){
+async function getKrogerPromotions({ page, type, _id}){
     /**
    * @param page : PageElement from Successfully Launched Browser. 
    * @param brower : The current Browser instance. 
@@ -908,10 +903,9 @@ async function getKrogerPromotions(browser, page, type, _id){
     return null;
 }
 
-async function getInstacartItems(browser, page, _id){
+async function getInstacartItems({ page, _id}){
   /**
    * @param page : PageElement from Successfully Launched Browser. 
-   * @param browser : the current browser instance. 
    * @prerequisite setUpBrowser() successful.
    * @todo : clicks on individual product cards gives way to item specific pages / modals that provide ItemDetailData (more info on specific item), =RelatedItems (Similar Products), =ComplementaryProductItems (Products Bought in Tandem), =ProductNutritionalInfo (More Nutritional Items)
    * & =RecipesByProductId (links to recipes page on instacart site, which provide all items for recipes and their prices)
@@ -1010,9 +1004,8 @@ async function getInstacartItems(browser, page, _id){
   return null;
 }
 
-async function getPublixPromotions(browser, page, _id){ 
+async function getPublixPromotions({ page, _id}){ 
   /**
-   * @param browser : the currnet browser instance . 
    * @param page : the current page instance. 
    * @prerequiste : setUpBrowser() set location successfully. 
    */
@@ -1056,7 +1049,7 @@ async function getPublixPromotions(browser, page, _id){
   return null; 
 }
 
-async function getDollarGeneralPromotions(browser, page, _id){ 
+async function getDollarGeneralPromotions({ page, _id }){ 
   /**
    * @param browser: the passed browser instance from SetupBrowser()
    * @param page: the passed page instance from SetupBrowser()
@@ -1072,7 +1065,7 @@ async function getDollarGeneralPromotions(browser, page, _id){
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   var reqSet = new Set();
-  const newPagePromise = new Promise(x => browser.once('targetcreated', target => x(target.page()))); 
+
   fileName = path+fileName ; 
   var wantedResponseRegex = /\/bin\/omni\/coupons\/(products|recommended)/
   await page.setRequestInterception(true);
@@ -1157,10 +1150,10 @@ async function getDollarGeneralPromotions(browser, page, _id){
   return null;
 }
 
-async function getDollarGeneralItems(browser, page, _id){
+async function getDollarGeneralItems({ page, _id }){
   /**
    * @prerequisite : setUpBrowser() successfully set location. 
-   * @param browser : the current browser instance.
+   * 
    * @param page : the current page instance.
    */
   // set request interception on page
@@ -1206,10 +1199,10 @@ async function getDollarGeneralItems(browser, page, _id){
   return null
 }
 
-async function getFamilyDollarPromotions(browser, page, _id){
+async function getFamilyDollarPromotions({ page, _id }){
   /**
    * @prerequisite : setUpBrowser() worked. 
-   * @param browser : the existing browser instance
+   * 
    * @param page : the starting page ; 
    */
   // set request interception on page
@@ -1244,7 +1237,7 @@ async function getFamilyDollarPromotions(browser, page, _id){
   return null; 
 }
 
-async function getFamilyDollarItems(browser, page, _id){
+async function getFamilyDollarItems({ page, _id }){
   /**
     * @param browser: the current browser instance .
     * @param page : PageElement from Successfully Launched Browser. 
@@ -1301,13 +1294,13 @@ async function getFamilyDollarItems(browser, page, _id){
     await wrapFile(fileName);
     console.log("finished file", fileName);
     insertRun(getFamilyDollarItems, "runs", "node_call", dbArgs, true, _id,
-  `Puppeteer Node.js Call for Scrape of ${getFamilyDollarItems.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
+    `Puppeteer Node.js Call for Scrape of ${getFamilyDollarItems.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
     return null
 }
 
-async function getFoodDepotItems(browser, page, _id){
+async function getFoodDepotItems({ page, _id }){
   /**
-   * @param browser : the current browser instance
+   * 
    * @param page : the current page instance
    * @prerequisites : setUpBrowser() succeeded
    * @todo : synchronous image loading & rendering is blocking network causing requests to complete and images to appear on page before next request is called, filled and rendered.
@@ -1399,9 +1392,9 @@ async function getFoodDepotItems(browser, page, _id){
   return null
 }
 
-async function getFoodDepotPromotions(browser, page, _id){ 
+async function getFoodDepotPromotions({ page, _id }){ 
   /**
-   * @param browser : the current browser instance. 
+   * 
    * @param page : the current page instance.
    * @requirements : setUpBrowser("foodDepotCoupons") was successful. 
    */
@@ -1479,10 +1472,15 @@ return new Promise((resolve, reject) => {
 });
 }
 
-
 async function insertRun(functionObject, collectionName, executionType, funcArgs, close=false, _id=undefined, description=null){
   /**
-   * @param 
+   * @param functionObject: the function being called
+   * @param collectionName: the collection to insert run meta-data to
+   * @param executionType: how/where the function is being called from.
+   * @param funcArgs: Object representing function arguments
+   * @param close: Boolean Switch Whether or Not to Close the Run Document and Calculate and Update Final MetaData into Collection
+   * @param _id: ObjectId of Existing Run. undefined if first function in a chain.
+   * @param description: Optional Additional Description to Append to Function Document.     
    */
   const client = new MongoClient(process.env.MONGO_CONN_URL);
   const dbName = 'new';
@@ -1499,7 +1497,7 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
     // increment duration by this difference
     let filter = {"_id": _id} 
     let update = {
-      "$set": {
+      "$set": { // update duration and endTime for Entire Run
         "duration": { 
           "$divide": [{"$subtract": ["$$NOW", "$startedAt"]}, 1000]
         },
@@ -1514,7 +1512,7 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
                 in:{
                   $cond: {
                     if: {$eq: ["$$this.function", functionObject.name]},
-                    then: {$mergeObjects: ["$$this", {"endedAt": "$$NOW", "duration": {"$divide" : [{$subtract: ["$$NOW", "$$this.startedAt"]}, 1000]}}]},
+                    then: {$mergeObjects: ["$$this", {"endedAt": "$$NOW", "duration": {"$divide" : [{$subtract: ["$$NOW", "$$this.startedAt"]}, 1000]}}]}, // timestamp end of function and calculate duration
                     else: "$$this"}
                   } 
               }
@@ -1536,18 +1534,22 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
       }
     };
     await collection.updateOne(filter, [update]);
-    update = {"$push": {"functions": {
-      function: functionObject.name,
-      description: description,
-      vars: funcArgs,
-      duration: 0,
-      startedAt: timestamp
-    }}};
+    update = {
+      "$push": { // push new function onto existing runs functions array with 0 duration
+        "functions": {
+          function: functionObject.name,
+          description: description,
+          vars: funcArgs,
+          duration: 0,
+          startedAt: timestamp
+        }
+      }
+    };
     await collection.updateOne(filter, update);
     console.log("updated 1")
   }else { // creates original run document 
     let startedAt = new Date(); 
-    document = {
+    document = { //set the high level document features (executionType, startedAt, durations & functions Array)
       executeVia: executionType,
       startedAt: startedAt,
       duration: 0,
@@ -1616,7 +1618,7 @@ program
   .description("scrapes specified data throught containerized browser")
   .option("-a, --aldi <procedure>", "scrape aldi items")
   .option("-fd --family-dollar <procedure>", "scrape family dollar items, instacartItems, promotions")
-  .option("-k, --kroger <procedure>", "scrape kroger promotions and trips")
+  .option("-k, --kroger <procedure> <type>", "scrape kroger promotions (cashback | digital) and trips")
   .option("-p, --publix <procedure>", "scrape publix promotions and items")
   .option("-dg, --dollar-general <procedure>", "scrape dollar general promotions and items")
   .option("--food-depot <procedure>", "scrape food depot items and promotions")
@@ -1636,14 +1638,15 @@ program
       foodDepotItems: getFoodDepotItems,
       foodDepotPromotions: getFoodDepotPromotions
     };
-    let [taskName] = Object.entries(([k, v])=>k!=='setup').map(([k, v])=>k+v[0].toUpperCase()+v.slice(1))
+    let [taskName] = Object.entries(options).map(([k, v])=>k!=='setup' && k!=='promoType').map(([k, v])=>k+v[0].toUpperCase()+v.slice(1))
     let taskArgs;
     if (options.setup){
       taskArgs = await setUpBrowser(taskName)
     } else {
       taskArgs = await setUpBrowser(task="")
     }
-    await taskParser[taskName](...taskArgs)
+    taskName==="krogerPromotions"? taskArgs = {...taskArgs, "type": options.promoType} : taskArgs; 
+    await taskParser[taskName](taskArgs)
     await taskArgs.browser.close();
     return undefined
   })
