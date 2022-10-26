@@ -47,13 +47,13 @@ async function createType(){
     var t = ''
     let t2 =''
     let reg = /kroger|aldi|publix|dollargeneral|familydollar|fooddepot/
-    let regKroger = /mypurchases|cashback|coupons|Buy5Save1|Buy3Save6|Buy2Save10|Spend\d+Save\d+|S\d+S\d+/
+    let regKroger = /mypurchases|cashback|coupons|Buy5Save1|Buy3Save6|Buy2Save10|Spend\d+Save\d+|S\d+S\d+|99c|MustBuy/
     let regFamilyDollar = /\?N=|smart-coupons|sameday/
     let regPublix = /savings/
     let regFoodDepot = /coupons/
     var fileTypes = {'mypurchases': 'trips', 'cashback': 'cashback', "coupons": "digital",
     "Buy5Save1": "buy5save1", "Buy3Save6": "buy3save6", '?N=': 'items', 'smart-coupons': 'coupons',
-    "Buy2Save10": "buy2save10", 'sameday': 'instacartItems'}
+    "Buy2Save10": "buy2save10", 'sameday': 'instacartItems', '99c': '99c', 'MustBuy2':'MustBuy2'}
     var fileTypePub = {'savings': 'coupons'}
     for (let tab of tabs){
       if (tab.url.match(reg)!=null){

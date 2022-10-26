@@ -301,16 +301,14 @@ async function setUpBrowser(task) {
             });
             await targetStoreModal.click();
             // allow time for mapbox requests to complete & so mapbox comes into focus
-            await page.waitForNetworkIdle({idleTime: 1000})
+            await page.waitForNetworkIdle({idleTime: 4000})
+            await page.keyboard.press("Enter");
             page.on("response", async (response)=> {
-              if (response.isInterceptResolutionHandled()) return;
-              else {
-                if (Object.keys(passDownArgs).length<1 && response.url().match(locationIdRegex)){
-                  passDownArgs["locationId"] = response.url().match(locationIdRegex)[1];
-                } 
+              if (Object.keys(passDownArgs).length<1 && response.url().match(locationIdRegex)){
+                passDownArgs["locationId"] = response.url().match(locationIdRegex)[1];
               }
             })
-            await page.keyboard.press("Enter");
+            
           }
           await page.waitForNetworkIdle({idleTime: 15500})
           break;
@@ -379,18 +377,16 @@ async function setUpBrowser(task) {
           });
           await targetStoreModal.click();
           // allow time for mapbox requests to complete & so mapbox comes into focus
-          await page.waitForNetworkIdle({idleTime: 1000})
-          page.on("response", async (response)=> {
-            if (response.isInterceptResolutionHandled()) return;
-            else {
+          await page.waitForNetworkIdle({idleTime: 4000})
+            await page.keyboard.press("Enter");
+            page.on("response", async (response)=> {
               if (Object.keys(passDownArgs).length<1 && response.url().match(locationIdRegex)){
                 passDownArgs["locationId"] = response.url().match(locationIdRegex)[1];
-              } 
-            }
-          })
-          await page.keyboard.press("Enter");
-        }
-        await page.waitForNetworkIdle({idleTime: 15500})
+              }
+            })
+            
+          }
+          await page.waitForNetworkIdle({idleTime: 15500})
         break;
       }  
       case "publixPromotions": {
@@ -829,7 +825,8 @@ async function getKrogerTrips({ page, _id}){
 async function getKrogerPromotions({ page, type, _id}){
     /**
    * @param page : PageElement from Successfully Launched Browser. 
-   * @param brower : The current Browser instance. 
+   * @param type : Kroger Promotional Type. Either `cashback` or `digital`
+   * @param _id : MongoDB ObjectId  
    * @prerequisite : location setup was successful, setUpBrowser was successful 
    * @steps : 
    * 1 - can get iterations via DOM pagination elements now. Get Them

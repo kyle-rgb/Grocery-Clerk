@@ -9,7 +9,7 @@ const {MongoClient} = require('mongodb');
 // add stealth plugin and use defaults 
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { ProtocolError, TimeoutError } = require('puppeteer');
-
+const { unescape } = require("querystring")
 puppeteer.use(StealthPlugin())
 
 async function getTestWebsite() {
@@ -394,16 +394,14 @@ async function setUpBrowser(task) {
             });
             await targetStoreModal.click();
             // allow time for mapbox requests to complete & so mapbox comes into focus
-            await page.waitForNetworkIdle({idleTime: 1000})
-            page.on("response", async (response)=> {
-              if (response.isInterceptResolutionHandled()) return;
-              else {
-                if (Object.keys(passDownArgs).length<1 && response.url().match(locationIdRegex)){
-                  passDownArgs["locationId"] = response.url().match(locationIdRegex)[1];
-                } 
-              }
-            })
+            await page.waitForNetworkIdle({idleTime: 4000})
             await page.keyboard.press("Enter");
+            page.on("response", async (response)=> {
+              if (Object.keys(passDownArgs).length<1 && response.url().match(locationIdRegex)){
+                passDownArgs["locationId"] = response.url().match(locationIdRegex)[1];
+              } 
+            })
+            
           }
           await page.waitForNetworkIdle({idleTime: 15500})
           break;
@@ -473,15 +471,13 @@ async function setUpBrowser(task) {
           await targetStoreModal.click();
           // allow time for mapbox requests to complete & so mapbox comes into focus
           await page.waitForNetworkIdle({idleTime: 1000})
+          await page.keyboard.press("Enter");
           page.on("response", async (response)=> {
-            if (response.isInterceptResolutionHandled()) return;
-            else {
               if (Object.keys(passDownArgs).length<1 && response.url().match(locationIdRegex)){
                 passDownArgs["locationId"] = response.url().match(locationIdRegex)[1];
-              } 
-            }
+              }
           })
-          await page.keyboard.press("Enter");
+          
         }
         await page.waitForNetworkIdle({idleTime: 15500})
         break;
@@ -1032,7 +1028,6 @@ async function getKrogerCoupons(browser, page, type, _id){
       console.log("CCs Length", currentCoupons.length, " finished @", i)
     }
     await page.waitForNetworkIdle({idleTime: 3000});
-    await browser.close();
     await wrapFile(fileName);
     console.log("file finished : ", fileName) ;
     insertRun(getKrogerCoupons, "runs", "node_call", dbArgs, true, _id,
@@ -1064,7 +1059,7 @@ async function getInstacartItems(browser, page, _id){
   let offset = 0;
   var wantedResponseRegex =  /item_attributes|operationName=Items|operationName=CollectionProductsWithFeaturedProducts/;
   let allCategoryLinks = await page.$$eval("ul[aria-labelledby='sm-departments'] > li > a", (elems)=> elems.map((a)=>a.href)) // departments side panel
-  allCategoryLinks = allCategoryLinks.filter((a)=>!a.match(unwantedPattern)).slice(1)
+  allCategoryLinks = allCategoryLinks.filter((a)=>!a.match(unwantedPattern))
   let apiEmitter = new EventEmitter();
 
   async function setFlag(ee, waitTime = 4500, timeout = 45000){
@@ -1092,6 +1087,7 @@ async function getInstacartItems(browser, page, _id){
     }, waitTime)
     return new Promise((resolve, reject)=> {
       ee.on("resolve", ()=> {
+        ee.removeAllListeners()
         resolve(true)
       })
       setTimeout(()=>{
@@ -1099,6 +1095,15 @@ async function getInstacartItems(browser, page, _id){
       }, timeout)
     })
   }
+  page.on("response", async (res)=> {
+    let url = res.url() ;
+    if (url.match(wantedResponseRegex)){
+      offset+=await writeResponse(fileName=fileName, response=res, url=url, offset=offset)
+      apiEmitter.emit("fileDone")
+      return; 
+    }
+    return ; 
+  })
 
   for (let link of allCategoryLinks){
     // navigate to page ;
@@ -1106,15 +1111,6 @@ async function getInstacartItems(browser, page, _id){
     // once loaded responses have been copied, evalulate document.body.offsetHeight to see if more items are available. 
     var pageHeight, newHeight;
     // handle response
-    page.on("response", async (res)=> {
-      let url = res.url() ;
-      if (url.match(wantedResponseRegex)){
-        offset+=await writeResponse(fileName=fileName, response=res, url=url, offset=offset)
-        apiEmitter.emit("fileDone")
-        return; 
-      }
-      return ; 
-    })
     await page.goto(link);
     await setFlag(apiEmitter)    
     console.log("went to ", link)
@@ -1183,7 +1179,6 @@ async function getPublixCoupons(browser, page, _id){
   await page.goto("https://www.publix.com/savings/all-deals");
   await page.waitForNetworkIdle({idleTime: 8000});
   await wrapFile(fileName);
-  await browser.close();
   console.log("file finished : ", fileName) ;
   insertRun(getPublixCoupons, "runs", "node_call", dbArgs, true, _id,
   `Puppeteer Node.js Call for Scrape of ${getPublixCoupons.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
@@ -1703,40 +1698,28 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
 }
 
 async function testContainerBrowser(){
-  var browser = await puppeteer.launch({
-    headless: false,
-    slowMo: 2000,
+  var browser = await puppeteer.launch({headless: false,
+    slowMo: 500, 
+    executablePath:
+      "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
     dumpio: false,
-    args: ["--start-maximized", "--no-sandbox"],
-    executablePath: "google-chrome-stable",
-    defaultViewport: {width: 1920, height: 1080 },
+    args: [
+      "--start-maximized",
+      "--profile-directory=Profile 1",
+    ],
+    userDataDir: "C:\\c\\Profiles",
     devtools: false,
-    timeout: 0
-  });
-  console.log("successfully launched browser"); 
-  var [page] = await browser.pages(); 
-  console.log("opened page"); 
-  await page.goto("https://www.kroger.com");
-  console.log("went to kroger.com"); 
-  await page.waitForTimeout(6000);
-  console.log("waited for 4 seconds"); 
-  await page.screenshot({
-    path: "./img/headlessScreenKrogerHome.png",
-    fullPage: true,
-  });
-  console.log("took home screenshot");
-  await page.waitForTimeout(6000);
-  await page.goto("https://www.kroger.com/savings/cl/coupons")
-  await page.screenshot({
-    path: "./img/headlessScreenKrogerCoupons.png",
-    fullPage: true,
-  });
-  console.log("closed")
-  await browser.close()
+    timeout: 0,
+    defaultViewport: {
+      width: 1920,
+      height: 1080
+    }});
+    var [page ]= await browser.pages()
+  await page.goto("chrome://settings")
   return null
 }
 
-setUpBrowser(task="foodDepotCoupons").then(async ({browser, page , _id})=>{
-  await getFoodDepotCoupons(browser, page, _id);
-  await browser.close();
+setUpBrowser(task="publixCoupons").then(async ({browser, page , _id})=>{
+  await getPublixCoupons(browser, page, _id)
 })
+// testContainerBrowser()
