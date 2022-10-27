@@ -12,14 +12,15 @@ from airflow.exceptions import AirflowSkipException
 log = logging.getLogger(__name__)
 
 with DAG(
-    dag_id="kroger_scrape_promotions_cashback",
-    schedule_interval="0 0 * * 2",
+    dag_id="aldi_scrape_items",
+    schedule_interval="0 0 * * 2", # runs every tuesday, the last turnover date before next publicized promotion date (as given by their weekly ads)
     start_date=pendulum.datetime(2022, 10, 25, tz="UTC"),
     dagrun_timeout=datetime.timedelta(minutes=210),
     catchup=False,
     tags=["grocery", "GroceryClerk", "ETL", "python", "node", "mongodb", "docker"]
 ) as dag:
     # [START docker_wakeup_call]
+    # TODO: Images should work in parallel for data intensive days (2/Tuesday, 6/Saturday, 0/Sunday); So Each Task Should be Able to Scrape in Parallel Given the Number of Tasks and My Own Current CPU/RAM resources
     @task(task_id="docker_wakeup_call")
     def docker_wakeup_call():
         import docker
@@ -49,12 +50,13 @@ with DAG(
         client = docker.from_env()
         scrapingContainer = list(filter(lambda x: x.name=="docker-scraper-1"), client.containers.list())[0]
         scrapingContainer.exec_run("node ./src/index.js --aldi items", user="pptruser", workdir="/app")
+        client.close()
         return 0
     # [END kroger_operator_setup_node]
     extractTask = setup_browser_and_extract()
 
     # [START kroger_operator_setup_node]
-    @task(task_id="transform_items_data_publix")
+    @task(task_id="transform_items_data_aldi")
     def transform_publix_item_data(ds=None, **kwargs):
         """Starts the Browser and Runs Node.js Setup in Container"""
         # has to connect to docker network running on host via docker module 
@@ -67,11 +69,15 @@ with DAG(
         client = docker.from_env()
         scrapingContainer = list(filter(lambda x: x.name=="docker-scraper-1"), client.containers.list())[0]
         scrapingContainer.exec_run("node ./src/transform.js transform --aldi items", user="pptruser", workdir="/app")
+        client.close() 
         return 0
     # [END kroger_operator_setup_node]
 
-    transformTask = transform_publix_item_data()
+    transformTask = transform_aldi_item_data()
     # [END kroger_operator_transform_api]
+
+    # TODO: add encrpyting and archiving to complete files after transform task was completed successfully and use EmailOperator to Send Reports.
+    # TODO: past runs duration in current runs collection in MONGODB can be compared to new Dockerized/Nodeified Scraping Tasks. Sure Airflow Has its Own Version of This Too on Webserver Dashboard. 
 
     # [START main_flow]
     wakeUpTask >> extractTask >> transformTask

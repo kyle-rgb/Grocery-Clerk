@@ -12,7 +12,7 @@ from airflow.exceptions import AirflowSkipException
 log = logging.getLogger(__name__)
 
 with DAG(
-    dag_id="kroger_scrape_promotions_cashback",
+    dag_id="publix_scrape_items",
     schedule_interval="0 0 * * 2",
     start_date=pendulum.datetime(2022, 10, 25, tz="UTC"),
     dagrun_timeout=datetime.timedelta(minutes=210),
