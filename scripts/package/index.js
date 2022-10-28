@@ -146,7 +146,10 @@ const getNestedObject = (nestedObj, pathArr) => {
 async function writeResponse(fileName, response, url, offset) { 
   // check file existence to set character. 
   let fileExists = fs.existsSync(fileName);
+
   if (!fileExists){
+      // mkdirs if not exists
+    fs.mkdirSync(fileName.slice(0, fileName.lastIndexOf("/")), {recursive: true})
     fs.appendFile(fileName, "[", (err)=>{
       if (err) throw err; 
     })
@@ -1562,6 +1565,83 @@ async function getFoodDepotCoupons(browser, page, _id){
   insertRun(getFoodDepotCoupons, "runs", "node_call", dbArgs, true, _id,
   `Puppeteer Node.js Call for Scrape of ${getFoodDepotCoupons.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
   return null;
+}
+
+async function getKrogerSpecialPromotions(browser, page, _id) { 
+  /**
+   * @setup = getKrogerPromotions.
+   * For special promotions that are advertised on website's promotions page, but do not require any loading of promotion to get.
+   * Usually revolves around a Special Number of Products and a Required Purchasing Amount. Can power Savings when combined with other available promotions.
+   * Product information revolves around two different promotions calls, details-basic and traditional products? seen in Trips and reg Promotions scraping functions.
+   * the products.$.price.offerCode feature in /products? will have the internal promotional id for special promotion that can be connected overall to
+   * other promotions usually by adding 8000000 + linkedOfferCode to it.
+   * Other data on promotion (defaultDescription, nfor (min quantity), nforPrice, expiration date) will be found on products.$.price.storePrices.promo
+   * @nb : do not rely exclusively on linkedOfferCode to be the same for all promotions housed on the same promotion page. Similarish type of offers can end up on same page
+   * even though their linkedOfferCode's do not match.       
+  */
+  // capture details-basic and products? api repsonses
+  let specialPromoRegex = /(atlas\/v.\/product\/v.\/products\?|products\/details-basic)/
+  var path = "../../../requests/server/collections/kroger/promotions/"
+  var fileName = new Date().toLocaleDateString().replaceAll(/\//g, '_')+".json";
+  var offset = 0;
+  var specialPromoLinks = [];    
+  // navigate to shop-all-promotions and find all special type promotions pages
+  await page.goto("https://www.kroger.com/pr/shop-all-promotions")
+  await page.waitForNetworkIdle({idleTime: 5000})
+  // will give you section divs with tabulated options (for special promotions and regular digital promotions)
+  var specialPromoTabDivs = await page.$$eval("div[class$='.tabs']", (nodes)=>{
+    return nodes.filter((node)=>node.getElementByTagName("h2").map((a)=>a.innerText).every((text)=>!text.toLowerCase().includes("coupons")))
+  });
+  // handle individual links in tab marked divs; to get other special promotions behind tabs the tabs inside the elements must be clicked to chaing 
+  for (let specialPromoTabDiv of specialPromoTabDivs){
+    let initialSpecialPromoValue = await specialPromoTabDiv.$eval("a.kds-ProminentLink", (a)=>a.href)
+    specialPromoLinks.push(initialSpecialPromoValue);
+    let remainingTabs = specialPromoTabDiv.$$("button[id^='Tabs-tab'][aria-selected='false']")
+    for (let remainingTab of remainingTabs){
+      await remainingTab.click();
+      await page.waitForNetworkIdle({idleTime: 4000});
+      initialSpecialPromoValue = await specialPromoTabDiv.$eval("a.kds-ProminentLink", (a)=>a.href)
+      specialPromoLinks.push(initialSpecialPromoValue)
+    }
+  }
+  // will give sections of all special promotions (w/o tabs)
+  // var specialPromoSectionLinks = await page.$$eval("div[class$='.sectionwrapper'] a.kds-ProminentLink", (nodes)=>nodes.map((n)=>n.href))
+  var specialPromoBubbleLinks = await page.$$eval("div[class$='.sectionwrapper'] a[title][tabindex]", (nodes)=>nodes.map((n)=>n.href))
+  specialPromoLinks = specialPromoLinks.concat(specialPromoBubbleLinks)//.concat(specialPromoSectionLinks);
+  specialPromoLinks = Array.from(new Set(specialPromoLinks.filter((a)=>a.match(/\/search\?/))))
+
+  // create temp id for special promotion based on url query string params. Then look for actually numeric id in products? response;
+  // use as directory in promotions so that it can be further parsed after collection
+  /**
+   * @example : [
+   * https://www.kroger.com/search?keyword=(((2022P10W1BewitchingBeautyB2G1Free)))&query=2022P10W1BewitchingBeautyB2G1Free&searchType=mktg%20attribute&monet=curated&fulfillment=all&pzn=relevance
+   * https://www.kroger.com/search?keyword=(((ATLMustBuySoda3)))&query=ATLMustBuySoda3&searchType=mktg%20attribute&monet=promo&fulfillment=all&pzn=relevance
+   * https://www.kroger.com/search?keyword=(((Buy5Save1EachShopAll22102)))&query=Buy5Save1EachShopAll22102&searchType=mktg%20attribute&monet=promo&fulfillment=all&pzn=relevance
+  */ 
+
+  for (let link of specialPromoLinks){
+    let tempId = link.match(/keyword=(.+?)\&/)[1]
+    let linkFileName = path + tempId + fileName 
+    page.on("response", async (response)=> {
+      if (response.url().match(specialPromoRegex)){
+        offset += await writeResponse(linkFileName, response, url=response.url(), offset)
+      }
+      return;
+    })  
+    await page.goto(link);
+    await page.waitForNetworkIdle({idleTime: 4500});
+    // find see more button (will not appear there are no more items)
+    var loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
+    while (loadMoreButton){
+      await loadMoreButton.click();
+      await page.waitForNetworkIdle({idleTime: 4000});
+      loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
+    };
+    console.log("finished link : ", link)
+    page.removeAllListeners("response") // so as not to call it twice on next iteration
+  }
+
+  return null
 }
 
 const getFoodDepotCode = async (_id) => {
