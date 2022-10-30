@@ -4,7 +4,7 @@ from pymongo import MongoClient
 import pytz
 
 
-def deconstructKrogerFiles(filename):
+def deconstructKrogerFile(filename):
     mytz=pytz.timezone('America/New_York')
     startingArray=[]
     upcsRegex = re.compile(r'https://www\.kroger\.com/cl/api/couponDetails/(\d+)/upcs')
@@ -19,17 +19,13 @@ def deconstructKrogerFiles(filename):
     if os.path.exists(filename):
         with open(filename, 'r', encoding='utf-8') as file:
             startingArray = json.loads(file.read())
-        cDict={}
-        try:
-            if 'trips' in filename:
-                startingArray = list(filter(lambda x: type(x)==dict and "data" in x, startingArray))
-                startingArray = sorted(startingArray, key=lambda x: x['url'], reverse=True)
-            else:
-                startingArray = sorted(startingArray, key=lambda x: x['url'], reverse=False)
-        except TypeError as err:
-            raise err
-        except KeyError as err:
-            raise err
+        
+        if 'trips' in filename:
+            startingArray = list(filter(lambda x: type(x)==dict and "data" in x, startingArray))
+            startingArray = sorted(startingArray, key=lambda x: x['url'], reverse=True)
+        else:
+            startingArray = sorted(startingArray, key=lambda x: x['url'], reverse=False)
+        couponDict={}
         promotionsCollection = []
         itemCollection = []
         pricesCollection = []
@@ -48,7 +44,7 @@ def deconstructKrogerFiles(filename):
             data = apiCall.get('data')
             if re.match(upcsRegex, url):
                 couponId = re.match(upcsRegex, url).group(1)
-                cDict[couponId] = data
+                couponDict[couponId] = data
             elif re.match(specialPromoRegex, url):
                 allUpcs = set()
                 allOffers = set()
@@ -106,8 +102,8 @@ def deconstructKrogerFiles(filename):
                      "bool": {"cashbackCashoutType", "isSharable", "forCampaign", "specialSavings",  "longDescription"}}
                 for k,v in coupons.items():
                     promo = {}
-                    if k in cDict:
-                        v.update({'productUpcs': cDict[k]})
+                    if k in couponDict:
+                        v.update({'productUpcs': couponDict[k]})
                     else:
                         v.update({'productUpcs': []})
                     for coupKey, coupVal in v.items():

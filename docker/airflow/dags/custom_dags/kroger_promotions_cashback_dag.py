@@ -22,16 +22,18 @@ with DAG(
     # [START docker_wakeup_call]
     @task(task_id="docker_wakeup_call")
     def docker_wakeup_call():
+        # migrated current docker compose file (sans secrets) to replicate current compose network
         import docker
         client = docker.from_env()
-        if "docker-scraper-1" not in containerNames:
-            scrapingContainer = list(filter(lambda x: x.name=="docker-scraper-1"), client.containers.list())[0]
-            scrapingContainer.start()
-            client.close()
-            return 0
-        else:
-            client.close()
-            raise AirflowSkipException
+        client.containers.run("docker-scraper-1", "node", tty=True, ports={"8081/tcp": "8080", "9229/tcp": "9229", "5900/tcp": "5900", "5000/tcp": "5000"},
+        enviroment={"GPG_TTY": "/dev/pts/0", "DISPLAY": ":1", "XVFB_RESOLUTION": "1920x1080x16"},
+        init=True, stdin_open=True, mounts=[
+            docker.types.Mount("/app/node_modules", "browser_dependencies"),
+            docker.types.Mount("/tmp/collections", "./tmp/collections/", type="bind"),
+            docker.types.Mount("/app", "./scraper", type="bind")
+        ], detach=True)
+
+        return 0 
     # [END docker_wakeup_call]
     wakeUpTask = docker_wakeup_call()
 
@@ -64,12 +66,16 @@ with DAG(
             Importing at the module level ensures that it will not attempt to import the
             library before it is installed.
         """
-        from pyGrocery.transformers.kroger import deconstructKrogerFiles
+        from pyGrocery.transformers.kroger import deconstructKrogerFile
+        import os
         
-        deconstructKrogerFiles("/opt/airflow/dags/pyGrocery/tmp/")
+        tempFiles = [os.path.join(folder, file) for folder, __, files in os.walk("/tmp/collections/kroger/trips/") for file in files]
+        for tempFile in tempFiles:
+            deconstructKrogerFile(tempFile)
 
         print("successfully started stopped node container from airflow worker in separate docker network")
         print('finished from virtual env function. exiting with status code 0.')
+
 
         return 0
     transformTask = callable_virtualenv()

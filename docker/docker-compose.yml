@@ -17,6 +17,7 @@ services:
       - "8081:8080"
       - "9229:9229"
       - "5900:5900"
+      - "5000:5000"
     secrets:
       - puppet-keys
       - encryption-key

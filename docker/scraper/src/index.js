@@ -4,6 +4,7 @@ require("dotenv").config();
 const fs = require("fs")
 const readline = require("readline");
 const EventEmitter = require('node:events');
+const http = require("node:http")
 const { spawn } = require('child_process');
 const { MongoClient } = require('mongodb');
 const { Command, Option } = require('commander')
@@ -521,7 +522,7 @@ async function setUpBrowser(task) {
           if (step===0){
             tries++;
             if (tries>4){
-              throw new Error(`Error Modal Continues on All Setup Pages after ${tries} tries.`)
+              throw new Error(`Error Modal Continutes on All Setup Pages after ${tries} tries.`)
             }
             // navigate to homepage : 
             await page.goto("https://www.dollargeneral.com/dgpickup")
@@ -555,9 +556,10 @@ async function setUpBrowser(task) {
             // wait for reload,
             await Promise.all([setStoreButton.click(), page.waitForNetworkIdle({idleTime: 6000})])
           }
-          wasError = await checkForErrorModal(); 
+          wasError = await checkForErrorModal();
           step = wasError ? 0 : step+1;
-        } while (!wasError);
+        } while (!wasError && step<2);
+        console.log(!wasError, step)
         break; 
         }
       case "dollarGeneralPromotions": {
@@ -1510,39 +1512,30 @@ const getFoodDepotCode = async (_id) => {
   insertRun(getFoodDepotCode, "runs", "node_call", dbArgs, false, _id,
   `Puppeteer Node.js Call for Scrape of ${getFoodDepotCode.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
 
-  var SERVER_IP = process.env.SERVER_IP;
   var passedValidateCode; 
-  cmd = spawn("C:\\Users\\Kyle\\anaconda3\\python", ["../requests/server/app.py"]);
-  cmd.on("error", (e)=>console.error(e));
+  // rewrite as node controlled server
+  const server = http.createServer();
 
-  cmd.stdout.on("data", (data)=> {
-    console.log(data.toString());
+  server.on("request", (req, res)=>{
+    const phoneUrl = new URL(req.url, `http://${req.headers.host}`)
+    passedValidateCode = phoneUrl.search.match(/code=(\d+)/)[1]
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      data: {codeRecieved: true}
+    }))
+    console.log("phoneCode Set");
+    server.close();  
   })
-
-  cmd.stderr.on("data", async (data)=>{
-    let logs = data.toString(); 
-    console.log(data.toString())
-    if (logs.includes("/validate")) { 
-      passedValidateCode = logs.match(/code=(\d+)/)[1]
-      console.log("code from phone", passedValidateCode);
-      cmd.kill("SIGTERM")
-    }
-  })
-
 return new Promise((resolve, reject) => {
-  cmd.on("close", (code, signal)=>{
-    console.log(`child process exited with a code of ${code} due to receipt of ${signal}`)
+  server.on("close", ()=> {
     insertRun(getFoodDepotCode, "runs", "node_call", dbArgs, true, _id,
     `Puppeteer Node.js Call for Scrape of ${getFoodDepotCode.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
     resolve(passedValidateCode)
   })
-  cmd.on("error", (e)=>{
-    console.log("cmdline produced an error");
-    reject(e);
-  })
-  cmd.stdout.on("error", (e)=>{
-    console.log("sent to stdout err:", e);
-    reject(e);
+
+  server.on("error", (err)=>{
+    server.close(); 
+    reject(err)
   })
 
 });
@@ -1727,4 +1720,13 @@ program
     await taskArgs.browser.close();
     return undefined
   })
+
+program
+  .command("test")
+  .description("runs a test script for debugging")
+  .option("-m, --message <data>", "message to echo")
+  .action((options)=> {
+    console.log("your data : ", data)
+  })
+
 program.parse();

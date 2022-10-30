@@ -23,16 +23,18 @@ with DAG(
     # TODO: Images should work in parallel for data intensive days (2/Tuesday, 6/Saturday, 0/Sunday); So Each Task Should be Able to Scrape in Parallel Given the Number of Tasks and My Own Current CPU/RAM resources
     @task(task_id="docker_wakeup_call")
     def docker_wakeup_call():
+        # migrated current docker compose file (sans secrets) to replicate current compose network
         import docker
         client = docker.from_env()
-        if "docker-scraper-1" not in containerNames:
-            scrapingContainer = list(filter(lambda x: x.name=="docker-scraper-1"), client.containers.list())[0]
-            scrapingContainer.start()
-            client.close()
-            return 0
-        else:
-            client.close()
-            raise AirflowSkipException
+        client.containers.run("docker-scraper-1", "node", tty=True, ports={"8081/tcp": "8080", "9229/tcp": "9229", "5900/tcp": "5900", "5000/tcp": "5000"},
+        enviroment={"GPG_TTY": "/dev/pts/0", "DISPLAY": ":1", "XVFB_RESOLUTION": "1920x1080x16"},
+        init=True, stdin_open=True, mounts=[
+            docker.types.Mount("/app/node_modules", "browser_dependencies"),
+            docker.types.Mount("/tmp/collections", "./tmp/collections/", type="bind"),
+            docker.types.Mount("/app", "./scraper", type="bind")
+        ], detach=True)
+
+        return 0 
     # [END docker_wakeup_call]
     wakeUpTask = docker_wakeup_call()
 
@@ -57,7 +59,7 @@ with DAG(
 
     # [START kroger_operator_setup_node]
     @task(task_id="transform_promotions_data_dollar_general")
-    def transform_publix_item_data(ds=None, **kwargs):
+    def transform_dollar_general_item_data(ds=None, **kwargs):
         """Starts the Browser and Runs Node.js Setup in Container"""
         # has to connect to docker network running on host via docker module 
         # connect to docker and poke awake container; airflow worker should have docker module installed and access to host socket via volume

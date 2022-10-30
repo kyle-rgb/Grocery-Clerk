@@ -442,7 +442,7 @@ function processInternalCoupons({target, parser, uuid}){
         })
     }
 
-    insertFilteredData(uuid, 'promotions', allCoupons, "new", true)
+    insertFilteredData(uuid, 'promotions', allCoupons, "new", false)
     fs.mkdirSync('../../../data/collections/'+targetHeirarchy, {recursive: true})
     for (let file of files){
         fs.renameSync(target+file.name, `../../../data/collections/${targetHeirarchy}`+file.name)
@@ -766,7 +766,8 @@ program
     .option("--dollar-general <procedure>", "transform and insert promotions and items for Dollar General Stores")
     .option("--food-depot <procedure>", "transform and insert promotions and items for Food Depot Stores")
     .action((options)=> {
-        let [transformTask] = Object.entries(options).map(([k, v])=>{k+v[0].toUpperCase()+v.slice(1)});
+        let [transformTask] = Object.entries(options).map(([k, v])=>{return k+v[0].toUpperCase()+v.slice(1)});
+        console.log(transformTask)
         var transformerVars = {
             "foodDepotPromotions": {func: processInternalCoupons, args: {
                 uuid: "targetOfferId",
@@ -782,7 +783,7 @@ program
                     "details": {to: "terms"},
                     "offerType": {to: "type" }
                 },
-                target: "/tmp/collections/fooddepot/promotions/"
+                target: "../../tmp/collections/fooddepot/promotions/"
             }}, // target, parser, uuid="targetOfferId"
             "publixPromotions": {func: processInternalCoupons, args: {
                 uuid: "id",
@@ -800,7 +801,7 @@ program
                     "savingType": {to: "type"},
                     "dc_popularity": {to: "popularity"}
                 },
-                target: "/tmp/collections/publix/promotions/"
+                target: "../../tmp/collections/publix/promotions/"
             }}, //target, parser, uuid="id"
             "familyDollarPromotions": {func: processInternalCoupons, args:{
                 uuid: "id", 
@@ -830,10 +831,10 @@ program
                     "clippedCount": {keep: true}
                 
                 },
-                target: "/tmp/collections/familydollar/promotions/"
+                target: "../../tmp/collections/familydollar/promotions/"
             }}, // target, parser, uuid="id"
             "dollarGeneralPromotions": {func: processDollarGeneralItems, args: {
-                target: "/tmp/collections/dollargeneral/promotions/",
+                target: "../../tmp/collections/dollargeneral/promotions/",
                 couponParser: {
                     OfferCode: {to: "offerCode"},
                     OfferGS1: {to: "offerGS1", bool: true},
@@ -906,7 +907,7 @@ program
                 }
             }},
             "dollarGeneralItems": {func: processDollarGeneralItems, args: {
-                target: "/tmp/collections/dollargeneral/items/",
+                target: "../../tmp/collections/dollargeneral/items/",
                 couponParser: {
                     OfferCode: {to: "offerCode"},
                     OfferGS1: {to: "offerGS1", bool: true},
@@ -980,25 +981,25 @@ program
             }},
             "familyDollarItems": {func: processFamilyDollarItems, args: {
                 defaultLocation: "2394",
-                target: "/tmp/familydollar/items/"
+                target: "../../tmp/collections/familydollar/items/"
             }},
             "familyDollarInstacartItems": {func: processInstacartItems, args: {
                 uuid: "legacyId",
                 defaultLocation: "2394",
-                target: "/tmp/familydollar/instacartItems/"
+                target: "../../tmp/collections/familydollar/instacartItems/"
             }},
             "foodDepotItems": {func: processFoodDepotItems, args: {
-                target: "/tmp/fooddepot/items/"
+                target: "../../tmp/collections/fooddepot/items/"
             }},
             "publixItems": {func: processInstacartItems, args: {
                 uuid: "legacyId",
                 defaultLocation: "121659",
-                target: "/tmp/publix/items/"
+                target: "../../tmp/collections/publix/items/"
             }}, 
             "aldiItems": {func: processInstacartItems, args: {
                 uuid: "legacyId",
                 defaultLocation: "23170",
-                target: "/tmp/aldi/items/"
+                target: "../../tmp/collections/aldi/items/"
             }} 
         };
         // run proper taskformer task with proper preconfigured arguments

@@ -34,3 +34,6 @@
 # Bash Scripting & CLI Guides
 - [Bash Man Page](https://tiswww.case.edu/php/chet/bash/bashref.html#Special-Parameters)
 - [CLI Best Practices](https://clig.dev/)
+
+# Docker Python SDK
+- [Windows 10 Issue Using containers.exec_run()](https://stackoverflow.com/questions/73610213/docker-python-package-4-3-1-not-working-with-docker-desktop-4-12-0-on-windows-10)

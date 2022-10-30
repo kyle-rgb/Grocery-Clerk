@@ -218,11 +218,12 @@ async function setUpBrowser(task) {
 
   async function checkForErrorModal(){
     let errorVisible  = await page.$eval("#global-message-modal", (el)=>el.getAttribute("aria-hidden"));
-    console.log("type from getAttribute", typeof errorVisible, ' ', errorVisible)
-    errorVisible = errorVisible === 'false'? !errorVisible : !!errorVisible; 
-    if (!errorVisible){
+    console.log("type from getAttribute", typeof errorVisible, ' ', errorVisible, !errorVisible)
+    errorVisible = errorVisible === 'false'? !!errorVisible : !errorVisible; 
+    console.log(errorVisible)
+    if (errorVisible){
       // force refresh to allow access if alert modal appears when accessing drop down
-      await errorModal.$eval("#global-message-modal button.global-modal__close-button", (el)=>el.click())
+      await page.$eval("#global-message-modal button.global-modal__close-button", (el)=>el.click())
       await page.waitForNetworkIdle({idleTime: 2000})
       await page.reload();
       return true;
@@ -651,9 +652,10 @@ async function setUpBrowser(task) {
             // wait for reload,
             await Promise.all([setStoreButton.click(), page.waitForNetworkIdle({idleTime: 6000})])
           }
-          wasError = await checkForErrorModal(); 
+          wasError = await checkForErrorModal();
           step = wasError ? 0 : step+1;
-        } while (!wasError);
+        } while (!wasError && step<2);
+        console.log(!wasError, step)
         break; 
         }
       case "dollarGeneralCoupons": {
@@ -951,10 +953,10 @@ async function getKrogerTrips(browser, page, _id){
     console.log(element, yy, ' ', (Date.now()-st)/1000, ' seconds')
   }
   await page.waitForNetworkIdle({idleTime: 5500});
-  await browser.close();
+
   await wrapFile(fileName);
   console.log("file finished : ", fileName);
-  await browser.close();
+
   console.log("exiting....")
   insertRun(getKrogerTrips, "runs", "node_call", dbArgs, true, _id,
   `Puppeteer Node.js Call for Scrape of ${getKrogerTrips.name.replace("get", "")} for ${new Date().toLocaleDateString()}`)
@@ -1134,7 +1136,6 @@ async function getInstacartItems(browser, page, _id){
     console.log("finished ", link)
   }
   await page.waitForTimeout(10000)
-  await browser.close();
   await wrapFile(fileName);
   console.log("file finished : ", fileName) ; 
   insertRun(getInstacartItems, "runs", "node_call", dbArgs, true, _id,
@@ -1779,7 +1780,7 @@ async function insertRun(functionObject, collectionName, executionType, funcArgs
 
 async function testContainerBrowser(){
   var browser = await puppeteer.launch({headless: false,
-    slowMo: 500, 
+    slowMo: 0, 
     executablePath:
       "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
     dumpio: false,
@@ -1794,12 +1795,9 @@ async function testContainerBrowser(){
       width: 1920,
       height: 1080
     }});
-    var [page ]= await browser.pages()
+    var [page]= await browser.pages()
   await page.goto("chrome://settings")
   return null
 }
 
-setUpBrowser(task="publixCoupons").then(async ({browser, page , _id})=>{
-  await getPublixCoupons(browser, page, _id)
-})
-// testContainerBrowser()
+testContainerBrowser()
