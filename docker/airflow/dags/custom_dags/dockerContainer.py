@@ -24,16 +24,25 @@ with DAG(
     @task(task_id="docker_wakeup_call")
     def docker_wakeup_call():
         # migrated current docker compose file (sans secrets) to replicate current compose network
-        import docker
+        import docker, time
         client = docker.from_env()
-        client.containers.run("docker-scraper-1", "node", tty=True, ports={"8081/tcp": "8080", "9229/tcp": "9229", "5900/tcp": "5900", "5000/tcp": "5000"},
-        enviroment={"GPG_TTY": "/dev/pts/0", "DISPLAY": ":1", "XVFB_RESOLUTION": "1920x1080x16"},
-        init=True, stdin_open=True, mounts=[
-            docker.types.Mount("/app/node_modules", "browser_dependencies"),
-            docker.types.Mount("/tmp/collections", "./tmp/collections/", type="bind"),
-            docker.types.Mount("/app", "./scraper", type="bind")
-        ], detach=True)
+        container = client.containers.run("docker-scraper:latest", "node -e 'console.log(Math.PI)'",  ports={"8081/tcp": "8081", "9229/tcp": "9229", "5900/tcp": "5900", "5000/tcp": "5000"},
+        environment={"GPG_TTY": "/dev/pts/0", "DISPLAY": ":1", "XVFB_RESOLUTION": "1920x1080x16"},
+        init=True, stdin_open=True, working_dir='/app', detach=True
+        #mounts=[
+            # docker.types.Mount("/app", "/scraper", type="bind"),
+            # docker.types.Mount("/app/node_modules", "browser_dependencies"),
+            # docker.types.Mount("/tmp/collections", "/tmp/collections/", type="bind"),       
+        # ]
+        )
+        print(container.logs())
+        for i in range(4):
+            print("slept for ", i)
+            time.sleep(1)
 
+        container.remove(force=True)
+        client.close()
+        print("removed container and closed client")        
         return 0 
     # [END docker_wakeup_call]
     wakeUpTask = docker_wakeup_call()

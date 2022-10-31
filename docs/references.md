@@ -29,7 +29,6 @@
 
 # docker airflow custom configuration for windows & managing containers via another container (airflow network as defined in docker/airflow/)
 - [enable docker commands to host via airflow container](https://towardsdev.com/using-docker-inside-airflow-when-running-through-docker-compose-835364d11d3c)
-- 
 
 # Bash Scripting & CLI Guides
 - [Bash Man Page](https://tiswww.case.edu/php/chet/bash/bashref.html#Special-Parameters)
@@ -37,3 +36,6 @@
 
 # Docker Python SDK
 - [Windows 10 Issue Using containers.exec_run()](https://stackoverflow.com/questions/73610213/docker-python-package-4-3-1-not-working-with-docker-desktop-4-12-0-on-windows-10)
+
+# MongoDB Reference
+- [Node API reference](https://mongodb.github.io/node-mongodb-native/4.10/modules.html)

@@ -774,7 +774,7 @@ program
                 parser: {
                     "saveValue": {to: "value", convert: function (x) {return Number(x/100)}},
                     "expireDate": {to: "endDate", convert: function (x) {return new Date(x)}},
-                    "effectiveDate": {to: "endDate", convert: function (x) {return new Date(x)}},
+                    "effectiveDate": {to: "startDate", convert: function (x) {return new Date(x)}},
                     "offerId": {keep: true},
                     "targetOfferId": {keep: true},
                     "category": {to: "categories", convert: function(x) {return [x]}},
