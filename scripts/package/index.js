@@ -1800,4 +1800,9 @@ async function testContainerBrowser(){
   return null
 }
 
-testContainerBrowser()
+// testContainerBrowser()
+
+setUpBrowser(task="foodDepotCoupons").then(async ({browser, page, _id})=> {
+  await getFoodDepotCoupons(browser, page, _id);
+  console.log("done...")
+})
