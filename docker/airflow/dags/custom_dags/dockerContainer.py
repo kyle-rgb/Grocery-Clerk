@@ -26,21 +26,20 @@ with DAG(
         # migrated current docker compose file (sans secrets) to replicate current compose network
         import docker, time
         client = docker.from_env()
-        container = client.containers.run("docker-scraper:latest", "node -e 'console.log(Math.PI)'",  ports={"8081/tcp": "8081", "9229/tcp": "9229", "5900/tcp": "5900", "5000/tcp": "5000"},
-        environment={"GPG_TTY": "/dev/pts/0", "DISPLAY": ":1", "XVFB_RESOLUTION": "1920x1080x16"},
-        init=True, stdin_open=True, working_dir='/app', detach=True
-        #mounts=[
-            # docker.types.Mount("/app", "/scraper", type="bind"),
-            # docker.types.Mount("/app/node_modules", "browser_dependencies"),
-            # docker.types.Mount("/tmp/collections", "/tmp/collections/", type="bind"),       
-        # ]
+        container = client.containers.run("docker-scraper:latest", "node",  ports={"8081/tcp": "8081", "9229/tcp": "9229", "5900/tcp": "5900", "5000/tcp": "5000"},
+            environment={"GPG_TTY": "/dev/pts/0", "DISPLAY": ":1", "XVFB_RESOLUTION": "1920x1080x16"},
+            init=True, stdin_open=True, working_dir='/app', name="docker-scraper-1", detach=True, tty=True
         )
-        print(container.logs())
-        for i in range(4):
+        output = container.exec_run("node -e 'console.log(Math.PI)'")
+        print(output)
+        for i in range(5):
             print("slept for ", i)
             time.sleep(1)
-
-        container.remove(force=True)
+        
+        code, output = container.exec_run("node -e 'console.log(Math.randint()*90)'", workdir="/app")
+        print(code, output)
+        client.containers.get("docker-scraper-1").remove(force=True)
+        # container.remove(force=True)
         client.close()
         print("removed container and closed client")        
         return 0 
