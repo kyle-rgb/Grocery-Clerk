@@ -209,7 +209,7 @@ async function setUpBrowser(task) {
   /**
    * @for starting browser task, loading extension and handling location based services on websites on new browser instance
    * @note : request interception should occur only once page has setup been completed to prevent wrong location data.
-   * @param  task : a camelCase string that is franchise + {wantedScrapedPageCategory} 
+   * @param  task : a camelCase string that is franchise + {wantedScrapedPageCategory}  
    */
   let dbArgs = {};
   dbArgs["task"] = task
@@ -1802,8 +1802,8 @@ async function testContainerBrowser(){
 }
 
 // testContainerBrowser()
-
-setUpBrowser(task="foodDepotCoupons").then(async ({browser, page, _id})=> {
-  await getFoodDepotCoupons(browser, page, _id);
+setUpBrowser(task="publixCoupons").then(async ({browser, page, _id})=>{
+  await getPublixCoupons(browser, page, _id)
   console.log("done...")
+  await browser.close()
 })

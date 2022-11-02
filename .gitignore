@@ -118,3 +118,4 @@ archive.*
 *summary.json
 node_modules/
 .npmrc
+*.cfg

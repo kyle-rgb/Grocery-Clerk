@@ -30,14 +30,16 @@ with DAG(
             environment={"GPG_TTY": "/dev/pts/0", "DISPLAY": ":1", "XVFB_RESOLUTION": "1920x1080x16"},
             init=True, stdin_open=True, working_dir='/app', name="docker-scraper-1", detach=True, tty=True
         )
-        output = container.exec_run("node -e 'console.log(Math.PI)'")
-        print(output)
+        code, output = container.exec_run("node -e 'console.log(Math.PI)'")
+        output = output.decode('ascii')
+        print(f"exited with code {code} and output:{output}")
         for i in range(5):
             print("slept for ", i)
             time.sleep(1)
         
-        code, output = container.exec_run("node -e 'console.log(Math.randint()*90)'", workdir="/app")
-        print(code, output)
+        code, output = container.exec_run("node -e 'console.log(Math.random()*90)'", workdir="/app")
+        output = output.decode('ascii')
+        print(f"exited with code {code} and output:{output}")
         client.containers.get("docker-scraper-1").remove(force=True)
         # container.remove(force=True)
         client.close()

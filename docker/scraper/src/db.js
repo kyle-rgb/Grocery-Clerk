@@ -1,6 +1,7 @@
 const { MongoClient, ObjectId } = require("mongodb")
 const { Command } = require("commander");
 require("dotenv").config()
+const {setTimeout} = require("timers/promises")
 
 async function insertRun({functionName, collection, executor, args=undefined, push=false, _id=undefined , description=null}){
     /**
@@ -85,6 +86,15 @@ async function insertRun({functionName, collection, executor, args=undefined, pu
 }
 const program = new Command();
 
+async function createSampleCommand(args){
+  console.log(args)
+  console.log("starting node timer")  
+  res = await setTimeout(5000, 'done');
+  console.log("resolved with ", res)
+  return null
+}
+
+
 program
     .command("insert")
     .description("inserts function run into collection")
@@ -102,4 +112,12 @@ program
         return 0
     })
 
+program
+    .command("test")
+    .description("runs a sample command with a 5 second sleeper to test docker logs")
+    .option("-d, --data [data]", "data to pass", {})
+    .action(async (options)=> {
+      await createSampleCommand(options)
+      return 0
+    })
 program.parse();
