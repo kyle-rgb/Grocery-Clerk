@@ -31,7 +31,22 @@ with DAG(
         # ports={"8081/tcp": "8081", "9229/tcp": "9229", "5900/tcp": "5900", "5000/tcp": "5000"},
         # environment={"GPG_TTY": "/dev/pts/0", "DISPLAY": ":1", "XVFB_RESOLUTION": "1920x1080x16"},
         # init=True, stdin_open=True, working_dir='/app')
-        client.containers.run("docker-scraper:latest", command, working_dir='/app', tty=True, detach=True, name="scraper")
+        container = client.containers.run("docker-scraper:latest", working_dir='/app', tty=True, detach=True, name="scraper",
+         ports={"8081/tcp": "8081", "9229/tcp": "9229", "5900/tcp": "5900", "5000/tcp": "5000"},
+        environment={"GPG_TTY": "/dev/pts/0", "DISPLAY": ":1", "XVFB_RESOLUTION": "1920x1080x16"},
+        init=True, stdin_open=True)
+        logs = container.logs(stream=True, follow=True)
+        logLine = ''
+        try:
+            while True:
+                line = next(logs).decode("utf-8")
+                if line != "\r":
+                    logLine+=line
+                else:
+                    print(line)
+        except StopIteration:
+            print(f'log stream ended for scraper')   
+        client.close()
         # objectId = re.findall(r'id=([a-f0-9]+)')[0]
         return 0 
     # [END db_try]
@@ -50,13 +65,13 @@ with DAG(
         print(output)
         return exit_code
 
-    send_email = EmailOperator(task_id="send_email_via_operator", to="kylel9815@gmail.com", subject="sent from your docker container...", html_content="""
-            ## Hello From Docker !
-            ### just want to inform you that all your tasks from {{task_instance.task_id}} exited cleanly and the dag run was complete for {{ ts }}.   
-        """)
+    # send_email = EmailOperator(task_id="send_email_via_operator", to="kylel9815@gmail.com", subject="sent from your docker container...", html_content="""
+    #         ## Hello From Docker !
+    #         ### just want to inform you that all your tasks from {{task_instance.task_id}} exited cleanly and the dag run was complete for {{ ts }}.   
+    #     """)
 
 
-    start_container("/bin/sh") >> setTimeout(5) >> executeCommand() >> setTimeout(2) >> send_email
+    start_container("/bin/sh") #>> setTimeout(5) >> executeCommand() >> setTimeout(2) >> send_email
 
 
 

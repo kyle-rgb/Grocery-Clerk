@@ -32,6 +32,8 @@ RUN npm install \
 
 COPY . /app/
 
+RUN mkdir ./tmp && chown -R pptruser:pptruser ./tmp/
+
 USER pptruser
 
 CMD '/app/bootstrap.sh'

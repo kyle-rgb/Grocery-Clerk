@@ -12,7 +12,7 @@ const { ProtocolError, TimeoutError } = require('puppeteer');
 
 puppeteer.use(StealthPlugin())
 
-const BROWSER_OPTIONS = platform==="linux" ? {
+const BROWSER_OPTIONS = platform() === "linux" ? {
   headless: false,
   slowMo: 900, 
   executablePath:"google-chrome-stable",
@@ -27,7 +27,7 @@ const BROWSER_OPTIONS = platform==="linux" ? {
   executablePath: "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
   dumpio: true,
   devtools: false,   
-  args: ["--start-maximized", "--profile-directory=Profile 1"],
+  args: ["--start-maximized", "--profile-directory=Profile 1", "--new-window", "--disable-features=site-per-process"],
   userDataDir : "C:\\c\\Profiles",
   timeout: 0,
   defaultViewport: {
@@ -201,7 +201,6 @@ async function setUpBrowser(task) {
           await page.$eval("button.CurrentModality-button", (el)=>el.click());
           zipInput = await page.$("input[autocomplete='postal-code']");
           placeHolder = await zipInput.getProperty("value").then((v)=> v.jsonValue());
-          console.log("placeHolder was", placeHolder, " ", placeHolder.length)
           for (let j=0;j<placeHolder.length;j++){
             await zipInput.press("Backspace");
           }
@@ -264,7 +263,6 @@ async function setUpBrowser(task) {
           var wantedStoreAddress = "1669 Scott Boulevard";
           var wantedModality = availableModalities[0]; // @param?
           let locationIdRegex = /GetRetailerLocationAddress&variables=%7B%22id%22%3A%22(.+?)%22%7D/
-          console.log(wantedModality, `div[class$='${wantedModality === "Delivery" ? wantedModality+"Address" : wantedModality+"Location"}Picker'] button[aria-haspopup]`)
           await page.goto("https://shop.aldi.us/store/aldi/storefront")
           await page.waitForNetworkIdle({idleTime: 4000})
           // click pickup modal // defaults to delivery
@@ -275,8 +273,6 @@ async function setUpBrowser(task) {
               return index
             } 
           });
-          console.log(modalityButton)
-          console.log(await modalityButton.getProperty("innerText").then((j)=>j.jsonValue()));
           // click pickup button && wait for refresh
           await Promise.all([
             page.waitForNetworkIdle({idleTime:2000}),
@@ -339,7 +335,6 @@ async function setUpBrowser(task) {
         let locationIdRegex = /GetRetailerLocationAddress&variables=%7B%22id%22%3A%22(.+?)%22%7D/
         var instacartLocationId; 
         var wantedModality = availableModalities[0]; // @param?
-        console.log(wantedModality, `div[class$='${wantedModality === "Delivery" ? wantedModality+"Address" : wantedModality+"Location"}Picker'] button[aria-haspopup]`)
         await page.goto("https://delivery.publix.com/store/publix/storefront")
         await page.waitForNetworkIdle({idleTime: 4000})
         // click pickup modal // defaults to delivery
@@ -350,8 +345,6 @@ async function setUpBrowser(task) {
             return index
           } 
         });
-        console.log(modalityButton)
-        console.log(await modalityButton.getProperty("innerText").then((j)=>j.jsonValue()));
         // click pickup button && wait for refresh
         await Promise.all([
           page.waitForNetworkIdle({idleTime:2000}),
@@ -471,16 +464,13 @@ async function setUpBrowser(task) {
         // nav to page => AppCard App That Requires MFA ; allow additional time for shortcut to run
         page.setDefaultTimeout(timeout=120000)
         var appCardIFrame = await page.$("#ac-iframe");
-        console.log(appCardIFrame)
         let frameCoupons = await appCardIFrame.contentFrame();
-        console.log(frameCoupons.url())
         if (appCardIFrame){
           let phoneInput = await frameCoupons.$("#phone");
           if (!phoneInput){
             console.log("already logged in")
             break;
           }
-          console.log(phoneInput)
           await phoneInput.type(PHONE_NUMBER, {delay: 400})
           console.log("wrote phone number")
           await frameCoupons.$eval("button.button-login.default", async (el)=>{
@@ -508,7 +498,6 @@ async function setUpBrowser(task) {
               return index
             } 
           });
-          console.log(modalityButton)
           await modalityButton.click();
           await page.waitForTimeout(3000);
           var availableStores = await frameCoupons.$$("li[app-branch-info]")
@@ -654,7 +643,6 @@ async function setUpBrowser(task) {
             return index
           } 
         })
-        console.log(targetStoreModal);
         await Promise.all([
           targetStoreModal.$eval("div > div.mystoreIcon > span > a", (el)=>el.click()),
           page.waitForNavigation({timeout: 15000, waitUntil: "load"})
@@ -682,7 +670,6 @@ async function setUpBrowser(task) {
         var addrSuggestions = await page.$$("div[class$='AddressSuggestionList']");
         var targetLocation = await asyncFilter(addrSuggestions, async (storeItem, index)=> {
           let address = await storeItem.getProperty("innerText").then((v)=>v.jsonValue())
-          console.log(address.replaceAll("\n", "\\n"))
           if (address.includes(ZIPCODE)){ 
             return index
           } 
@@ -731,12 +718,10 @@ async function setUpBrowser(task) {
       // select store by address,
       var targetStoreModal = await asyncFilter(targetStoreModals, async (poiItem, index)=> {
         let address = await poiItem.$eval("div > div.address-wrapper", (el)=>el.outerText)
-        console.log(address.replace("\n", "\\n"))
         if (address === wantedStore){ 
           return index
         } 
       })
-      console.log(targetStoreModal);
       await Promise.all([
         targetStoreModal.$eval("div > div.mystoreIcon > span > a", (el)=>el.click()),
         page.waitForNavigation({timeout: 15000, waitUntil: "networkidle0"})
@@ -760,6 +745,7 @@ async function setUpBrowser(task) {
   // will pass down location ids where applicable and browser, page and run ObjectId  
   passDownArgs.browser = browser
   passDownArgs.page = page
+  await page.removeAllListeners('response')
   return passDownArgs;
 }
 
@@ -773,7 +759,7 @@ async function getKrogerTrips({ page }){
    * 2 - Await Load of User Trips... Carousel Cards are Rendered and Requests are Complete.
    * 3 - Press Arrow. Repeat Until Arrow is Unavailable via CSS class  
   */
-  var path = "../requests/server/collections/kroger/trips/"
+  var path = "../tmp/collections/kroger/trips/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var wantedResponseRegex = /\/mypurchases\/api\/v.\/receipt\/details|\/atlas\/v1\/product\/v2\/products/
   path += fileName
@@ -802,23 +788,24 @@ async function getKrogerTrips({ page }){
   }
   let element = await nextButton()
   console.log(element)
-  let yy = 1;
-  let st = null;
+  let iterations = 1;
+  let start = null;
   while( element ){
-    st = Date.now()
+    start = Date.now()
     // click to next page
     await element.click();
     // await product card render, images of items purchased to be rendered 
     await page.waitForNetworkIdle({idleTime: 8000})
     await page.waitForSelector("div[aria-label='Purchase History Order']");
     element = await nextButton();
-    yy++
-    console.log(element, yy, ' ', (Date.now()-st)/1000, ' seconds')
+    iterations++
+    console.log(element, iterations, ' ', (Date.now()-start)/1000, ' seconds')
   }
   await page.waitForNetworkIdle({idleTime: 5500});
   await wrapFile(fileName);
   console.log("file finished : ", fileName);
   console.log("exiting....")
+  await page.removeAllListeners('response')
   return null;
 }
 
@@ -841,7 +828,7 @@ async function getKrogerPromotions({ page, type}){
     var offset = 0;
     var wantedRequestRegex = /atlas\/v1\/product\/v2\/products\?|\/cl\/api\/coupons/
     let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
-    fileName = `../requests/server/collections/kroger/${type}/` + fileName; 
+    fileName = `../tmp/collections/kroger/${type}/` + fileName; 
     await page.goto(promotionUrl);
     page.on("response", async (res)=>{
       let url = res.url() ;
@@ -889,6 +876,7 @@ async function getKrogerPromotions({ page, type}){
     await page.waitForNetworkIdle({idleTime: 3000});
     await wrapFile(fileName);
     console.log("file finished : ", fileName) ;
+    await page.removeAllListeners('response')
     return null;
 }
 
@@ -907,7 +895,7 @@ async function getKrogerSpecialPromotions({ page }) {
   */
   // capture details-basic and products? api repsonses
   let specialPromoRegex = /(atlas\/v.\/product\/v.\/products\?|products\/details-basic)/
-  var path = "../../../requests/server/collections/kroger/promotions/"
+  var path = "../tmp/collections/kroger/promotions/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, '_')+".json";
   var offset = 0;
   var specialPromoLinks = [];    
@@ -985,7 +973,7 @@ async function getInstacartItems({ page}){
   let store = currentUrl.match(storePatterns)[0]
   let folder = store==="familydollar"? "instacartItems" : "items";
   let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
-  fileName = "../requests/server/collections/" + [store, folder, fileName].join("/") ;
+  fileName = "../tmp/collections/" + [store, folder, fileName].join("/") ;
   let offset = 0;
   var wantedResponseRegex =  /item_attributes|operationName=Items|operationName=CollectionProductsWithFeaturedProducts/;
   let allCategoryLinks = await page.$$eval("ul[aria-labelledby='sm-departments'] > li > a", (elems)=> elems.map((a)=>a.href)) // departments side panel
@@ -1062,6 +1050,7 @@ async function getInstacartItems({ page}){
   await page.waitForTimeout(10000)
   await wrapFile(fileName);
   console.log("file finished : ", fileName) ; 
+  await page.removeAllListeners('response')
   return null;
 }
 
@@ -1077,7 +1066,7 @@ async function getPublixPromotions({ page }){
   //   else req.continue()
   // })
 
-  var path = "../requests/server/collections/publix/coupons/"
+  var path = "../tmp/collections/publix/coupons/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   fileName = path+fileName ; 
@@ -1101,6 +1090,7 @@ async function getPublixPromotions({ page }){
   await page.waitForNetworkIdle({idleTime: 8000});
   await wrapFile(fileName);
   console.log("file finished : ", fileName) ;
+  await page.removeAllListeners('response')
   return null; 
 }
 
@@ -1112,7 +1102,7 @@ async function getDollarGeneralPromotions({ page }){
   // set request interception on page
   
   var badRequests = [];
-  var path = "../requests/server/collections/dollargeneral/promotions/"
+  var path = "../tmp/collections/dollargeneral/promotions/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   var reqSet = new Set();
@@ -1196,6 +1186,7 @@ async function getDollarGeneralPromotions({ page }){
       let br = JSON.stringify(badRequests);
       await fs.promises.writeFile("./temp.json", br)
     }
+  await page.removeAllListeners('response')
   return null;
 }
 
@@ -1206,7 +1197,7 @@ async function getDollarGeneralItems({ page }){
    * @param page : the current page instance.
    */
   // set request interception on page
-  var path = "../requests/server/collections/dollargeneral/items/"
+  var path = "../tmp/collections/dollargeneral/items/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   fileName = path+fileName ; 
@@ -1238,6 +1229,7 @@ async function getDollarGeneralItems({ page }){
   await page.waitForTimeout(6000);
   await wrapFile(fileName);
   console.log("file finished : ", fileName) ;
+  await page.removeAllListeners('response')
   return null
 }
 
@@ -1249,7 +1241,7 @@ async function getFamilyDollarPromotions({ page }){
    */
   // set request interception on page
   
-  var path = "../requests/server/collections/familydollar/coupons/"
+  var path = "../tmp/collections/familydollar/coupons/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   fileName = path+fileName ; 
@@ -1270,6 +1262,7 @@ async function getFamilyDollarPromotions({ page }){
   ])
   await wrapFile(fileName);
   console.log("file finished : ", fileName) ;
+  await page.removeAllListeners('response')
   return null; 
 }
 
@@ -1283,7 +1276,7 @@ async function getFamilyDollarItems({ page }){
     var offset = 0;
     var wantedRequestRegex = /dollartree-cors\.groupbycloud\.com\/api/
     let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
-    fileName = "../requests/server/collections/familydollar/items/" + fileName; 
+    fileName = "../tmp/collections/familydollar/items/" + fileName; 
     page.on("response", async (res)=> {
       let url = await res.url() ;
       if (url.match(wantedRequestRegex)){
@@ -1323,6 +1316,7 @@ async function getFamilyDollarItems({ page }){
     await page.waitForNetworkIdle({idleTime: 3000}); 
     await wrapFile(fileName);
     console.log("finished file", fileName);
+    await page.removeAllListeners('response')
     return null
 }
 
@@ -1342,7 +1336,7 @@ async function getFoodDepotItems({ page }){
   //await page.setRequestInterception(true);
 
   await page.setDefaultTimeout(0)
-  var path = "../requests/server/collections/fooddepot/items/"
+  var path = "../tmp/collections/fooddepot/items/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   var wantedResponseRegex = /production-us-1\.noq-servers\.net\/api\/v.+\/stores\/.+\/products\?/
@@ -1410,6 +1404,8 @@ async function getFoodDepotItems({ page }){
   }
   await page.waitForNetworkIdle({idleTime: 3000}); 
   await wrapFile(fileName);
+  await page.removeAllListeners('response');
+  console.log("finished file : ", fileName)
   return null
 }
 
@@ -1423,7 +1419,7 @@ async function getFoodDepotPromotions({ page }){
   // page = await browser.pages()
   // page = page[0]
   await page.waitForNetworkIdle({idleTime:3000});
-  var path = "../requests/server/collections/fooddepot/coupons/"
+  var path = "./tmp/collections/fooddepot/coupons/"
   var fileName = new Date().toLocaleDateString().replaceAll("/", "_") + ".json";
   var offset = 0;
   let wantedResponseRegex = /unclipped_recommendation_flag/
@@ -1440,6 +1436,7 @@ async function getFoodDepotPromotions({ page }){
   await page.waitForTimeout(13000)
   await wrapFile(fileName);
   console.log("finished file", fileName);
+  await page.removeAllListeners('response')
   return null;
 }
 
@@ -1549,17 +1546,21 @@ program
       taskArgs = await setUpBrowser(task="")
     }
     taskName==="krogerPromotions"? taskArgs = {...taskArgs, "type": options.type} : taskArgs; 
-    // await taskParser[taskName](taskArgs)
-    // await taskArgs.browser.close();
+    await taskParser[taskName](taskArgs)
+    await taskArgs.browser.close();
     return undefined
   })
 
 program
   .command("test")
   .description("runs a test script for debugging")
-  .option("-m, --message <data>", "message to echo")
-  .action((options)=> {
-    console.log("your data : ", data)
+  .option("-d, --data <data>", "message to echo")
+  .action(async (options)=> {
+    console.log("your data : ", options.data)
+    const browser = await puppeteer.launch(BROWSER_OPTIONS)
+    console.log(browser.wsEndpoint)
+    let [page] = await browser.pages()
+    await page.goto("https://www.google.com")
   })
 
 program.parse();
