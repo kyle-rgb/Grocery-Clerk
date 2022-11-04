@@ -24,7 +24,7 @@ launch_xvfb(){
     do
         loopCount=$((loopCount+1))
         sleep 1
-        if [ ${loopCount} -gt ${timeout} ]
+        if [ ${loopCount} -gt ${XVFB_TIMEOUT} ]
         then
             echo "${G_LOG_I} xvfb failed to start."
             exit 1

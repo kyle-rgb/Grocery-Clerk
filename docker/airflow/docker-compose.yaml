@@ -64,9 +64,14 @@ x-airflow-common:
     - ./logs:/opt/airflow/logs
     - ./plugins:/opt/airflow/plugins
     - //var/run/docker.sock:/var/run/docker.sock
-    - ../tmp/collections/:/tmp/collections/
     - ./airflow.cfg:/opt/airflow/airflow.cfg
   user: "${AIRFLOW_UID:-50000}:0"
+  secrets:
+      - encryption-key
+      - source : secrets-vars
+        target : secrets-vars.json
+      - source: secrets-connections
+        target: secrets-connections.json
   depends_on:
     &airflow-common-depends-on
     redis:
@@ -281,3 +286,11 @@ services:
 
 volumes:
   postgres-db-volume:
+
+secrets:
+  secrets-vars:
+    file: ../config/keys/vars.json
+  secrets-connections:
+    file: ../config/keys/connections.json
+  encryption-key:
+    file: ../config/keys/kyleA.gpg
