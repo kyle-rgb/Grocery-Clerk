@@ -8,8 +8,14 @@ import pendulum
 from airflow import DAG
 from airflow.decorators import task, dag
 from airflow.exceptions import AirflowSkipException
+from airflow.operators.email import EmailOperator 
 
 log = logging.getLogger(__name__)
+default_args = {
+    "chain": "kroger",
+    "target_data": "promotions",
+    "typePromo": "cashback"
+}
 
 with DAG(
     dag_id="kroger_scrape_promotions_cashback",
@@ -17,6 +23,7 @@ with DAG(
     start_date=pendulum.datetime(2022, 10, 25, tz="UTC"),
     dagrun_timeout=datetime.timedelta(minutes=210),
     catchup=False,
+    default_args=default_args,
     tags=["grocery", "GroceryClerk", "ETL", "python", "node", "mongodb", "docker"]
 ) as dag:
     # [START db_try]
@@ -92,14 +99,14 @@ with DAG(
         return 0
 
     @task(task_id="scrape_dataset")
-    def scrape_dataset(chain=None, target_data=None, add_args=None):
+    def scrape_dataset(chain=None, target_data=None, typePromo=None):
         import docker
         connections = load_connections_dict("/run/secrets/secrets-connections.json")
 
         client = docker.from_env()
         container = client.containers.get("scraper")
-        if chain=="kroger" and target_data=="promotions" and add_args:
-            target_data += add_args
+        if chain=="kroger" and target_data=="promotions" and typePromo:
+            target_data += typePromo
         code, output = container.exec_run(f"node ./src/index.js scrape --{chain} {target_data}", workdir="/app", user="pptruser")
         output = output.decode("ascii")
         print(output)
@@ -136,7 +143,7 @@ with DAG(
     @task.virtualenv(
         task_id="virtualenv_transform_python", requirements=["pymongo==3.11.0"], system_site_packages=True
     )
-    def callable_virtualenv():
+    def transformData():
         """
             Task will be performed in a virtual environment that mirrors my own environment.
 
@@ -161,4 +168,4 @@ with DAG(
             <h3>just want to inform you that all your tasks from {{run_id}} exited cleanly and the dag run was complete for {{ ts }}.</h3>   
         """)
 
-    start_container() >> [insertRun("getKrogerPromotions-Cashback", "get kroger's cashback digitial coupon data"), scrape_dataset("kroger", "promotions", "cashback")] >> updateRun(push=False) >> stop() >> send_email
+    start_container() >> [insertRun("getKrogerPromotions-Cashback", "get kroger's cashback digitial coupon data"), scrape_dataset("kroger", "promotions", "cashback")] >> updateRun(functionName=f"transform{default_args['chain'].title()}", args=default_args, push=True, description=f"transform {default_args['chain']}'s {default_args['target_data']} data")  >> transformData()  >> stop() >> send_email

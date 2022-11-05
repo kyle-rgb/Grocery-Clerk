@@ -12,12 +12,18 @@ from airflow.operators.email import EmailOperator
 
 
 log = logging.getLogger(__name__)
+default_args = {
+    "chain": "dollar-general",
+    "target_data": "items"
+}
+
 with DAG(
     dag_id="dollar_general_scrape_items",
     schedule_interval="0 0 * * 6", # runs every saturday, the last turnover date before next publicized promotion date (as given by their weekly ads)
     start_date=pendulum.datetime(2022, 10, 25, tz="UTC"),
     dagrun_timeout=datetime.timedelta(minutes=210),
     catchup=False,
+    default_args=default_args,
     tags=["grocery", "GroceryClerk", "ETL", "python", "node", "mongodb", "docker", "runs", "metadata"]
 ) as dag:
     # [START db_try]
@@ -138,5 +144,28 @@ with DAG(
             <h1>Hello From Docker !</h1>
             <h3>just want to inform you that all your tasks from {{run_id}} exited cleanly and the dag run was complete for {{ ts }}.</h3>   
         """)
+    
+    @task(task_id="transform-data")
+    def transformData(chain=None, target_data=None):
+        # legal values for chain = food-depot, family-dollar, aldi, publix, dollar-general
+        # legal values for target_data = items, instacartItems, promotions
+        import docker
+        from airflow.secrets.local_filesystem import load_variables, load_connections_dict
+        client = docker.from_env()
+        email = load_variables("/run/secrets/secrets-vars.json")["EMAIL"]
+        connections = load_connections_dict("/run/secrets/secrets-connections.json")
 
-    start_container() >> [insertRun("getDollarGeneralItems", "get dollar general item and price data"), scrape_dataset("dollar-general", "items")] >> updateRun(push=False) >> stop() >> send_email
+        container = client.containers.get("scraper")
+        baseCmd = f"node ./src/transform.js transform --{chain} {target_data}"
+        print("executing $ ", baseCmd)
+        code, output = container.exec_run(cmd=baseCmd,
+            user="pptruser", environment={"MONGO_CONN_URL": connections["MONGO_CONN_URL"].get_uri(), "EMAIL": email},
+            workdir="/app"
+        )
+        output = output.decode("ascii")
+        print(output)
+        client.close()
+
+        return 0
+
+    start_container() >> [insertRun("".join(["get", default_args["chain"].title(), default_args["target_data"].title()]), f"get {default_args['chain']}'s {default_args['target_data']} data"), scrape_dataset()] >> updateRun(functionName=f"transform{default_args['chain'].title()}", args=default_args, push=True, description=f"transform {default_args['chain']}'s {default_args['target_data']} data")  >> transformData() >> updateRun(push=False) >> stop() >> send_email

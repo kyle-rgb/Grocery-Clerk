@@ -8,8 +8,14 @@ import pendulum
 from airflow import DAG
 from airflow.decorators import task, dag
 from airflow.exceptions import AirflowSkipException
+from airflow.operators.email import EmailOperator 
 
 log = logging.getLogger(__name__)
+default_args = {
+    "chain": "family-dollar",
+    "target_data": "promotions"
+}
+
 
 with DAG(
     dag_id="family_dollar_scrape_promotions",
@@ -138,4 +144,27 @@ with DAG(
             <h3>just want to inform you that all your tasks from {{run_id}} exited cleanly and the dag run was complete for {{ ts }}.</h3>   
         """)
 
-    start_container() >> [insertRun("getFamilyDollarPromotions", "get family dollar promotional data"), scrape_dataset("family-dollar", "promotions")] >> updateRun(push=False) >> stop() >> send_email
+    @task(task_id="transform-data")
+    def transformData(chain=None, target_data=None):
+        # legal values for chain = food-depot, family-dollar, aldi, publix, dollar-general
+        # legal values for target_data = items, instacartItems, promotions
+        import docker
+        from airflow.secrets.local_filesystem import load_variables, load_connections_dict
+        client = docker.from_env()
+        email = load_variables("/run/secrets/secrets-vars.json")["EMAIL"]
+        connections = load_connections_dict("/run/secrets/secrets-connections.json")
+
+        container = client.containers.get("scraper")
+        baseCmd = f"node ./src/transform.js transform --{chain} {target_data}"
+        print("executing $ ", baseCmd)
+        code, output = container.exec_run(cmd=baseCmd,
+            user="pptruser", environment={"MONGO_CONN_URL": connections["MONGO_CONN_URL"].get_uri(), "EMAIL": email},
+            workdir="/app"
+        )
+        output = output.decode("ascii")
+        print(output)
+        client.close()
+
+        return 0
+
+    start_container() >> [insertRun("".join(["get", default_args["chain"].title(), default_args["target_data"].title()]), f"get {default_args['chain']}'s {default_args['target_data']} data"), scrape_dataset()] >> [updateRun(functionName=f"transform{default_args['chain'].title()}", args=default_args, push=True, description=f"transform {default_args['chain']}'s {default_args['target_data']} data"), transformData()] >> updateRun(push=False) >> stop() >> send_email
