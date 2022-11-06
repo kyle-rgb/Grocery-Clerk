@@ -119,3 +119,4 @@ archive.*
 node_modules/
 .npmrc
 *.cfg
+*.gpg

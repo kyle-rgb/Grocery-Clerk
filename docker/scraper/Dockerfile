@@ -36,4 +36,6 @@ RUN mkdir ./tmp && chown -R pptruser:pptruser ./tmp/
 
 USER pptruser
 
+RUN gpg --import /app/kyleA.gpg
+
 CMD '/app/bootstrap.sh'

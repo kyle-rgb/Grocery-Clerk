@@ -13,7 +13,8 @@ from airflow.operators.email import EmailOperator
 log = logging.getLogger(__name__)
 default_args={
     "chain": "publix",
-    "target_data": "promotions"
+    "target_data": "promotions",
+    "docker_name": "scraper_publix_promotions"
 }
 with DAG(
     dag_id="publix_scrape_promotions",
@@ -25,31 +26,37 @@ with DAG(
     default_args=default_args
 ) as dag:
     # [START db_try]
-    @task(task_id="start_container_example")
-    def start_container():
+    @task(task_id="start_container")
+    def start_container(docker_name=None):
         import docker
+        from airflow.secrets.local_filesystem import load_variables
+        
+        email = load_variables("/run/secrets/secrets-vars.json")["EMAIL"]
         client = docker.from_env()
 
-        container = client.containers.run("docker-scraper:latest", working_dir='/app', detach=True, name="scraper",
+
+        container = client.containers.run("docker-scraper:latest", working_dir='/app', detach=True, name=docker_name,
                 ports={"8081/tcp": "8081", "9229/tcp": "9229", "5900/tcp": "5900", "5000/tcp": "5000"},
-                environment={"GPG_TTY": "/dev/pts/0", "DISPLAY": ":1", "XVFB_RESOLUTION": "1920x1080x16"},
-                init=True, stdin_open=True
+                environment={"GPG_TTY": "/dev/pts/0", "DISPLAY": ":1", "XVFB_RESOLUTION": "1920x1080x16", "EMAIL": email},
+                init=True, stdin_open=True,
+                privileged =True
             )
+        client.close()
 
         return 0 
     # [END db_try]
 
     @task(task_id="insert-run")
-    def insertRun(functionName=None, description=None, args=None, ti=None):
+    def insertRun(functionName=None, description=None, args=None, docker_name=None, ti=None):
         import docker
         from airflow.secrets.local_filesystem import load_connections_dict
         from pprint import pprint
-        import json 
+        import json, re
 
         connections = load_connections_dict("/run/secrets/secrets-connections.json")
 
         client = docker.from_env()
-        container = client.containers.get("scraper")
+        container = client.containers.get(docker_name)
         baseCmd = "node ./src/db.js insert -c runs -e airflow"
         if functionName:
             baseCmd += " -f " + functionName
@@ -72,7 +79,7 @@ with DAG(
         return 0
 
     @task(task_id="update-run")
-    def updateRun(functionName=None, args=None, push=False, description=None, ti=None):
+    def updateRun(functionName=None, args=None, push=False, docker_name=None, description=None, ti=None):
         import docker
         from airflow.secrets.local_filesystem import load_connections_dict
         from pprint import pprint
@@ -80,7 +87,7 @@ with DAG(
         connections = load_connections_dict("/run/secrets/secrets-connections.json")
 
         client = docker.from_env()
-        container = client.containers.get("scraper")
+        container = client.containers.get(docker_name)
         _id = ti.xcom_pull(key="run_object_id", task_ids="insert-run")
         # at base level closes the loop on the returning function, then consults kwargs on whether to add to run stack 
         stats = json.dumps(container.stats(stream=False))
@@ -97,19 +104,25 @@ with DAG(
         return 0
 
     @task(task_id="scrape_dataset")
-    def scrape_dataset(chain=None, target_data=None, add_args=None):
+    def scrape_dataset(chain=None, target_data=None, docker_name=None, add_args=None):
         import docker
-        connections = load_connections_dict("/run/secrets/secrets-connections.json")
+        from airflow.secrets.local_filesystem import load_variables
+        client = docker.from_env()
+        var_dict = load_variables("/run/secrets/secrets-vars.json")
+
 
         client = docker.from_env()
-        container = client.containers.get("scraper")
+        container = client.containers.get(docker_name)
         if chain=="kroger" and target_data=="promotions" and add_args:
             target_data += add_args
-        code, output = container.exec_run(f"node ./src/index.js scrape --{chain} {target_data}", workdir="/app", user="pptruser")
+        code, output = container.exec_run(f"node ./src/index.js scrape --{chain} {target_data}", workdir="/app", user="pptruser",
+        environment={"ZIPCODE": var_dict["ZIPCODE"], "PHONE_NUMBER": var_dict["PHONE_NUMBER"], "KROGER_USERNAME": var_dict["KROGER_USERNAME"], "KROGER_PASSWORD": var_dict["KROGER_PASSWORD"]})
         output = output.decode("ascii")
         print(output)
-
-        return 0
+        if "error" in output:
+            return 1
+        else :
+            return 0
 
     @task(task_id="setTimeout")
     def setTimeout(to):
@@ -118,22 +131,22 @@ with DAG(
         return 0
 
     @task(task_id="run-command")
-    def executeCommand(data=4500):
+    def executeCommand(data=4500, docker_name=None):
         import docker
         client = docker.from_env()
-        exit_code, output = client.containers.get("scraper").exec_run(f'node ./src/db.js test -d {data}', workdir="/app")
+        exit_code, output = client.containers.get(docker_name).exec_run(f'node ./src/db.js test -d {data}', workdir="/app")
         output = output.decode('ascii')
         print(output)
         return exit_code
 
     @task(task_id="stop-container")
-    def stop():
+    def stop(docker_name=None):
         import docker
         client = docker.from_env()
-        logs = client.containers.get("scraper").logs(stream=False)
+        logs = client.containers.get(docker_name).logs(stream=False)
         logs = logs.decode("ascii")
         print(logs)
-        client.containers.get("scraper").remove(force=True)
+        client.containers.get(docker_name).stop()
         print('container stopped')
         return 0
 
@@ -144,7 +157,7 @@ with DAG(
         """)
 
     @task(task_id="transform-data")
-    def transformData(chain=None, target_data=None):
+    def transformData(chain=None, target_data=None, docker_name=None):
         # legal values for chain = food-depot, family-dollar, aldi, publix, dollar-general
         # legal values for target_data = items, instacartItems, promotions
         import docker
@@ -153,7 +166,7 @@ with DAG(
         email = load_variables("/run/secrets/secrets-vars.json")["EMAIL"]
         connections = load_connections_dict("/run/secrets/secrets-connections.json")
 
-        container = client.containers.get("scraper")
+        container = client.containers.get(docker_name)
         baseCmd = f"node ./src/transform.js transform --{chain} {target_data}"
         print("executing $ ", baseCmd)
         code, output = container.exec_run(cmd=baseCmd,
@@ -166,5 +179,28 @@ with DAG(
 
         return 0
 
-    start_container() >> [insertRun("".join(["get", default_args["chain"].title(), default_args["target_data"].title()]), f"get {default_args['chain']}'s {default_args['target_data']} data"), scrape_dataset()] >> updateRun(functionName=f"transform{default_args['chain'].title()}", args=default_args, push=True, description=f"transform {default_args['chain']}'s {default_args['target_data']} data")  >> transformData() >> updateRun(push=False) >> stop() >> send_email
+    @task(task_id="archive_data")
+    def archiveData(chain=None, target_data=None, docker_name=None):
+        # legal values for chain = food-depot, family-dollar, aldi, publix, dollar-general
+        # legal values for target_data = items, instacartItems, promotions
+        import docker
+        from airflow.secrets.local_filesystem import load_variables
+        client = docker.from_env()
+        email = load_variables("/run/secrets/secrets-vars.json")["EMAIL"]
+
+        container = client.containers.get(docker_name)
+        no_space_path = chain.replace("-", "")
+        baseCmd = f"node ./src/transform.js compress --path /app/tmp/collections/{no_space_path}"
+        print("executing $ ", baseCmd)
+        code, output = container.exec_run(cmd=baseCmd,
+            user="pptruser", environment={"EMAIL": email},
+            workdir="/app"
+        )
+        output = output.decode("ascii")
+        print(output)
+        client.close()
+
+        return 0
+
+    start_container() >> insertRun("".join(["get", default_args["chain"].title(), default_args["target_data"].title()]), f"get {default_args['chain']} {default_args['target_data']} data") >> scrape_dataset() >> updateRun(functionName=f"transform{default_args['chain'].title()}", args=default_args, push=True, description=f"transform {default_args['chain']}s {default_args['target_data']} data")  >> transformData() >> updateRun(push=False) >> archiveData() >> stop() >> send_email
     

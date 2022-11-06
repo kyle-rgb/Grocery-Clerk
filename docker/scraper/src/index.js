@@ -46,7 +46,7 @@ const getNestedObject = (nestedObj, pathArr) => {
 async function writeResponse(fileName, response, url, offset) { 
   // check file existence to set character. 
   let fileExists = fs.existsSync(fileName);
-  fileName.endsWith("/") ? undefined : fileName+="/" 
+  //fileName.endsWith("/") ? undefined : fileName+="/" 
   if (!fileExists){
     fs.mkdirSync(fileName.slice(0, fileName.lastIndexOf("/")), {recursive: true})
     fs.appendFile(fileName, "[", (err)=>{
@@ -522,7 +522,7 @@ async function setUpBrowser(task) {
         // provide break points for evaluating existance of error modal at different steps of the setup procedure. If ever error, restart process with known workaround.        
         // navigate to homepage : 
         await page.goto("https://www.dollargeneral.com/dgpickup")
-        await page.waitForNetworkIdle({idleTime: 5000})
+        await page.waitForTimeout(12000)
         do {
           if (step===0){
             tries++;
@@ -557,7 +557,7 @@ async function setUpBrowser(task) {
             // "span.store-list-item__store-address-1"
             let setStoreButton = await wantedStoreDiv.$("button[data-selectable-store-text='Set as my store']")
             // wait for reload,
-            await Promise.all([setStoreButton.click(), page.waitForNetworkIdle({idleTime: 3000})])
+            await Promise.all([setStoreButton.click(), page.waitForTimeout(8800)])
             break;
           }
           wasError = await checkForErrorModal(); 
@@ -572,7 +572,7 @@ async function setUpBrowser(task) {
         // provide break points for evaluating existance of error modal at different steps of the setup procedure. If ever error, restart process with known workaround.        
         // navigate to homepage : 
         await page.goto("https://www.dollargeneral.com/dgpickup")
-        await page.waitForNetworkIdle({idleTime: 5000})
+        await page.waitForTimeout(12000)
         do {
           if (step===0){
             tries++;
@@ -607,7 +607,7 @@ async function setUpBrowser(task) {
             // "span.store-list-item__store-address-1"
             let setStoreButton = await wantedStoreDiv.$("button[data-selectable-store-text='Set as my store']")
             // wait for reload,
-            await Promise.all([setStoreButton.click(), page.waitForNetworkIdle({idleTime: 3000})])
+            await Promise.all([setStoreButton.click(), page.waitForTimeout(8800)])
             break;
           }
           wasError = await checkForErrorModal(); 
@@ -630,10 +630,12 @@ async function setUpBrowser(task) {
         await page.waitForNavigation({waitUntil: "networkidle0"})
         // enter zip code into input,
         var locatorIFrame = await page.waitForSelector("#storeLocator");
+        console.log("got #storeLocator")
         frameZip = await locatorIFrame.contentFrame();
         var inputZip = await frameZip.$("input") 
         await inputZip.type(ZIPCODE);
         await inputZip.press("Enter");
+        console.log("waiting for network idle 4")
         await page.waitForNetworkIdle({idleTime: 4000})
         var targetStoreModals = await frameZip.$$("li.poi-item")
         // select store by address,
@@ -643,6 +645,7 @@ async function setUpBrowser(task) {
             return index
           } 
         })
+        console.log("waiting for navigation")
         await Promise.all([
           targetStoreModal.$eval("div > div.mystoreIcon > span > a", (el)=>el.click()),
           page.waitForNavigation({timeout: 15000, waitUntil: "load"})
@@ -759,7 +762,7 @@ async function getKrogerTrips({ page }){
    * 2 - Await Load of User Trips... Carousel Cards are Rendered and Requests are Complete.
    * 3 - Press Arrow. Repeat Until Arrow is Unavailable via CSS class  
   */
-  var path = "../tmp/collections/kroger/trips/"
+  var path = "/app/tmp/collections/kroger/trips/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var wantedResponseRegex = /\/mypurchases\/api\/v.\/receipt\/details|\/atlas\/v1\/product\/v2\/products/
   path += fileName
@@ -828,7 +831,7 @@ async function getKrogerPromotions({ page, type}){
     var offset = 0;
     var wantedRequestRegex = /atlas\/v1\/product\/v2\/products\?|\/cl\/api\/coupons/
     let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
-    fileName = `../tmp/collections/kroger/${type}/` + fileName; 
+    fileName = `/app/tmp/collections/kroger/${type}/` + fileName; 
     await page.goto(promotionUrl);
     page.on("response", async (res)=>{
       let url = res.url() ;
@@ -895,7 +898,7 @@ async function getKrogerSpecialPromotions({ page }) {
   */
   // capture details-basic and products? api repsonses
   let specialPromoRegex = /(atlas\/v.\/product\/v.\/products\?|products\/details-basic)/
-  var path = "../tmp/collections/kroger/promotions/"
+  var path = "/app/tmp/collections/kroger/promotions/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, '_')+".json";
   var offset = 0;
   var specialPromoLinks = [];    
@@ -973,7 +976,7 @@ async function getInstacartItems({ page}){
   let store = currentUrl.match(storePatterns)[0]
   let folder = store==="familydollar"? "instacartItems" : "items";
   let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
-  fileName = "../tmp/collections/" + [store, folder, fileName].join("/") ;
+  fileName = "/app/tmp/collections/" + [store, folder, fileName].join("/") ;
   let offset = 0;
   var wantedResponseRegex =  /item_attributes|operationName=Items|operationName=CollectionProductsWithFeaturedProducts/;
   let allCategoryLinks = await page.$$eval("ul[aria-labelledby='sm-departments'] > li > a", (elems)=> elems.map((a)=>a.href)) // departments side panel
@@ -1066,7 +1069,7 @@ async function getPublixPromotions({ page }){
   //   else req.continue()
   // })
 
-  var path = "../tmp/collections/publix/coupons/"
+  var path = "/app/tmp/collections/publix/coupons/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   fileName = path+fileName ; 
@@ -1102,7 +1105,7 @@ async function getDollarGeneralPromotions({ page }){
   // set request interception on page
   
   var badRequests = [];
-  var path = "../tmp/collections/dollargeneral/promotions/"
+  var path = "/app/tmp/collections/dollargeneral/promotions/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   var reqSet = new Set();
@@ -1197,7 +1200,7 @@ async function getDollarGeneralItems({ page }){
    * @param page : the current page instance.
    */
   // set request interception on page
-  var path = "../tmp/collections/dollargeneral/items/"
+  var path = "/app/tmp/collections/dollargeneral/items/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   fileName = path+fileName ; 
@@ -1241,7 +1244,7 @@ async function getFamilyDollarPromotions({ page }){
    */
   // set request interception on page
   
-  var path = "../tmp/collections/familydollar/coupons/"
+  var path = "/app/tmp/collections/familydollar/coupons/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   fileName = path+fileName ; 
@@ -1257,7 +1260,6 @@ async function getFamilyDollarPromotions({ page }){
   })
   await Promise.all([
     page.goto("https://www.familydollar.com/smart-coupons"),
-    page.waitForNavigation({waitUntil: "load"}),
     page.waitForNetworkIdle({idleTime: 3000})
   ])
   await wrapFile(fileName);
@@ -1276,7 +1278,7 @@ async function getFamilyDollarItems({ page }){
     var offset = 0;
     var wantedRequestRegex = /dollartree-cors\.groupbycloud\.com\/api/
     let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
-    fileName = "../tmp/collections/familydollar/items/" + fileName; 
+    fileName = "/app/tmp/collections/familydollar/items/" + fileName; 
     page.on("response", async (res)=> {
       let url = await res.url() ;
       if (url.match(wantedRequestRegex)){
@@ -1297,7 +1299,8 @@ async function getFamilyDollarItems({ page }){
       // wait for reload
       page.waitForResponse(res=> res.url().includes("api/v1/search"), {timeout: 15000}), 
     ])
-    await page.waitForNetworkIdle({idleTime: 2000})
+    console.log("wait")
+    await page.waitForTimeout(10000)
 
     let iterations = await page.$eval("span.category-count", (el)=>{
       return +el.textContent.replaceAll(/(\(|\))/g, "")
@@ -1308,12 +1311,12 @@ async function getFamilyDollarItems({ page }){
     for (let i=1; i<iterations; i++){
       await Promise.all([
         page.$eval("a[aria-label='Next']", (el)=>el.click()),
-        page.waitForNetworkIdle({idleTime: 6500})
+        page.waitForTimeout(12000)
       ])
       console.log("finished ", i , " ", iterations-i, " left ")
     }
 
-    await page.waitForNetworkIdle({idleTime: 3000}); 
+    await page.waitForTimeout(14000); 
     await wrapFile(fileName);
     console.log("finished file", fileName);
     await page.removeAllListeners('response')
@@ -1336,7 +1339,7 @@ async function getFoodDepotItems({ page }){
   //await page.setRequestInterception(true);
 
   await page.setDefaultTimeout(0)
-  var path = "../tmp/collections/fooddepot/items/"
+  var path = "/app/tmp/collections/fooddepot/items/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   var wantedResponseRegex = /production-us-1\.noq-servers\.net\/api\/v.+\/stores\/.+\/products\?/
