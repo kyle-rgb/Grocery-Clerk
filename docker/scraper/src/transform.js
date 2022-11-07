@@ -266,7 +266,7 @@ function processInstacartItems({ target, defaultLocation=null, uuid }){
     insertData(fullPrices, 'prices')
     insertData(fullInventories, 'inventories')
 
-    zipUp(target)
+    //zipUp(target)
 
     // fs.mkdirSync('/app/tmp/data/collections/'+targetHeirarchy, {recursive: true})
     // for (file of files){
@@ -391,7 +391,7 @@ function processFoodDepotItems({target}){
     insertFilteredData("Id", 'items', allItems)
     insertData(allPrices, 'prices')
     
-    zipUp(target)
+    //zipUp(target)
     // fs.mkdirSync('/app/tmp/data/collections/'+targetHeirarchy, {recursive: true})
     // for (let file of files){
     //     fs.renameSync(target+file.name, `/app/tmp/data/collections/${targetHeirarchy}`+file.name)
@@ -449,7 +449,7 @@ function processInternalCoupons({target, parser, uuid}){
     }
 
     insertFilteredData(uuid, 'promotions', allCoupons, "new", false)
-    zipUp(target)
+    //zipUp(target)
     // fs.mkdirSync('/app/tmp/data/collections/'+targetHeirarchy, {recursive: true})
     // for (let file of files){
     //     fs.renameSync(target+file.name, `/app/tmp/data/collections/${targetHeirarchy}`+file.name)
@@ -647,7 +647,7 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
     })
     insertData(allPrices, "prices")
     insertFilteredData("id", "items", allItems)
-    zipUp(target)
+    //zipUp(target)
     // fs.mkdirSync('/app/tmp/data/collections/'+targetHeirarchy, {recursive: true})
     // files = fs.readdirSync(target)
     // for (let file of files){
@@ -750,7 +750,7 @@ function processDollarGeneralItems({target, couponParser, itemParser}){
     prices.length>0 ? insertData(prices, "prices", false):0;
     inventories.length>0 ? insertData(inventories, "inventories", false):0;
 
-    zipUp(target)
+    //zipUp(target)
     // fs.mkdirSync('/app/tmp/data/collections/'+targetHeirarchy, {recursive: true})
     // for (let file of files){
     //     fs.renameSync(target+file, `/app/tmp/data/collections/${targetHeirarchy}`+file)

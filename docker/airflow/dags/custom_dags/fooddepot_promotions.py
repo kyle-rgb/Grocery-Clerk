@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 default_args = {
     "chain": "food-depot",
     "target_data": "promotions",
-    "docker_name": "scraper_fd_promotions"
+    "docker_name": "scraper_food_promotions"
 }
 
 with DAG(
@@ -32,13 +32,15 @@ with DAG(
         import docker
         from airflow.secrets.local_filesystem import load_variables
         
-        email = load_variables("/run/secrets/secrets-vars.json")["EMAIL"]
+        variables = load_variables("/run/secrets/secrets-vars.json")
+        email = variables["EMAIL"]
+        phone_number = variables["PHONE_NUMBER"]
         client = docker.from_env()
 
 
         container = client.containers.run("docker-scraper:latest", working_dir='/app', detach=True, name=docker_name,
-                ports={"8081/tcp": "8082", "9229/tcp": "9228", "5900/tcp": "5901", "5000/tcp": "5001"},
-                environment={"GPG_TTY": "/dev/pts/0", "DISPLAY": ":1", "XVFB_RESOLUTION": "1920x1080x16", "EMAIL": email},
+                ports={"8081/tcp": "8081", "9229/tcp": "9229", "5900/tcp": "5900", "5000/tcp": "5000"},
+                environment={"GPG_TTY": "/dev/pts/0", "DISPLAY": ":1", "XVFB_RESOLUTION": "1920x1080x16", "EMAIL": email, "PHONE_NUMBER": phone_number},
                 init=True, stdin_open=True,
                 privileged =True
             )

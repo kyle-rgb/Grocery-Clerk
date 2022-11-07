@@ -168,7 +168,7 @@ async function setUpBrowser(task) {
   const PHONE_NUMBER = process.env.PHONE_NUMBER;
   var browser, page, passDownArgs = {};
   try { 
-    BROWSER_OPTIONS.headless = task === "foodDepotCoupons";
+    BROWSER_OPTIONS.headless = task === "foodDepotPromotions";
     browser = await puppeteer.launch(BROWSER_OPTIONS);
     var zipInput, wantedModality, wantedAddress; 
     [page] = await browser.pages();
@@ -471,7 +471,12 @@ async function setUpBrowser(task) {
             console.log("already logged in")
             break;
           }
-          await phoneInput.type(PHONE_NUMBER, {delay: 400})
+          console.log(PHONE_NUMBER)
+          for (i=0; i<PHONE_NUMBER.length; i++){
+            await phoneInput.type(PHONE_NUMBER[i], {delay: 100})
+
+          }
+          
           console.log("wrote phone number")
           await frameCoupons.$eval("button.button-login.default", async (el)=>{
             el.click();
@@ -1069,7 +1074,7 @@ async function getPublixPromotions({ page }){
   //   else req.continue()
   // })
 
-  var path = "/app/tmp/collections/publix/coupons/"
+  var path = "/app/tmp/collections/publix/promotions/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   fileName = path+fileName ; 
@@ -1244,7 +1249,7 @@ async function getFamilyDollarPromotions({ page }){
    */
   // set request interception on page
   
-  var path = "/app/tmp/collections/familydollar/coupons/"
+  var path = "/app/tmp/collections/familydollar/promotions/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
   fileName = path+fileName ; 
@@ -1368,7 +1373,7 @@ async function getFoodDepotItems({ page }){
   await Promise.all([
     shopAllButton.click(),
     page.waitForNavigation({waitUntil: 'load'}),
-    page.waitForNetworkIdle({idleTime:2000})
+    page.waitForTimeout(8800)
   ])
   // get all departments
   let allCategories = await page.$$eval("li.category-sibling-links__item > a", (els)=> els.map((el)=>{
@@ -1390,7 +1395,7 @@ async function getFoodDepotItems({ page }){
     pageHeight = await body.getProperty("offsetHeight").then((jsHandle)=> jsHandle.jsonValue())
     console.log(pageHeight)
     await page.keyboard.press("End");
-    await page.waitForNetworkIdle({idleTime: 4000});
+    await page.waitForTimeout(6500);
     newHeight = await body.getProperty("offsetHeight").then((jsHandle)=> jsHandle.jsonValue());
     console.log(newHeight)
     let u = 1; 
@@ -1398,14 +1403,14 @@ async function getFoodDepotItems({ page }){
       pageHeight=newHeight;
       console.log(newHeight)
       await page.keyboard.press("End");
-      await page.waitForNetworkIdle({idleTime: 5500}); // what is blocking syncrohous calls if end is not pressed again, images will stall and render one by one before next image resource is called
+      await page.waitForTimeout(5500); // what is blocking syncrohous calls if end is not pressed again, images will stall and render one by one before next image resource is called
       u++;
       newHeight = await body.getProperty("offsetHeight").then((jsHandle)=> jsHandle.jsonValue());
       console.log(newHeight, u)
     }
     console.log('finished ', categoryUrl, ' @ index: ', allCategories.indexOf(categoryUrl), ' of ', allCategories.length-1)
   }
-  await page.waitForNetworkIdle({idleTime: 3000}); 
+  await page.waitForTimeout(7500); 
   await wrapFile(fileName);
   await page.removeAllListeners('response');
   console.log("finished file : ", fileName)
@@ -1421,8 +1426,8 @@ async function getFoodDepotPromotions({ page }){
   // note : navigation to other stores promotions can only occur after MFA login 
   // page = await browser.pages()
   // page = page[0]
-  await page.waitForNetworkIdle({idleTime:3000});
-  var path = "./tmp/collections/fooddepot/coupons/"
+  await page.waitForTimeout(10000);
+  var path = "/app/tmp/collections/fooddepot/promotions/"
   var fileName = new Date().toLocaleDateString().replaceAll("/", "_") + ".json";
   var offset = 0;
   let wantedResponseRegex = /unclipped_recommendation_flag/
@@ -1435,7 +1440,7 @@ async function getFoodDepotPromotions({ page }){
     return ;
   })
   await page.reload();
-  await page.waitForNetworkIdle({idleTime: 15000});
+  await page.waitForTimeout(15000);
   await page.waitForTimeout(13000)
   await wrapFile(fileName);
   console.log("finished file", fileName);
@@ -1458,6 +1463,8 @@ const getFoodDepotCode = async () => {
     console.log("phoneCode Set");
     server.close();  
   })
+  server.listen({port: 5000})
+
 return new Promise((resolve, reject) => {
   server.on("close", ()=> {
     resolve(passedValidateCode)
@@ -1467,7 +1474,6 @@ return new Promise((resolve, reject) => {
     server.close(); 
     reject(err)
   })
-
 });
 }
 

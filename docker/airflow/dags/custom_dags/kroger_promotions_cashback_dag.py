@@ -62,7 +62,7 @@ with DAG(
 
 
         container = client.containers.run("docker-scraper:latest", working_dir='/app', detach=True, name=docker_name,
-                ports={"8081/tcp": "8082", "9229/tcp": "9228", "5900/tcp": "5901", "5000/tcp": "5001"},
+                ports={"8081/tcp": "8081", "9229/tcp": "9229", "5900/tcp": "5900", "5000/tcp": "5000"},
                 environment={"GPG_TTY": "/dev/pts/0", "DISPLAY": ":1", "XVFB_RESOLUTION": "1920x1080x16", "EMAIL": email},
                 init=True, stdin_open=True,
                 privileged =True
