@@ -3,6 +3,22 @@ const { Command } = require("commander");
 require("dotenv").config()
 const {setTimeout} = require("timers/promises")
 
+function cleanup(object){
+  Object.entries(object).forEach(([k, v])=>{
+      if (v && typeof v ==='object'){
+          cleanup(v);
+      }
+      if (v && typeof v ==='object' && !Object.keys(v).length || v===null || v === undefined || v === '' || k === '__typename' || v === 'none' || (Object.keys(object).length===1 && typeof v === 'boolean' && !v)) {
+          if (Array.isArray(object)) {
+              object.splice(k, 1)
+          } else if (!(v instanceof Date)) {
+              delete object[k];
+          }
+      }
+  })
+  return object
+}
+
 async function insertRun({functionName, collection, executor, args=undefined, push=false, _id=undefined , description=null, stats={}}){
     /**
    * @param functionName: the function being called
@@ -74,7 +90,6 @@ async function insertRun({functionName, collection, executor, args=undefined, pu
       executeVia: executor,
       startedAt: startedAt,
       duration: 0,
-      stats: stats,
       functions: [ baseRunDocument ]
     }
     result = (await runCollection.insertOne(document)).insertedId
@@ -110,8 +125,8 @@ program
     .option("--push", "mark previous function in run as complete and push new function onto run stack")
     .action((options)=> {
         console.log(options)
-        options.args ? options.args = JSON.parse(options.args) : undefined ;
-        options.stats ? options.stats = JSON.parse(options.stats) : undefined; 
+        options.args ? options.args = cleanup(JSON.parse(options.args)) : undefined ;
+        options.stats ? options.stats = cleanup(JSON.parse(options.stats)) : undefined; 
         insertRun(options)
         return 0
     })
@@ -121,7 +136,8 @@ program
     .description("runs a sample command with a 5 second sleeper to test docker logs")
     .option("-d, --data [data]", "data to pass", {})
     .action(async (options)=> {
-      await createSampleCommand(options)
+      // await createSampleCommand(options)
+      console.log(cleanup(JSON.parse(options.data)))
       return 0
     })
 program.parse();

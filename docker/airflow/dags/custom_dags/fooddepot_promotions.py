@@ -8,7 +8,8 @@ import pendulum
 from airflow import DAG
 from airflow.decorators import task, dag
 from airflow.exceptions import AirflowSkipException
-from airflow.operators.email import EmailOperator 
+from airflow.operators.email import EmailOperator
+from airflow.operators.bash import BashOperator
 
 log = logging.getLogger(__name__)
 default_args = {
@@ -159,6 +160,9 @@ with DAG(
             <h3>just want to inform you that all your tasks from {{run_id}} exited cleanly and the dag run was complete for {{ ts }}.</h3>   
         """)
 
+    docker_cp_bash = BashOperator(task_id="bash_docker_cp", bash_command=f"docker cp {default_args['docker_name']}:/app/tmp/collections /tmp/archive/")
+
+
     @task(task_id="transform-data")
     def transformData(chain=None, target_data=None, docker_name=None):
         # legal values for chain = food-depot, family-dollar, aldi, publix, dollar-general
@@ -205,5 +209,4 @@ with DAG(
 
         return 0
 
-    start_container() >> insertRun("".join(["get", default_args["chain"].title(), default_args["target_data"].title()]), f"get {default_args['chain']} {default_args['target_data']} data") >> scrape_dataset() >> updateRun(functionName=f"transform{default_args['chain'].title()}", args=default_args, push=True, description=f"transform {default_args['chain']}s {default_args['target_data']} data")  >> transformData() >> updateRun(push=False) >> archiveData() >> stop() >> send_email
-    
+    start_container() >> insertRun("".join(["get", default_args["chain"].title(), default_args["target_data"].title()]), f"get {default_args['chain']} {default_args['target_data']} data") >> scrape_dataset() >> updateRun(functionName=f"transform{default_args['chain'].title()}", args=default_args, push=True, description=f"transform {default_args['chain']}s {default_args['target_data']} data")  >> transformData() >> updateRun(push=False) >> archiveData() >> docker_cp_bash >> stop() >> send_email
