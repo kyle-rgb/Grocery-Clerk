@@ -421,5 +421,3 @@ def insertFilteredData(entries, collection_name, db, uuid) -> None:
         print(f"Inserted {len(res)} documents in {collection_name}")
      
     print(f"ended in {time.perf_counter()-start} seconds")
-
-{'isPurchase': False,'locationId': '01100685','modalities': ['IN_STORE'],'quantity': 1,'sellerKey': 0,'type': 'WhiteTag','upc': '0361630297084',}

@@ -6,6 +6,7 @@ const { platform } = require("os")
 const EventEmitter = require('node:events');
 const http = require("node:http")
 const { Command } = require('commander')
+const {setTimeout} = require("timers/promises")
 // add stealth plugin and use defaults 
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { ProtocolError, TimeoutError } = require('puppeteer');
@@ -191,7 +192,7 @@ async function setUpBrowser(task) {
           var wantedModality = "PICKUP";
           var wantedAddress = "3559 Chamblee Tucker Rd"; // "4357 Lawrenceville Hwy"
           await page.goto("https://www.kroger.com")
-          await page.waitForNetworkIdle({idleTime: 2200})
+          await page.waitForTimeout(5500)// await page.waitForNetworkIdle({idleTime: 2200})
           let introModals = await page.$$("button.kds-DismissalButton.kds-Modal-closeButton")
           if (introModals){
             for (let modal of introModals){
@@ -222,7 +223,7 @@ async function setUpBrowser(task) {
             // button to choose right store
             await targetStoreModal.$eval("button", (el) => el.click());
           } 
-          page.waitForNetworkIdle({idleTime: 4500})
+          // page.waitForNetworkIdle({idleTime: 4500})
           break;
       }
       case "krogerTrips": {
@@ -855,7 +856,7 @@ async function getKrogerPromotions({ page, type}){
       return ; 
     })
     
-    await page.waitForNetworkIdle({idleTime: 4500})
+    await page.waitForTimeout(5500)
     // close out of intro modals
     let introModals = await page.$$("button.kds-DismissalButton.kds-Modal-closeButton")
     for (intro of introModals){
@@ -866,7 +867,7 @@ async function getKrogerPromotions({ page, type}){
     await sortButton.press("ArrowDown");
     await sortButton.press("ArrowDown");
     await sortButton.press("Enter");
-    await page.waitForNetworkIdle({idleTime: 4000})
+    await setTimeout(7500)// await page.waitForTimeout(5500)
     let currentCoupons = await page.$$("button.CouponCard-viewQualifyingProducts")
     let startingLength = currentCoupons.length;
     apiEmitter.on("couponsLoaded", async ()=>{
@@ -877,11 +878,11 @@ async function getKrogerPromotions({ page, type}){
     for (let i = 0 ; i < currentCoupons.length ; i++){
       let coupon = currentCoupons[i]
       await coupon.click();
-      await page.waitForNetworkIdle({idleTime: 8000});
+      await page.waitForTimeout(8000);
       await page.keyboard.press("Escape");
       console.log("CCs Length", currentCoupons.length, " finished @", i)
     }
-    await page.waitForNetworkIdle({idleTime: 3000});
+    await page.waitForTimeout(3500);
     await wrapFile(fileName);
     console.log("file finished : ", fileName) ;
     await page.removeAllListeners('response')
@@ -1525,11 +1526,12 @@ program
   .description("scrapes specified data throught containerized browser")
   .option("-a, --aldi <procedure>", "scrape aldi items")
   .option("-fd --family-dollar <procedure>", "scrape family dollar items, instacartItems, promotions")
-  .option("-k, --kroger <procedure> <type>", "scrape kroger promotions (cashback | digital), specialPromotions and trips")
+  .option("-k, --kroger <procedure>", "scrape kroger promotions (cashback | digital), specialPromotions and trips")
   .option("-p, --publix <procedure>", "scrape publix promotions and items")
   .option("-dg, --dollar-general <procedure>", "scrape dollar general promotions and items")
   .option("--food-depot <procedure>", "scrape food depot items and promotions")
   .option("--no-setup", "bypass setup task for browser (for debugging purposes only)")
+  .option("--type <type>", "additional argument for kroger scrapes that must be passed down to scraping function")
   .action(async (options)=>{
     var taskParser = {
       aldiItems: getInstacartItems,

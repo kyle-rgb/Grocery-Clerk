@@ -38,7 +38,7 @@ with DAG(
 
 
         container = client.containers.run("docker-scraper:latest", working_dir='/app', detach=True, name=docker_name,
-                ports={"8081/tcp": "8081", "9229/tcp": "9229", "5900/tcp": "5900", "5000/tcp": "5000"},
+                ports={ "5900/tcp": None },
                 environment={"GPG_TTY": "/dev/pts/0", "DISPLAY": ":1", "XVFB_RESOLUTION": "1920x1080x16", "EMAIL": email},
                 init=True, stdin_open=True,
                 privileged =True
@@ -49,7 +49,7 @@ with DAG(
     # [END db_try]
 
     @task(task_id="insert-run")
-    def insertRun(functionName=None, description=None, args=None, docker_name=None, ti=None):
+    def insertRun(pipeline_action="scrape", description=None, args={}, docker_name=None, chain=None, target_data=None, ti=None):
         import docker
         from airflow.secrets.local_filesystem import load_connections_dict
         from pprint import pprint
@@ -60,15 +60,10 @@ with DAG(
         client = docker.from_env()
         container = client.containers.get(docker_name)
         baseCmd = "node ./src/db.js insert -c runs -e airflow"
-        if functionName:
-            baseCmd += " -f " + functionName
-        if description:
-            baseCmd += f" -d '{description}'"
-        if not args:
-            args = {}
-
-        args["pre_execute_stats"] = container.stats(stream=False)
-        baseCmd += f" --args '{json.dumps(args)}'"
+        functionName = pipeline_action + chain.title() + target_data.title() 
+        description = description or pipeline_action +" "+ chain.title() + target_data.title() 
+        args["pre_execute_stats"] = container.stats(stream=False) 
+        baseCmd += f" -f {functionName} -d {description} --args '{json.dumps(args)}' " 
         print("executing $ ", baseCmd)
         code, output = container.exec_run(cmd=baseCmd,
             user="pptruser", environment={"MONGO_CONN_URL": connections["MONGO_CONN_URL"].get_uri()},
@@ -81,7 +76,7 @@ with DAG(
         return 0
 
     @task(task_id="update-run")
-    def updateRun(functionName=None, args=None, push=False, docker_name=None, description=None, ti=None):
+    def updateRun(pipeline_action="scrape", args={}, push=False, docker_name=None, description=None, chain=None, target_data=None, ti=None):
         import docker
         from airflow.secrets.local_filesystem import load_connections_dict
         from pprint import pprint
@@ -91,16 +86,21 @@ with DAG(
         client = docker.from_env()
         container = client.containers.get(docker_name)
         _id = ti.xcom_pull(key="run_object_id", task_ids="insert-run")
-        # at base level closes the loop on the returning function, then consults kwargs on whether to add to run stack 
+        # at base level closes the loop on the returning function, then consults kwargs on whether to add to run stack
+        # represents the final stats dealing with container
         stats = json.dumps(container.stats(stream=False))
         baseCmd = f"node ./src/db.js insert -c runs -e airflow -i {_id} -s '{stats}'"
         
         if push:
+            functionName = pipeline_action + chain.title()+target_data.title()
+            description = description or (pipeline_action +" "+ chain+"s " + target_data + " data")
+            args["pre_execute_stats"] = container.stats(stream=False)
             baseCmd += f" -f {functionName} -d '{description}' --args '{json.dumps(args)}' --push"
         print("executing $ ", baseCmd)
         code, output = container.exec_run(cmd=baseCmd,
-        user="pptruser", environment={"MONGO_CONN_URL": connections["MONGO_CONN_URL"].get_uri()},
-        workdir="/app")
+            user="pptruser", environment={"MONGO_CONN_URL": connections["MONGO_CONN_URL"].get_uri()},
+            workdir="/app"
+        )
         output = output.decode("ascii")
         print(output)
         return 0
@@ -116,9 +116,10 @@ with DAG(
         client = docker.from_env()
         container = client.containers.get(docker_name)
         if chain=="kroger" and target_data=="promotions" and add_args:
-            target_data += add_args
+            target_data += " " + add_args
         code, output = container.exec_run(f"node ./src/index.js scrape --{chain} {target_data}", workdir="/app", user="pptruser",
-        environment={"ZIPCODE": var_dict["ZIPCODE"], "PHONE_NUMBER": var_dict["PHONE_NUMBER"], "KROGER_USERNAME": var_dict["KROGER_USERNAME"], "KROGER_PASSWORD": var_dict["KROGER_PASSWORD"]})
+            environment={"ZIPCODE": var_dict["ZIPCODE"], "PHONE_NUMBER": var_dict["PHONE_NUMBER"], "KROGER_USERNAME": var_dict["KROGER_USERNAME"], "KROGER_PASSWORD": var_dict["KROGER_PASSWORD"]}
+        )
         output = output.decode("ascii")
         print(output)
         if "error" in output:
@@ -126,20 +127,7 @@ with DAG(
         else :
             return 0
 
-    @task(task_id="setTimeout")
-    def setTimeout(to):
-        time.sleep(to)
-
-        return 0
-
-    @task(task_id="run-command")
-    def executeCommand(data=4500, docker_name=None):
-        import docker
-        client = docker.from_env()
-        exit_code, output = client.containers.get(docker_name).exec_run(f'node ./src/db.js test -d {data}', workdir="/app")
-        output = output.decode('ascii')
-        print(output)
-        return exit_code
+    
 
     @task(task_id="stop-container")
     def stop(docker_name=None):
@@ -206,4 +194,4 @@ with DAG(
 
         return 0
 
-    start_container() >> insertRun("".join(["get", default_args["chain"].title(), default_args["target_data"].title()]), f"get {default_args['chain']} {default_args['target_data']} data") >> scrape_dataset() >> updateRun(functionName=f"transform{default_args['chain'].title()}", args=default_args, push=True, description=f"transform {default_args['chain']}s {default_args['target_data']} data")  >> transformData() >> updateRun(push=False) >> archiveData() >> docker_cp_bash >> stop() >> send_email
+    start_container() >> insertRun() >> scrape_dataset() >> updateRun(pipeline_action="transform", push=True)  >> transformData() >> updateRun(pipeline_action="archive", push=True) >> archiveData() >> docker_cp_bash >> updateRun(push=False)>> stop() >> send_email
