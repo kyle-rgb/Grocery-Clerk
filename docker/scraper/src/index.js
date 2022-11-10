@@ -37,6 +37,8 @@ const BROWSER_OPTIONS = platform() === "linux" ? {
   }
 } ;
 
+
+
 const getNestedObject = (nestedObj, pathArr) => {
   return pathArr.reduce(
     (obj, key) => (obj && obj[key] !== "undefined" ? obj[key] : undefined),
@@ -986,10 +988,22 @@ async function getInstacartItems({ page}){
   let offset = 0;
   var wantedResponseRegex =  /item_attributes|operationName=Items|operationName=CollectionProductsWithFeaturedProducts/;
   let allCategoryLinks = await page.$$eval("ul[aria-labelledby='sm-departments'] > li > a", (elems)=> elems.map((a)=>a.href)) // departments side panel
-  allCategoryLinks = allCategoryLinks.filter((a)=>!a.match(unwantedPattern)).slice(1)
+  allCategoryLinks = allCategoryLinks.filter((a)=>!a.match(unwantedPattern))
+  console.log(allCategoryLinks)
   let apiEmitter = new EventEmitter();
+  // handle response
+  page.on("response", async (res)=> {
+    let url = res.url() ;
+    if (url.match(wantedResponseRegex)){
+      offset+=await writeResponse(fileName=fileName, response=res, url=url, offset=offset)
+      apiEmitter.emit("fileDone")
+      return; 
+    }
+    return ; 
+  })
 
   async function setFlag(ee, waitTime = 4500, timeout = 45000){
+    // helper function to make sure files are completed before next page action 
     let times = 0;
     let previousTimes = 0;
     let pageEnded = 0;
@@ -1014,6 +1028,8 @@ async function getInstacartItems({ page}){
     }, waitTime)
     return new Promise((resolve, reject)=> {
       ee.on("resolve", ()=> {
+        ee.removeAllListeners("resolve")
+        ee.removeAllListeners("fileDone")
         resolve(true)
       })
       setTimeout(()=>{
@@ -1027,19 +1043,9 @@ async function getInstacartItems({ page}){
     // wait for request where (collections_all_items_grid) in wanted request
     // once loaded responses have been copied, evalulate document.body.offsetHeight to see if more items are available. 
     var pageHeight, newHeight;
-    // handle response
-    page.on("response", async (res)=> {
-      let url = res.url() ;
-      if (url.match(wantedResponseRegex)){
-        offset+=await writeResponse(fileName=fileName, response=res, url=url, offset=offset)
-        apiEmitter.emit("fileDone")
-        return; 
-      }
-      return ; 
-    })
     await page.goto(link);
-    await setFlag(apiEmitter)    
-    console.log("went to ", link)
+    await setFlag(apiEmitter);
+    console.log("starting scrape of ", link)
     pageHeight = await page.$eval("body", (body)=> body.offsetHeight)
     await page.keyboard.press("End");
     await setFlag(apiEmitter)
@@ -1049,7 +1055,7 @@ async function getInstacartItems({ page}){
       console.log(pageHeight, " pageHeight")
       pageHeight = newHeight;
       await page.keyboard.press("End");
-      await setFlag(apiEmitter)
+      await setFlag(apiEmitter)   
       newHeight = await page.$eval("body", (el)=>el.offsetHeight)
       console.log(newHeight, " newHeight. Iteration Took ", (Date.now() - lastStart) / 1000, " secs");
       lastStart = Date.now()

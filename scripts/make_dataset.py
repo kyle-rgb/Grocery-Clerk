@@ -11,7 +11,7 @@ import win32gui
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 import pyperclip as clip
-from api_keys import DB_ARCHIVE_KEY, EXTENSION_ARCHIVE_KEY, ZIPCODE, PHONE_NUMBER, VERIFICATION_CODE
+from api_keys import DB_ARCHIVE_KEY, EXTENSION_ARCHIVE_KEY, MONGO_CONN_URL, ZIPCODE, PHONE_NUMBER, VERIFICATION_CODE
 from tzwhere import tzwhere
 
 # Inside Will Find:
@@ -683,7 +683,7 @@ def retrieveData(collection_name, db='new'):
 
 def createDBSummaries(db='new'):
     # Helper to Create MetaData File for DB In Order Track Database and Collection Evolution Overtime
-    uri = os.environ.get("MONGO_CONN_URL")
+    uri = MONGO_CONN_URL
     client = MongoClient(uri)
     db = client[db]
     with open('../data/stats.json', 'w') as file:
@@ -1429,11 +1429,11 @@ def deconstructDollars(file='./requests/server/collections/familydollar/digital0
 def backupDatabase():
     # more raw to archive and compress,
     # dump database and compress
-    
     # move and compressed extension files to separate archive 
-    subprocess.Popen(['7z', "a", "../data/archive.7z", "../data/collections", f"-p{EXTENSION_ARCHIVE_KEY}", "-mhe", "-sdel"])
+    if os.path.exists("../data/collections"):
+        subprocess.Popen(['7z', "a", "../data/archive.7z", "../data/collections", f"-p{EXTENSION_ARCHIVE_KEY}", "-mhe", "-sdel"])
     # helper to dump bsons and zip files for archive
-    process1 = subprocess.Popen(['mongodump', "-d", "new", "-o", "../data/data"])
+    process1 = subprocess.Popen(['mongodump', "--uri", MONGO_CONN_URL, "-o", "../data/data", "--authenticationDatabase", "admin"])
     process1.wait(90)
     # 7zip archive mongodumps w/ password
     process2 = subprocess.Popen(['7z', "a", "../data/data.7z", "../data/data", f"-p{DB_ARCHIVE_KEY}", "-mhe", "-sdel"])
@@ -2515,4 +2515,4 @@ def findAndInsertExtraPromotions(head):
 # findAndInsertExtraPromotions("./requests/server/collections/kroger/cashback/")
 # createDecompositions('./requests/server/collections/kroger', wantedPaths=["digital", "cashback"], additionalPaths=[])
 # backupDatabase()
-# createDBSummaries('new')
+createDBSummaries('new')

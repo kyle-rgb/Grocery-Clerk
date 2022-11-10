@@ -22,7 +22,7 @@ with DAG(
     dag_id="publix_scrape_items",
     schedule_interval="0 0 * * 2",
     start_date=pendulum.datetime(2022, 10, 25, tz="UTC"),
-    dagrun_timeout=datetime.timedelta(minutes=210),
+    dagrun_timeout=datetime.timedelta(minutes=60*6),
     catchup=False,
     default_args=default_args,
     tags=["grocery", "GroceryClerk", "ETL", "python", "node", "mongodb", "docker"]
@@ -133,11 +133,17 @@ with DAG(
     def stop(docker_name=None):
         import docker
         client = docker.from_env()
-        logs = client.containers.get(docker_name).logs(stream=False)
+        container = client.containers.get(docker_name) 
+        logs = container.logs(stream=False)
         logs = logs.decode("ascii")
         print(logs)
-        client.containers.get(docker_name).stop()
+        # rm tmp lock file to all for x11 re-entry for inspection of container files post a run
+        code, output = container.exec_run(cmd="rm /tmp/.X1-lock -f") 
+        output = output.decode("ascii")
+        print(output)
+        container.stop()
         print('container stopped')
+        client.close()
         return 0
 
 

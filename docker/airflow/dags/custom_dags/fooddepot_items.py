@@ -133,11 +133,17 @@ with DAG(
     def stop(docker_name=None):
         import docker
         client = docker.from_env()
-        logs = client.containers.get(docker_name).logs(stream=False)
+        container = client.containers.get(docker_name) 
+        logs = container.logs(stream=False)
         logs = logs.decode("ascii")
         print(logs)
-        client.containers.get(docker_name).stop()
+        # rm tmp lock file to all for x11 re-entry for inspection of container files post a run
+        code, output = container.exec_run(cmd="rm /tmp/.X1-lock -f") 
+        output = output.decode("ascii")
+        print(output)
+        container.stop()
         print('container stopped')
+        client.close()
         return 0
 
 
