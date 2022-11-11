@@ -38,5 +38,9 @@
 ### Docker Python SDK
 - [Windows 10 Issue Using containers.exec_run()](https://stackoverflow.com/questions/73610213/docker-python-package-4-3-1-not-working-with-docker-desktop-4-12-0-on-windows-10)
 
+### Docker API Calls Reference
+- [What docker stats returns on pyDocker Calls to Into Via Python](https://docs.docker.com/config/containers/runmetrics/)
+- [Engine Stats API](https://docs.docker.com/engine/api/v1.41/#tag/Container/operation/ContainerExport)
+
 ### MongoDB Reference
 - [Node API reference](https://mongodb.github.io/node-mongodb-native/4.10/modules.html)

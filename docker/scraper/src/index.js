@@ -912,19 +912,19 @@ async function getKrogerSpecialPromotions({ page }) {
   var specialPromoLinks = [];    
   // navigate to shop-all-promotions and find all special type promotions pages
   await page.goto("https://www.kroger.com/pr/shop-all-promotions")
-  await page.waitForNetworkIdle({idleTime: 5000})
+  await page.waitForTimeout(9000)
   // will give you section divs with tabulated options (for special promotions and regular digital promotions)
   var specialPromoTabDivs = await page.$$eval("div[class$='.tabs']", (nodes)=>{
     return nodes.filter((node)=>node.getElementByTagName("h2").map((a)=>a.innerText).every((text)=>!text.toLowerCase().includes("coupons")))
   });
-  // handle individual links in tab marked divs; to get other special promotions behind tabs the tabs inside the elements must be clicked to chaing 
+  // handle individual links in tab marked divs; to get other special promotions behind tabs the tabs inside the elements must be clicked to change
   for (let specialPromoTabDiv of specialPromoTabDivs){
     let initialSpecialPromoValue = await specialPromoTabDiv.$eval("a.kds-ProminentLink", (a)=>a.href)
     specialPromoLinks.push(initialSpecialPromoValue);
     let remainingTabs = specialPromoTabDiv.$$("button[id^='Tabs-tab'][aria-selected='false']")
     for (let remainingTab of remainingTabs){
       await remainingTab.click();
-      await page.waitForNetworkIdle({idleTime: 4000});
+      await page.waitForTimeout(7000);
       initialSpecialPromoValue = await specialPromoTabDiv.$eval("a.kds-ProminentLink", (a)=>a.href)
       specialPromoLinks.push(initialSpecialPromoValue)
     }
@@ -942,30 +942,30 @@ async function getKrogerSpecialPromotions({ page }) {
    * https://www.kroger.com/search?keyword=(((2022P10W1BewitchingBeautyB2G1Free)))&query=2022P10W1BewitchingBeautyB2G1Free&searchType=mktg%20attribute&monet=curated&fulfillment=all&pzn=relevance
    * https://www.kroger.com/search?keyword=(((ATLMustBuySoda3)))&query=ATLMustBuySoda3&searchType=mktg%20attribute&monet=promo&fulfillment=all&pzn=relevance
    * https://www.kroger.com/search?keyword=(((Buy5Save1EachShopAll22102)))&query=Buy5Save1EachShopAll22102&searchType=mktg%20attribute&monet=promo&fulfillment=all&pzn=relevance
-  */ 
+  */
+  page.on("response", async (response)=> {
+    if (response.url().match(specialPromoRegex)){
+      let tempId = response.url().match(/keyword=(.+?)\&/)[1]
+      let linkFileName = path+tempId+fileName 
+      offset += await writeResponse(linkFileName, response, url=response.url(), offset)
+    }
+    return;
+  }) 
 
   for (let link of specialPromoLinks){
-    let tempId = link.match(/keyword=(.+?)\&/)[1]
-    let linkFileName = path + tempId + fileName 
-    page.on("response", async (response)=> {
-      if (response.url().match(specialPromoRegex)){
-        offset += await writeResponse(linkFileName, response, url=response.url(), offset)
-      }
-      return;
-    })  
     await page.goto(link);
-    await page.waitForNetworkIdle({idleTime: 4500});
+    await page.waitForTimeout(6500);
     // find see more button (will not appear there are no more items)
     var loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
     while (loadMoreButton){
       await loadMoreButton.click();
-      await page.waitForNetworkIdle({idleTime: 4000});
+      await page.waitForResponse(async (response)=> response.url().match(specialPromoRegex)!==null, {timeout: 20000})
+      await page.waitForTimeout(2000)
       loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
     };
     console.log("finished link : ", link)
-    page.removeAllListeners("response") // so as not to call it twice on next iteration
   }
-
+  page.removeAllListeners("response") 
   return null
 }
 
