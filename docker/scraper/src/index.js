@@ -1,3 +1,4 @@
+// hi
 // migrating extension, server intermediary and CV based browser scraping into single package 
 const puppeteer = require('puppeteer-extra')
 require("dotenv").config();
@@ -17,7 +18,7 @@ const BROWSER_OPTIONS = platform() === "linux" ? {
   headless: false,
   slowMo: 900, 
   executablePath:"google-chrome-stable",
-  dumpio: true,
+  dumpio: false,
   args: ["--start-maximized", "--no-sandbox"],
   defaultViewport: {width: 1920, height: 1080},
   devtools: false,
@@ -166,7 +167,6 @@ async function setUpBrowser(task) {
     }
     return false;
   }
-
   var ZIPCODE = process.env.ZIPCODE; 
   const PHONE_NUMBER = process.env.PHONE_NUMBER;
   var browser, page, passDownArgs = {};
@@ -184,12 +184,13 @@ async function setUpBrowser(task) {
       return 
     })
     switch (task) {
+      case "krogerSpecial": {
+        break;
+      }
       case "krogerPromotions": {
-          // * kroger coupons: exit out of promotional modals (usually 1||2), click change store button, click find store, remove default zipcode in input, write wanted zipcode to input, press enter, select wanted modalitiy button (In-Store),
-          // wait for page reload, select dropdown for filtering coupons, press arrow down and enter, wait for page reload
-          /**
-           * @tests passed
-          */  
+          /** kroger coupons: exit out of promotional modals (usually 1||2), click change store button, click find store, remove default zipcode in input, write wanted zipcode to input, press enter, select wanted modalitiy button (In-Store),
+           * wait for page reload, select dropdown for filtering coupons, press arrow down and enter, wait for page reload
+          */ 
           let availableModalities = ["PICKUP", "DELIVERY", "SHIP", "IN_STORE"];
           var wantedModality = "PICKUP";
           var wantedAddress = "3559 Chamblee Tucker Rd"; // "4357 Lawrenceville Hwy"
@@ -914,44 +915,108 @@ async function getKrogerSpecialPromotions({ page }) {
   await page.goto("https://www.kroger.com/pr/shop-all-promotions")
   await page.waitForTimeout(9000)
   // will give you section divs with tabulated options (for special promotions and regular digital promotions)
-  var specialPromoTabDivs = await page.$$eval("div[class$='.tabs']", (nodes)=>{
-    return nodes.filter((node)=>node.getElementByTagName("h2").map((a)=>a.innerText).every((text)=>!text.toLowerCase().includes("coupons")))
-  });
+  var specialPromoTabDivs = await page.$$("div[class$='.tabs']")
+  var specialPromoTabDivs = await asyncFilter(specialPromoTabDivs, async (storeItem, index)=> {
+    let modalHeaders = await storeItem.$$eval("h2", (els)=>els.map((el)=>el.innerText))
+    console.log(modalHeaders)
+    let doesNotContainCoupons = modalHeaders.every((head)=>!head.toLowerCase().includes("coupon"))
+    if (doesNotContainCoupons){ 
+      return index
+    } 
+  })
+  console.log(specialPromoTabDivs)
+  specialPromoTabDivs = [specialPromoTabDivs]
   // handle individual links in tab marked divs; to get other special promotions behind tabs the tabs inside the elements must be clicked to change
   for (let specialPromoTabDiv of specialPromoTabDivs){
     let initialSpecialPromoValue = await specialPromoTabDiv.$eval("a.kds-ProminentLink", (a)=>a.href)
+    console.log("special initialSpecialPromoValue = ", initialSpecialPromoValue)
     specialPromoLinks.push(initialSpecialPromoValue);
-    let remainingTabs = specialPromoTabDiv.$$("button[id^='Tabs-tab'][aria-selected='false']")
+    let remainingTabs = await specialPromoTabDiv.$$("button[id^='Tabs-tab'][aria-selected='false']")
+    console.log("remainingTabs" , remainingTabs)
     for (let remainingTab of remainingTabs){
+      tabText = await remainingTab.getProperty("innerText")
+      console.log(await tabText.jsonValue())
+      console.log("clicking chips")
+      await remainingTab.click();
       await remainingTab.click();
       await page.waitForTimeout(7000);
       initialSpecialPromoValue = await specialPromoTabDiv.$eval("a.kds-ProminentLink", (a)=>a.href)
       specialPromoLinks.push(initialSpecialPromoValue)
     }
   }
+  console.log("specialPromoLinks = ", specialPromoLinks)
   // will give sections of all special promotions (w/o tabs)
   // var specialPromoSectionLinks = await page.$$eval("div[class$='.sectionwrapper'] a.kds-ProminentLink", (nodes)=>nodes.map((n)=>n.href))
   var specialPromoBubbleLinks = await page.$$eval("div[class$='.sectionwrapper'] a[title][tabindex]", (nodes)=>nodes.map((n)=>n.href))
   specialPromoLinks = specialPromoLinks.concat(specialPromoBubbleLinks)//.concat(specialPromoSectionLinks);
+  
+  console.log("specialPromoLinks = w/ bubbles =>", specialPromoLinks)
+  var specialPromoNonBubbleLinks = await page.$$eval("a.kds-Link.kds-ProminentLink", (nodes)=>nodes.map((el)=>el.href))
+  console.log(specialPromoNonBubbleLinks)
+  specialPromoLinks = specialPromoLinks.concat(specialPromoNonBubbleLinks.filter((link)=>link.match(/search\?/)))
   specialPromoLinks = Array.from(new Set(specialPromoLinks.filter((a)=>a.match(/\/search\?/))))
+  // remove link that redirects to standard digital coupon page and adds special promotions
+  specialPromoNonBubbleLinks = specialPromoNonBubbleLinks.filter((href)=>href.match(/pr\/(?!weekly-digital-deals)/))
+  // iff specialPromoNonBubbleLinks is not empty, it will only send you to that specific promotions page similar to all promotions page
+  // where specfic promotion is segmented by item categories. Goal is to process special promotions once we have links for all available special promotions
+  // that redirect us to items search page. specialPromoNonBubble links require a few extra steps.
+  console.log("specialPromoLinks >>", specialPromoLinks)
+  var reachedSearchPage = false; 
+  page.on("response", async (response)=> {
+    if (reachedSearchPage && response.url().match(specialPromoRegex)){
+      let tempId = page.url().match(/keyword=(.+?)\&/)[1]
+      let linkFileName = path+tempId+"/"+fileName 
+      offset += await writeResponse(linkFileName, response, url=response.url(), offset)
+    }
+    return;
+  }) 
+  if (specialPromoNonBubbleLinks.length>0){
+    // go to page find and find search link that comprises the broadest category (should have ShopAll in it and no reference to a specific category.)
+    for (let specialLink of specialPromoNonBubbleLinks ){
+      console.log("specialLink = w/o bubbles", specialLink)
+      await page.goto(specialLink);
+      await page.waitForTimeout(8500);
+      var categoryLinks = await page.$$eval("a.kds-Link.kds-ProminentLink", (nodes)=>nodes.map((el)=>el.href))
+      var [shopAllLink] = categoryLinks.filter((a)=>a.includes("ShopAll"));
+      reachedSearchPage =  true;
+      console.log("shopAllLink = w/o bubbles", shopAllLink) 
+      await page.goto(shopAllLink);
+      // get all categories in departments dropdown then proceed with waiting for and getting load more button
+      await page.waitForTimeout(10000);
+      let departmentFilter = await page.waitForSelector("span[aria-label='Open the Departments filter']")
+      await departmentFilter.click(); // will change upon click
+      // get show all categories button
+      let loadAllCategoriesButton = await page.waitForSelector("button[data-test='sliced-filters-show-more-button']");
+      await loadAllCategoriesButton.click();
+      await page.waitForSelector("button.x-filter.x-sliced-filters__button.x-sliced-filters__button--show-less")
+      let categoryFilters = await page.$$("div.x-hierarchical-filter input[type='radio']")
+      console.log("categoryFilters = w/o bubbles", categoryFilters)
+      for (let catFilter of categoryFilters){
+        await catFilter.click();
+        await page.waitForTimeout(12500)
+        // check for load button
+        var loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
+        while (loadMoreButton){
+          await loadMoreButton.click();
+          await page.waitForResponse(async (response)=> response.url().match(specialPromoRegex)!==null, {timeout: 20000})
+          await page.waitForTimeout(2000)
+          loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
+        };
+        console.log("finished category : ", page.url().match(/pl\/(.+?)\//)) 
+      }
+    }    
+  } 
 
-  // create temp id for special promotion based on url query string params. Then look for actually numeric id in products? response;
-  // use as directory in promotions so that it can be further parsed after collection
+
   /**
    * @example : [
    * https://www.kroger.com/search?keyword=(((2022P10W1BewitchingBeautyB2G1Free)))&query=2022P10W1BewitchingBeautyB2G1Free&searchType=mktg%20attribute&monet=curated&fulfillment=all&pzn=relevance
    * https://www.kroger.com/search?keyword=(((ATLMustBuySoda3)))&query=ATLMustBuySoda3&searchType=mktg%20attribute&monet=promo&fulfillment=all&pzn=relevance
    * https://www.kroger.com/search?keyword=(((Buy5Save1EachShopAll22102)))&query=Buy5Save1EachShopAll22102&searchType=mktg%20attribute&monet=promo&fulfillment=all&pzn=relevance
+   * (nonbubble link) : https://www.kroger.com/search?fulfillment=all&keyword=(((Buy6Save3ShopAll22104)))&monet=promo&page=11&pzn=relevance&query=Buy6Save3ShopAll22104&searchType=mktg%20attribute
+  * (nonbubble link show full category) : https://www.kroger.com/pl/dairy-eggs/02?keyword=Buy6Save3ShopAll22104&monet=promo&pzn=relevance&query=Buy6Save3ShopAll22104&searchType=mktg%20attribute&taxonomyId=02&fulfillment=all
+  * (ibid): https://www.kroger.com/pl/cleaning-and-household/26?keyword=Buy6Save3ShopAll22104&monet=promo&pzn=relevance&query=Buy6Save3ShopAll22104&searchType=mktg%20attribute&taxonomyId=26&fulfillment=all
   */
-  page.on("response", async (response)=> {
-    if (response.url().match(specialPromoRegex)){
-      let tempId = response.url().match(/keyword=(.+?)\&/)[1]
-      let linkFileName = path+tempId+fileName 
-      offset += await writeResponse(linkFileName, response, url=response.url(), offset)
-    }
-    return;
-  }) 
-
   for (let link of specialPromoLinks){
     await page.goto(link);
     await page.waitForTimeout(6500);
@@ -1545,7 +1610,7 @@ program
       familyDollarInstacartItems: getInstacartItems,
       familyDollarPromotions: getFamilyDollarPromotions,
       krogerPromotions: getKrogerPromotions,
-      krogerSpecialPromotions: getKrogerSpecialPromotions, 
+      krogerSpecial: getKrogerSpecialPromotions, 
       krogerTrips: getKrogerTrips,
       publixPromotions: getPublixPromotions,
       publixItems: getInstacartItems,
