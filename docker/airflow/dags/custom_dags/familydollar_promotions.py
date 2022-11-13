@@ -31,7 +31,7 @@ with DAG(
     # [START db_try]
     @task(task_id="start_container")
     def start_container(docker_name=None):
-        import docker, shutil
+        import docker
         from airflow.secrets.local_filesystem import load_variables
         
         email = load_variables("/run/secrets/secrets-vars.json")["EMAIL"]
@@ -123,7 +123,8 @@ with DAG(
         )
         output = output.decode("ascii")
         print(output)
-        if "error" in output:
+        if "Error" in output:
+            raise ValueError("node error. check logs!")
             return 1
         else :
             return 0

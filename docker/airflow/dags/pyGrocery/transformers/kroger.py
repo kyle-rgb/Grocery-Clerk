@@ -1,4 +1,4 @@
-import json, re, os, datetime as dt
+import json, re, os, datetime as dt, time
 from pprint import pprint
 from pymongo import MongoClient
 import pytz
@@ -338,28 +338,24 @@ def deconstructKrogerFile(filename):
                         isProcessed = bool(list(filter(lambda x: x.get('upc')==itemDoc.get('upc'), itemCollection)))
                         if isProcessed==False:
                             itemCollection.append(itemDoc)
-    # if promotionsCollection:
-    #     insertFilteredData(promotionsCollection, "promotions", "new", "krogerCouponNumber")
-    # if itemCollection:
-    #     insertFilteredData(itemCollection, "items", "new", "upc")
-    # if tripCollection:
-    #     insertFilteredData(tripCollection, "trips", "new", "transactionId")  
-    # if priceModifierCollection:
-    #     insertFilteredData(priceModifierCollection, "priceModifiers", "new", "promotionId")
-    # if userCollection:
-    #     insertFilteredData(userCollection, "users", "new", "loyaltyId") 
-    # if sellerCollection:
-    #     insertFilteredData(sellerCollection, "sellers", "new", "sellerId")
+    if promotionsCollection:
+        insertFilteredData(promotionsCollection, "promotions", "new", "krogerCouponNumber")
+    if itemCollection:
+        insertFilteredData(itemCollection, "items", "new", "upc")
+    if tripCollection:
+        insertFilteredData(tripCollection, "trips", "new", "transactionId")  
+    if priceModifierCollection:
+        insertFilteredData(priceModifierCollection, "priceModifiers", "new", "promotionId")
+    if userCollection:
+        insertFilteredData(userCollection, "users", "new", "loyaltyId") 
+    if sellerCollection:
+        insertFilteredData(sellerCollection, "sellers", "new", "sellerId")
 
-    # if pricesCollection:
-    #     insertData(pricesCollection, "prices", "new")
-    # if inventoryCollection:
-    #     insertData(inventoryCollection, "inventories", "new")
-    
-    pprint(promotionsCollection[-2:])
-    pprint(pricesCollection[-2:])
-    pprint(itemCollection[-2:])
-    pprint(inventoryCollection[-2:])
+    if pricesCollection:
+        insertData(pricesCollection, "prices", "new")
+    if inventoryCollection:
+        insertData(inventoryCollection, "inventories", "new")
+
     print("decomposed {}".format(filename))
     return None
 
@@ -377,6 +373,7 @@ def insertData(entries, collection_name, db='new'):
             entries = [entries]
     except AttributeError:
         entries = [x for x in entries]
+    print(os.environ)
     uri = os.environ.get("MONGO_CONN_URL")
     client = MongoClient(uri)
     db = client[db]

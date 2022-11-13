@@ -41,13 +41,20 @@ with DAG(
         """
         from pyGrocery.transformers.kroger import deconstructKrogerFile
         import os
-        
-        tempFiles = [os.path.join(folder, file) for folder, __, files in os.walk("/app/tmp/collections/kroger/promotions/digital/") for file in files]
+        from airflow.secrets.local_filesystem import load_connections_dict
+
+        connections = load_connections_dict("/run/secrets/secrets-connections.json")
+        os.environ["MONGO_CONN_URL"] = connections["MONGO_CONN_URL"].get_uri()
+
+        tempFiles = [os.path.join(folder, file) for folder, __, files in os.walk("/tmp/archive/.venv_files/kroger/promotions/") for file in files]
+        if len(tempFiles)==0:
+            raise ValueError("/tmp/archive/.venv_files is empty")
         for tempFile in tempFiles:
             deconstructKrogerFile(tempFile)
 
-        print("successfully started stopped node container from airflow worker in separate docker network")
-        print('finished from virtual env function. exiting with status code 0.')
+        print("successfully transformed promotions files in python venv")
+        shutil.rmtree("/tmp/archive/.venv_files")
+        print("cleaned up tmp files in archive volume")
 
 
         return 0
@@ -172,15 +179,15 @@ with DAG(
         client.close()
         return 0
 
-
     send_email = EmailOperator(task_id="send_email_via_operator", to="kylel9815@gmail.com", subject="sent from your docker container...", html_content="""
             <h1>Hello From Docker !</h1>
             <h3>just want to inform you that all your tasks from {{run_id}} exited cleanly and the dag run was complete for {{ ts }}.</h3>   
         """)
 
+    # copy finished  zipped archive to shared volume to let it bubble back up to the host
+    docker_cp_venv_files = BashOperator(task_id="bash_docker_cp_venv_files", bash_command=f"docker cp {default_args['docker_name']}:/app/tmp/collections /tmp/archive/.venv_files")
     docker_cp_bash = BashOperator(task_id="bash_docker_cp", bash_command=f"docker cp {default_args['docker_name']}:/app/tmp/collections /tmp/archive/")
     
-
     @task(task_id="archive_data")
     def archiveData(chain=None, target_data=None, docker_name=None):
         # legal values for chain = food-depot, family-dollar, aldi, publix, dollar-general
@@ -204,4 +211,5 @@ with DAG(
 
         return 0
 
-    start_container() >> insertRun() >> scrape_dataset() >> updateRun(pipeline_action="transform", push=True)  >> transformData() >> updateRun(pipeline_action="archive", push=True) >> archiveData() >> docker_cp_bash >> updateRun(push=False)>> stop() >> send_email
+    start_container() >> insertRun() >> scrape_dataset() >> updateRun(pipeline_action="transform", push=True)  >> docker_cp_venv_files >> transformData() >> updateRun(pipeline_action="archive", push=True) >> archiveData() >> docker_cp_bash >> updateRun(push=False)>> stop() >> send_email
+    

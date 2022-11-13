@@ -184,9 +184,7 @@ async function setUpBrowser(task) {
       return 
     })
     switch (task) {
-      case "krogerSpecial": {
-        break;
-      }
+      case "krogerSpecial":
       case "krogerPromotions": {
           /** kroger coupons: exit out of promotional modals (usually 1||2), click change store button, click find store, remove default zipcode in input, write wanted zipcode to input, press enter, select wanted modalitiy button (In-Store),
            * wait for page reload, select dropdown for filtering coupons, press arrow down and enter, wait for page reload
@@ -633,10 +631,11 @@ async function setUpBrowser(task) {
         var wantedStore = "3201 Tucker Norcross Rd Ste B2,\nTucker, GA 30084-2152";
         // navigate to smart-coupons page,
         await page.goto("https://www.familydollar.com")
+        await page.waitForTimeout(11000) 
         // click your store link in nav bar,
         page.$eval("a[text='FIND A STORE']", (el)=> el.click())
         // redirects to /store-locator
-        await page.waitForNavigation({waitUntil: "networkidle0"})
+        await page.waitForTimeout(9000)
         // enter zip code into input,
         var locatorIFrame = await page.waitForSelector("#storeLocator");
         console.log("got #storeLocator")
@@ -645,7 +644,7 @@ async function setUpBrowser(task) {
         await inputZip.type(ZIPCODE);
         await inputZip.press("Enter");
         console.log("waiting for network idle 4")
-        await page.waitForNetworkIdle({idleTime: 4000})
+        await page.waitForTimeout(6000)
         var targetStoreModals = await frameZip.$$("li.poi-item")
         // select store by address,
         var targetStoreModal = await asyncFilter(targetStoreModals, async (poiItem, index)=> {
@@ -657,14 +656,14 @@ async function setUpBrowser(task) {
         console.log("waiting for navigation")
         await Promise.all([
           targetStoreModal.$eval("div > div.mystoreIcon > span > a", (el)=>el.click()),
-          page.waitForNavigation({timeout: 15000, waitUntil: "load"})
+          page.waitForTimeout(15000)
         ]);
         let locationChangedModal = await page.$("div.modal.occ-notifications-modal.in a.modal-close");
         if (locationChangedModal){
           await locationChangedModal.click();
         }
         await page.goto("https://www.familydollar.com/categories?N=categories.1%3ADepartment&No=0&Nr=product.active:1")
-        await page.waitForNetworkIdle({idleTime: 3500})
+        await page.waitForTimeout(8000)
         break;
       }
       case "familyDollarInstacartItems": {
@@ -690,7 +689,6 @@ async function setUpBrowser(task) {
         //click save address button
         var addressSubmit = await page.waitForSelector("div[class$='UserAddressManager'] button[type='submit']");
         page.on("response", async (res)=> {
-          if (res.isInterceptResolutionHandled()) return;
           if (Object.keys(passDownArgs).length<1 && res.url().match(instacartRegex)){
             let shopIdObject = await res.json()
             shopIdObject = shopIdObject.data.shopCollection;
@@ -703,7 +701,7 @@ async function setUpBrowser(task) {
 
         // click and wait for reload
         await addressSubmit.click()
-        await page.waitForNetworkIdle({idleTime: 15500})
+        await page.waitForTimeout(15500)
         break;
       }
       case "familyDollarPromotions": {
@@ -718,7 +716,7 @@ async function setUpBrowser(task) {
       // click your store link in nav bar,
       page.$eval("a[text='FIND A STORE']", (el)=> el.click())
       // redirects to /store-locator
-      await page.waitForNavigation({waitUntil: "networkidle0"})
+      await page.waitForTimeout(12000)
       // enter zip code into input,
       var locatorIFrame = await page.waitForSelector("#storeLocator");
       frameZip = await locatorIFrame.contentFrame();
@@ -736,12 +734,12 @@ async function setUpBrowser(task) {
       })
       await Promise.all([
         targetStoreModal.$eval("div > div.mystoreIcon > span > a", (el)=>el.click()),
-        page.waitForNavigation({timeout: 15000, waitUntil: "networkidle0"})
+        page.waitForTimeout(15000)
       ]);
       let locataionChangedModal = await page.waitForSelector("div.modal.occ-notifications-modal.in a.modal-close")
       await Promise.all([
         locataionChangedModal.click(),
-        page.waitForNavigation({waitUntil: "load"})
+        page.waitForTimeout(7000)
       ])
       break;
       }
@@ -991,6 +989,8 @@ async function getKrogerSpecialPromotions({ page }) {
       await page.waitForSelector("button.x-filter.x-sliced-filters__button.x-sliced-filters__button--show-less")
       let categoryFilters = await page.$$("div.x-hierarchical-filter input[type='radio']")
       console.log("categoryFilters = w/o bubbles", categoryFilters)
+      categoryFilters = categoryFilters.slice(8, 10)
+      console.log("getting filters ", categoryFilters)
       for (let catFilter of categoryFilters){
         await catFilter.click();
         await page.waitForTimeout(12500)
@@ -1003,7 +1003,11 @@ async function getKrogerSpecialPromotions({ page }) {
           loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
         };
         console.log("finished category : ", page.url().match(/pl\/(.+?)\//)) 
-      }
+      };
+      let dirName = specialLink.match(/keyword=(.+?)\&/)[1]
+      let linkFileName = path+dirName+"/"+fileName 
+      await wrapFile(linkFileName)
+      console.log("finished ", linkFileName)
     }    
   } 
 
@@ -1017,6 +1021,9 @@ async function getKrogerSpecialPromotions({ page }) {
   * (nonbubble link show full category) : https://www.kroger.com/pl/dairy-eggs/02?keyword=Buy6Save3ShopAll22104&monet=promo&pzn=relevance&query=Buy6Save3ShopAll22104&searchType=mktg%20attribute&taxonomyId=02&fulfillment=all
   * (ibid): https://www.kroger.com/pl/cleaning-and-household/26?keyword=Buy6Save3ShopAll22104&monet=promo&pzn=relevance&query=Buy6Save3ShopAll22104&searchType=mktg%20attribute&taxonomyId=26&fulfillment=all
   */
+  console.log("getting remaining special promo links ...> ", specialPromoLinks)
+  specialPromoLinks = specialPromoLinks.slice(-2)
+  console.log("getting remaining special promo links ...> ", specialPromoLinks)
   for (let link of specialPromoLinks){
     await page.goto(link);
     await page.waitForTimeout(6500);
@@ -1025,9 +1032,13 @@ async function getKrogerSpecialPromotions({ page }) {
     while (loadMoreButton){
       await loadMoreButton.click();
       await page.waitForResponse(async (response)=> response.url().match(specialPromoRegex)!==null, {timeout: 20000})
-      await page.waitForTimeout(2000)
+      await page.waitForTimeout(6500)
       loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
     };
+    let dirName = page.url().match(/keyword=(.+?)\&/)[1]
+    let linkFileName = path+dirName+"/"+fileName 
+    await wrapFile(linkFileName)
+    console.log("finished ", linkFileName)
     console.log("finished link : ", link)
   }
   page.removeAllListeners("response") 
@@ -1328,8 +1339,9 @@ async function getFamilyDollarPromotions({ page }){
   var wantedRequestRegex = /ice-familydollar\.dpn\.inmar\.com\/v2\/offers\?/
   
   page.on("response", async (res)=> {
-    let url = await res.url() ;
-    if (url.match(wantedRequestRegex)){
+    let url = res.url() ;
+    let req= res.request();
+    if (req.method()!== "OPTIONS" && url.match(wantedRequestRegex)){
       offset+=await writeResponse(fileName=fileName, response=res, url=url, offset=offset)
       return; 
     }
@@ -1337,7 +1349,7 @@ async function getFamilyDollarPromotions({ page }){
   })
   await Promise.all([
     page.goto("https://www.familydollar.com/smart-coupons"),
-    page.waitForNetworkIdle({idleTime: 3000})
+    page.waitForTimeout(10000)
   ])
   await wrapFile(fileName);
   console.log("file finished : ", fileName) ;
@@ -1357,7 +1369,7 @@ async function getFamilyDollarItems({ page }){
     let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
     fileName = "/app/tmp/collections/familydollar/items/" + fileName; 
     page.on("response", async (res)=> {
-      let url = await res.url() ;
+      let url = res.url() ;
       if (url.match(wantedRequestRegex)){
         offset+=await writeResponse(fileName=fileName, response=res, url=url, offset=offset)
         return; 
@@ -1366,6 +1378,7 @@ async function getFamilyDollarItems({ page }){
     })
     
     let selectDiv = await page.$$(".oc3-select > div > select");
+    console.log(selectDiv)
     selectDiv = selectDiv[1]
     await selectDiv.hover()
     await selectDiv.click();

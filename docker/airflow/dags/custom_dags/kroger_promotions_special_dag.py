@@ -14,13 +14,12 @@ from airflow.operators.bash import BashOperator
 log = logging.getLogger(__name__)
 default_args = {
     "chain": "kroger",
-    "target_data": "promotions",
-    "add_args": "cashback",
-    "docker_name": "scraper_kroger_cashback_promotions"
+    "target_data": "special",
+    "docker_name": "scraper_kroger_promotions_special"
 }
 
 with DAG(
-    dag_id="kroger_scrape_promotions_cashback",
+    dag_id="kroger_scrape_promotions_digital",
     schedule_interval="0 0 * * 2",
     start_date=pendulum.datetime(2022, 10, 25, tz="UTC"),
     dagrun_timeout=datetime.timedelta(minutes=210),
@@ -40,7 +39,7 @@ with DAG(
             library before it is installed.
         """
         from pyGrocery.transformers.kroger import deconstructKrogerFile
-        import os, shutil
+        import os
         from airflow.secrets.local_filesystem import load_connections_dict
 
         connections = load_connections_dict("/run/secrets/secrets-connections.json")
