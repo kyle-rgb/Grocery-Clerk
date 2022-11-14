@@ -19,7 +19,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id="kroger_scrape_promotions_digital",
+    dag_id="kroger_scrape_promotions_special",
     schedule_interval="0 0 * * 2",
     start_date=pendulum.datetime(2022, 10, 25, tz="UTC"),
     dagrun_timeout=datetime.timedelta(minutes=210),
@@ -152,7 +152,10 @@ with DAG(
         code, output = container.exec_run(f"node ./src/index.js scrape --{chain} {target_data}", workdir="/app", user="pptruser",
             environment={"ZIPCODE": var_dict["ZIPCODE"], "PHONE_NUMBER": var_dict["PHONE_NUMBER"], "KROGER_USERNAME": var_dict["KROGER_USERNAME"], "KROGER_PASSWORD": var_dict["KROGER_PASSWORD"]}
         )
-        output = output.decode("ascii")
+        try:
+            output = output.decode("utf-8")
+        except:
+            print(output)
         print(output)
         if "error" in output:
             return 1

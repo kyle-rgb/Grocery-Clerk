@@ -1,0 +1,411 @@
+{   "_id" : "636c3f5d2f0a68a1939a3cd8",
+    "executeVia" : "airflow",
+    "startedAt" : "2022-11-10T00:01:33.964Z",
+    "duration" : 5642.567,
+    "functions" : [
+        {
+            "function" : "scrapeAldiItems", "duration" : 5628.087, "startedAt" : "2022-11-10T00:01:33.964Z",
+            "pre_execute_stats" : {
+                "read" : "2022-11-10T00:01:33.661743799Z",
+                "preread" : "2022-11-10T00:01:32.658367495Z",
+                "pids_stats" : { "current" : 18 },
+                "num_procs" : 0,
+            "cpu_stats" : { 
+                "cpu_usage" : {
+                    "total_usage" : 414910500,
+                    "percpu_usage" : [ 86679800, 69963700, 183758600, 74508400 ],
+                    "usage_in_kernelmode" : 170000000,
+                    "usage_in_usermode" : 150000000
+                },
+                "system_cpu_usage" : 51846180000000,
+                "online_cpus" : 4,
+                "throttling_data" : {
+                    "periods" : 0,
+                    "throttled_periods" : 0,
+                    "throttled_time" : 0
+                    }
+            },
+            "precpu_stats" : {
+                    "cpu_usage" : {
+                        "total_usage" : 386703000,
+                        "percpu_usage" : [ 81442900, 60464200, 176375700, 68420200 ],
+                        "usage_in_kernelmode" : 150000000,
+                        "usage_in_usermode" : 150000000
+                    },
+                    "system_cpu_usage" : 51842180000000,
+                    "online_cpus" : 4,
+                    "throttling_data" : {
+                        "periods" : 0,
+                        "throttled_periods" : 0,
+                        "throttled_time" : 0
+                    }
+            },
+            "memory_stats" : {
+                "usage" : 62992384,
+                "max_usage" : 63541248,
+                "stats" : {
+                    "active_anon" : 0,
+                    "active_file" : 10543104,
+                    "cache" : 23384064,
+                    "dirty" : 0,
+                    "hierarchical_memory_limit" : 9223372036854772000,
+                    "hierarchical_memsw_limit" : 9223372036854772000,
+                    "inactive_anon" : 40538112,
+                    "inactive_file" : 8380416,
+                    "mapped_file" : 8650752,
+                    "pgfault" : 27654,
+                    "pgmajfault" : 99,
+                    "pgpgin" : 21549,
+                    "pgpgout": 8455,
+                    "rss" : 34447360,
+                    "rss_huge" : 0,
+                    "total_active_anon" : 0,
+                    "total_active_file" : 10543104,
+                    "total_cache" : 23384064,
+                    "total_dirty" : 0,
+                    "total_inactive_anon" : 40538112,
+                    "total_inactive_file" : 8380416,
+                    "total_mapped_file" : 8650752,
+                    "total_pgfault" : 27654,
+                    "total_pgmajfault" : 99,
+                    "total_pgpgin" : 21549,
+                    "total_pgpgout" : 8455,
+                    "total_rss" : 34447360,
+                    "total_rss_huge" : 0,
+                    "total_unevictable" : 0,
+                    "total_writeback" : 0,
+                    "unevictable" : 0, 
+                    "writeback" : 0
+                },
+            "limit" : 4122275840
+            },
+                "name" : "/scraper_aldi_items",
+                "id" : "77a87fb84f9a93c60d009481e8236e4513ca02807a957343be741b6eb662095d",
+                "networks" : {
+                    "eth0" : {
+                        "rx_bytes" : 696,
+                        "rx_packets" : 8,
+                        "rx_errors" : 0,
+                        "rx_dropped" : 0,
+                        "tx_bytes" : 0,
+                        "tx_packets" : 0,
+                        "tx_errors" : 0,
+                        "tx_dropped" : 0
+                    }
+                }
+            },
+            "description" : "scrape",
+            "endedAt" : "2022-11-10T01:35:22.051Z"
+        },
+        {
+            "function" : "transformAldiItems",
+            "duration" : 8.903, "startedAt" : "2022-11-10T01:35:22.051Z",
+            "pre_execute_stats" : {
+                "read" : "2022-11-10T01:35:21.474248281Z",
+                "preread" : "2022-11-10T01:35:20.470928392Z",
+                "pids_stats" : { "current" : 18 },
+                "num_procs" : 0,
+                "cpu_stats" : {
+                    "cpu_usage" : {
+                        "total_usage" : 1491879004900,
+                        "percpu_usage" : [
+                            359870376600,
+                            394616607100,
+                            369318262700,
+                            368073758500
+                        ],
+                        "usage_in_kernelmode" : 159710000000,
+                        "usage_in_usermode" : 1259750000000
+                    },
+                    "system_cpu_usage" : 74612860000000,
+                    "online_cpus" : 4,
+                    "throttling_data" : {
+                        "periods" : 0,
+                        "throttled_periods" : 0,
+                        "throttled_time" : 0
+                    }
+                },
+            "precpu_stats" : {
+                "cpu_usage" : {
+                    "total_usage" : 1491878242600,
+                    "percpu_usage" : [
+                        359869941700,
+                        394616542700,
+                        369318188900,
+                        368073569300
+                    ],
+                    "usage_in_kernelmode" : 159710000000,
+                    "usage_in_usermode" : 1259750000000
+                },
+                "system_cpu_usage" : 74608810000000,
+                "online_cpus" : 4,
+                "throttling_data" : {
+                    "periods" : 0,
+                    "throttled_periods" : 0,
+                    "throttled_time" : 0
+                }
+            },
+            "memory_stats" : {
+                "usage" : 116248576,
+                "max_usage" : 1217818624,
+                "stats" : {
+                    "active_anon" : 4800512,
+                    "active_file" : 36446208,
+                    "cache" : 56770560,
+                    "dirty" : 135168,
+                    "hierarchical_memory_limit" : 9223372036854772000,
+                    "hierarchical_memsw_limit" : 9223372036854772000,
+                    "inactive_anon" : 14340096,
+                    "inactive_file" : 18628608,
+                    "mapped_file" : 3244032,
+                    "pgfault" : 18127890,
+                    "pgmajfault" : 65835,
+                    "pgpgin" : 15607614,
+                    "pgpgout" : 15591416,
+                    "rss" : 15413248,
+                    "rss_huge" : 0,
+                    "total_active_anon" : 4800512,
+                    "total_active_file" : 36446208,
+                    "total_cache" : 56770560,
+                    "total_dirty" : 135168,
+                    "total_inactive_anon" : 14340096,
+                    "total_inactive_file" : 18628608,
+                    "total_mapped_file" : 3244032,
+                    "total_pgfault" : 18127890,
+                    "total_pgmajfault" : 65835,
+                    "total_pgpgin" : 15607614,
+                    "total_pgpgout" : 15591416,
+                    "total_rss" : 15413248,
+                    "total_rss_huge" : 0,
+                    "total_unevictable" : 0,
+                    "total_writeback" : 0,
+                    "unevictable" : 0,
+                    "writeback" : 0
+                },
+            "limit" : 4122275840
+            },
+            "name" : "/scraper_aldi_items",
+            "id" : "77a87fb84f9a93c60d009481e8236e4513ca02807a957343be741b6eb662095d",
+            "networks" : {
+                    "eth0" : {
+                        "rx_bytes" : 115736851,
+                        "rx_packets" : 118980,
+                        "rx_errors" : 0,
+                        "rx_dropped" : 0,
+                        "tx_bytes" : 70006521,
+                        "tx_packets" : 74796,
+                        "tx_errors" : 0,
+                        "tx_dropped" : 0
+                    }
+                }
+            },
+            "description" : "transform aldis items data",
+            "endedAt" : "2022-11-10T01:35:30.954Z"
+        },
+        {
+            "function" : "archiveAldiItems",
+            "duration" : 5.577,
+            "startedAt" : "2022-11-10T01:35:30.954Z",
+            "pre_execute_stats" : {
+                "read" : "2022-11-10T01:35:30.674418844Z",
+                "preread" : "2022-11-10T01:35:29.668830545Z",
+                "pids_stats" : { "current" : 18 },
+                "num_procs" : 0,
+                "cpu_stats" : {
+                    "cpu_usage" : {
+                        "total_usage" : 1495598281600,
+                        "percpu_usage" : [
+                            360743814700,
+                            395986889800,
+                            370126982400,
+                            368740594700
+                        ],
+                        "usage_in_kernelmode" : 160010000000,
+                        "usage_in_usermode" : 1263050000000
+                        },
+                    "system_cpu_usage" : 74649870000000,
+                    "online_cpus" : 4,
+                    "throttling_data" : {
+                        "periods" : 0,
+                        "throttled_periods" : 0,
+                        "throttled_time" : 0
+                    }
+                },
+                "precpu_stats" : {
+                    "cpu_usage" : {
+                        "total_usage" : 1495597660700,
+                        "percpu_usage" : [
+                            360743651400,
+                            395986889800,
+                            370126685000,
+                            368740434500
+                        ],
+                        "usage_in_kernelmode" : 160010000000,
+                        "usage_in_usermode" : 1263050000000
+                    },
+                    "system_cpu_usage" : 74645860000000,
+                    "online_cpus" : 4,
+                    "throttling_data" : { 
+                        "periods" : 0,
+                        "throttled_periods" : 0,
+                        "throttled_time" : 0
+                    }
+                },
+                "memory_stats" : {
+                    "usage" : 142041088,
+                    "max_usage" : 1217818624,
+                    "stats" : {
+                        "active_anon" : 4800512,
+                        "active_file" : 50638848,
+                        "cache" : 81506304,
+                        "dirty" : 135168,
+                        "hierarchical_memory_limit" : 9223372036854772000,
+                        "hierarchical_memsw_limit" : 9223372036854772000,
+                        "inactive_anon" : 14516224,
+                        "inactive_file" : 29036544,
+                        "mapped_file" : 3244032,
+                        "pgfault" : 18177621,
+                        "pgmajfault" : 65868,
+                        "pgpgin" : 15661371,
+                        "pgpgout" : 15639152,
+                        "rss" : 15429632,
+                        "rss_huge" : 0,
+                        "total_active_anon" : 4800512,
+                        "total_active_file" : 50638848,
+                        "total_cache" : 81506304,
+                        "total_dirty" : 135168,
+                        "total_inactive_anon" : 14516224,
+                        "total_inactive_file": 29036544,
+                        "total_mapped_file" : 3244032,
+                        "total_pgfault" : 18177621,
+                        "total_pgmajfault" : 65868,
+                        "total_pgpgin" : 15661371,
+                        "total_pgpgout" : 15639152,
+                        "total_rss" : 15429632,
+                        "total_rss_huge" : 0,
+                        "total_unevictable" : 0,
+                        "total_writeback" : 0,
+                        "unevictable" : 0,
+                        "writeback" : 0
+                    },
+                    "limit" : 4122275840
+                },
+                "name" : "/scraper_aldi_items",
+                "id" : "77a87fb84f9a93c60d009481e8236e4513ca02807a957343be741b6eb662095d",
+                "networks" : {
+                    "eth0" : {
+                        "rx_bytes" : 132655892,
+                        "rx_packets" : 130581,
+                        "rx_errors" : 0,
+                        "rx_dropped" : 0,
+                        "tx_bytes" : 73182363,
+                        "tx_packets" : 79298,
+                        "tx_errors" : 0,
+                        "tx_dropped" : 0 
+                    }
+                }
+            },
+            "description" : "archive aldis items data",
+            "endedAt" : "2022-11-10T01:35:36.531Z"
+        }],
+    "endedAt" :"2022-11-10T01:35:36.531Z",
+    "stats" : { 
+        "read" : "2022-11-10T01:35:36.256952778Z", 
+        "preread" : "2022-11-10T01:35:35.253004756Z", 
+        "pids_stats" : { "current" : 18 }, 
+        "num_procs" : 0, 
+        "cpu_stats" : { 
+            "cpu_usage" : { 
+                "total_usage" : 1496487140600,
+                "percpu_usage" : [ 
+                    360978247700, 
+                    396051514300, 
+                    370412654700, 
+                    369044723900
+                ],
+                "usage_in_kernelmode" : 160120000000,
+                "usage_in_usermode" : 1263800000000
+            },
+            "system_cpu_usage" : 74672450000000,
+            "online_cpus" : 4,
+            "throttling_data" : { 
+                "periods" : 0, 
+                "throttled_periods" : 0, 
+                "throttled_time" : 0 
+            }
+    },
+    "precpu_stats" : { 
+        "cpu_usage" : { 
+            "total_usage" : 1496486481400, 
+            "percpu_usage" : [ 
+                360977970600, 
+                396051315100, 
+                370412654700, 
+                369044541000 
+            ],
+            "usage_in_kernelmode" : 160120000000,
+            "usage_in_usermode" : 1263800000000
+        },
+        "system_cpu_usage": 74668420000000,
+        "online_cpus" : 4,
+        "throttling_data" : { 
+            "periods" : 0, 
+            "throttled_periods" : 0, 
+            "throttled_time" : 0 
+        } 
+    }, 
+    "memory_stats" : { 
+        "usage" : 126316544, 
+        "max_usage" : 1217818624, 
+        "stats" : { 
+            "active_anon" : 4800512, 
+            "active_file" : 49827840, 
+            "cache" : 65961984, 
+            "dirty" : 1351680, 
+            "hierarchical_memory_limit" : 9223372036854772000, 
+            "hierarchical_memsw_limit" : 9223372036854772000, 
+            "inactive_anon" : 14630912, 
+            "inactive_file" : 15114240, 
+            "mapped_file" : 3379200, 
+            "pgfault" : 18198279, 
+            "pgmajfault" : 65967, 
+            "pgpgin" : 15680742, 
+            "pgpgout" : 15662350, 
+            "rss" : 15683584, 
+            "rss_huge" : 0, 
+            "total_active_anon" : 4800512, 
+            "total_active_file" : 49827840, 
+            "total_cache" : 65961984, 
+            "total_dirty" : 1351680, 
+            "total_inactive_anon" : 14630912, 
+            "total_inactive_file" : 15114240, 
+            "total_mapped_file" : 3379200, 
+            "total_pgfault" : 18198279, 
+            "total_pgmajfault" : 65967, 
+            "total_pgpgin" : 15680742, 
+            "total_pgpgout" : 15662350,
+            "total_rss" : 15683584,
+            "total_rss_huge" : 0,
+            "total_unevictable" : 0,
+            "total_writeback" : 0,
+            "unevictable" : 0,
+            "writeback" : 0 
+        },
+        "limit" : 4122275840
+    },
+    "name" : "/scraper_aldi_items",
+    "id" : "77a87fb84f9a93c60d009481e8236e4513ca02807a957343be741b6eb662095d",
+    "networks" : {
+        "eth0" : {
+            "rx_bytes" : 132658200,
+            "rx_packets" : 130601,
+            "rx_errors" : 0,
+            "rx_dropped" : 0,
+            "tx_bytes" : 73189193,
+            "tx_packets" : 79320,
+            "tx_errors" : 0,
+            "tx_dropped" : 0
+        }
+    }
+    }
+    }

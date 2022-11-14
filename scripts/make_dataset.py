@@ -1437,7 +1437,7 @@ def backupDatabase():
     process1.wait(90)
     # 7zip archive mongodumps w/ password
     process2 = subprocess.Popen(['7z', "a", "../data/data.7z", "../data/data", f"-p{DB_ARCHIVE_KEY}", "-mhe", "-sdel"])
-    process2.wait(30)
+    process2.wait(90)
     # clean up files 
     if os.path.exists("../data/archive/"):
         os.remove('../data/archive/')

@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 default_args = {
     "chain": "food-depot",
     "target_data": "items",
-    "docker_name": "scraper_fd_items"
+    "docker_name": "scraper_food_items"
 }
 
 with DAG(

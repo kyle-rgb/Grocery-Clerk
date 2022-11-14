@@ -987,11 +987,12 @@ async function getKrogerSpecialPromotions({ page }) {
       let loadAllCategoriesButton = await page.waitForSelector("button[data-test='sliced-filters-show-more-button']");
       await loadAllCategoriesButton.click();
       await page.waitForSelector("button.x-filter.x-sliced-filters__button.x-sliced-filters__button--show-less")
-      let categoryFilters = await page.$$("div.x-hierarchical-filter input[type='radio']")
+      let categoryFilters = await page.$$("ul.x-staggering-transition-group.x-staggered-fade-and-slide.x-list.x-filters > li > div > div > label > input")
       console.log("categoryFilters = w/o bubbles", categoryFilters)
-      categoryFilters = categoryFilters.slice(8, 10)
-      console.log("getting filters ", categoryFilters)
-      for (let catFilter of categoryFilters){
+      for (let j = 0 ; j <categoryFilters.length ; j++){
+        categoryFilters = await page.$$("ul.x-staggering-transition-group.x-staggered-fade-and-slide.x-list.x-filters > li > div > div > label > input")
+        console.log("categoryFilters ==> ", categoryFilters)
+        catFilter = categoryFilters[j]
         await catFilter.click();
         await page.waitForTimeout(12500)
         // check for load button
@@ -999,7 +1000,7 @@ async function getKrogerSpecialPromotions({ page }) {
         while (loadMoreButton){
           await loadMoreButton.click();
           await page.waitForResponse(async (response)=> response.url().match(specialPromoRegex)!==null, {timeout: 20000})
-          await page.waitForTimeout(2000)
+          await page.waitForTimeout(8000)
           loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
         };
         console.log("finished category : ", page.url().match(/pl\/(.+?)\//)) 
