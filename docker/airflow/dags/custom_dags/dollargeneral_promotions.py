@@ -148,7 +148,7 @@ with DAG(
 
     send_email = EmailOperator(task_id="send_email_via_operator", to="kylel9815@gmail.com", subject="sent from your docker container...", html_content="""
             <h1>Hello From Docker !</h1>
-            <h3>just want to inform you that all your tasks from {{run_id}} exited cleanly and the dag run was complete for {{ ts }}.</h3>   
+            <h3>just want to inform you that all your tasks from {{run_id}} exited cleanly and the dag run was complete for {{ task_instance_key_str }}.</h3>   
         """)
 
     docker_cp_bash = BashOperator(task_id="bash_docker_cp", bash_command=f"docker cp {default_args['docker_name']}:/app/tmp/collections /tmp/archive/")
@@ -187,7 +187,7 @@ with DAG(
 
         container = client.containers.get(docker_name)
         no_space_path = chain.replace("-", "")
-        baseCmd = f"node ./src/transform.js compress --path /app/tmp/collections/{no_space_path}"
+        baseCmd = f"node ./src/transform.js compress --path /app/tmp/collections/{no_space_path} --name {docker_name}"
         print("executing $ ", baseCmd)
         code, output = container.exec_run(cmd=baseCmd,
             user="pptruser", environment={"EMAIL": email},

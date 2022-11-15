@@ -838,7 +838,7 @@ async function getKrogerPromotions({ page, type}){
     var offset = 0;
     var wantedRequestRegex = /atlas\/v1\/product\/v2\/products\?|\/cl\/api\/coupons/
     let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
-    fileName = `/app/tmp/collections/kroger/${type}/` + fileName; 
+    fileName = `/app/tmp/collections/kroger/promotions/${type}/` + fileName; 
     await page.goto(promotionUrl);
     page.on("response", async (res)=>{
       let url = res.url() ;
@@ -992,6 +992,18 @@ async function getKrogerSpecialPromotions({ page }) {
       for (let j = 0 ; j <categoryFilters.length ; j++){
         categoryFilters = await page.$$("ul.x-staggering-transition-group.x-staggered-fade-and-slide.x-list.x-filters > li > div > div > label > input")
         console.log("categoryFilters ==> ", categoryFilters)
+        if (categoryFilters.length<1){
+          departmentFilter = await page.waitForSelector("span[aria-label='Open the Departments filter']")
+          await departmentFilter.click(); // will change upon click
+          // get show all categories button
+          await page.waitForTimeout(5000)
+          loadAllCategoriesButton = await page.waitForSelector("button[data-test='sliced-filters-show-more-button']");
+          await loadAllCategoriesButton.click();
+          await page.waitForTimeout(5000)
+          await page.waitForSelector("button.x-filter.x-sliced-filters__button.x-sliced-filters__button--show-less")
+          categoryFilters = await page.$$("ul.x-staggering-transition-group.x-staggered-fade-and-slide.x-list.x-filters > li > div > div > label > input")
+          await page.waitForTimeout(5500)
+        }
         catFilter = categoryFilters[j]
         await catFilter.click();
         await page.waitForTimeout(12500)
@@ -1003,9 +1015,10 @@ async function getKrogerSpecialPromotions({ page }) {
           await page.waitForTimeout(8000)
           loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
         };
-        console.log("finished category : ", page.url().match(/pl\/(.+?)\//)) 
+        console.log("finished category : ", page.url().match(/pl\/(.+?)\//))
+
       };
-      let dirName = specialLink.match(/keyword=(.+?)\&/)[1]
+      let dirName = page.url().match(/keyword=(.+?)\&/)[1]
       let linkFileName = path+dirName+"/"+fileName 
       await wrapFile(linkFileName)
       console.log("finished ", linkFileName)
@@ -1023,8 +1036,7 @@ async function getKrogerSpecialPromotions({ page }) {
   * (ibid): https://www.kroger.com/pl/cleaning-and-household/26?keyword=Buy6Save3ShopAll22104&monet=promo&pzn=relevance&query=Buy6Save3ShopAll22104&searchType=mktg%20attribute&taxonomyId=26&fulfillment=all
   */
   console.log("getting remaining special promo links ...> ", specialPromoLinks)
-  specialPromoLinks = specialPromoLinks.slice(-2)
-  console.log("getting remaining special promo links ...> ", specialPromoLinks)
+
   for (let link of specialPromoLinks){
     await page.goto(link);
     await page.waitForTimeout(6500);
@@ -1041,8 +1053,10 @@ async function getKrogerSpecialPromotions({ page }) {
     await wrapFile(linkFileName)
     console.log("finished ", linkFileName)
     console.log("finished link : ", link)
+    await page.waitForTimeout(9000)
   }
-  page.removeAllListeners("response") 
+  page.removeAllListeners("response")
+  await page.waitForTimeout(23000)
   return null
 }
 

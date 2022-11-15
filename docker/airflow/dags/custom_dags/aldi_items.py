@@ -23,7 +23,7 @@ with DAG(
     dag_id="aldi_scrape_items",
     schedule_interval="0 0 * * 2", # runs every tuesday, the last turnover date before next publicized promotion date (as given by their weekly ads)
     start_date=pendulum.datetime(2022, 10, 25, tz="UTC"),
-    dagrun_timeout=datetime.timedelta(minutes=210),
+    dagrun_timeout=datetime.timedelta(minutes=500),
     catchup=False,
     default_args=default_args,
     tags=["grocery", "GroceryClerk", "ETL", "python", "node", "mongodb", "docker", "runs", "metadata"]
@@ -150,7 +150,7 @@ with DAG(
 
     send_email = EmailOperator(task_id="send_email_via_operator", to="kylel9815@gmail.com", subject="sent from your docker container...", html_content="""
             <h1>Hello From Docker !</h1>
-            <h3>just want to inform you that all your tasks from {{run_id}} exited cleanly and the dag run was complete for {{ ts }}.</h3>   
+            <h3>just want to inform you that all your tasks from {{run_id}} exited cleanly and the dag run was complete for {{ task_instance_key_str }}.</h3>   
         """)
 
     docker_cp_bash = BashOperator(task_id="bash_docker_cp", bash_command=f"docker cp {default_args['docker_name']}:/app/tmp/collections /tmp/archive/")
@@ -189,7 +189,7 @@ with DAG(
 
         container = client.containers.get(docker_name)
         no_space_path = chain.replace("-", "")
-        baseCmd = f"node ./src/transform.js compress --path /app/tmp/collections/{no_space_path}"
+        baseCmd = f"node ./src/transform.js compress --path /app/tmp/collections/{no_space_path} --name {docker_name}"
         print("executing $ ", baseCmd)
         code, output = container.exec_run(cmd=baseCmd,
             user="pptruser", environment={"EMAIL": email},

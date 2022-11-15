@@ -39,20 +39,20 @@ with DAG(
             library before it is installed.
         """
         from pyGrocery.transformers.kroger import deconstructKrogerFile
-        import os
+        import os, shutil
         from airflow.secrets.local_filesystem import load_connections_dict
 
         connections = load_connections_dict("/run/secrets/secrets-connections.json")
         os.environ["MONGO_CONN_URL"] = connections["MONGO_CONN_URL"].get_uri()
 
-        tempFiles = [os.path.join(folder, file) for folder, __, files in os.walk("/tmp/archive/.venv_files/kroger/promotions/") for file in files]
-        if len(tempFiles)==0:
-            raise ValueError("/tmp/archive/.venv_files is empty")
-        for tempFile in tempFiles:
-            deconstructKrogerFile(tempFile)
+        # tempFiles = [os.path.join(folder, file) for folder, __, files in os.walk("/tmp/archive/.venv_files/collections/kroger/promotions/") for file in files]
+        # if len(tempFiles)==0:
+        #     raise ValueError("/tmp/archive/.venv_files is empty")
+        # for tempFile in tempFiles:
+        #     deconstructKrogerFile(tempFile)
 
         print("successfully transformed promotions files in python venv")
-        shutil.rmtree("/tmp/archive/.venv_files")
+        shutil.rmtree("/tmp/archive/.venv_files/collections")
         print("cleaned up tmp files in archive volume")
 
 
@@ -183,7 +183,7 @@ with DAG(
 
     send_email = EmailOperator(task_id="send_email_via_operator", to="kylel9815@gmail.com", subject="sent from your docker container...", html_content="""
             <h1>Hello From Docker !</h1>
-            <h3>just want to inform you that all your tasks from {{run_id}} exited cleanly and the dag run was complete for {{ ts }}.</h3>   
+            <h3>just want to inform you that all your tasks from {{run_id}} exited cleanly and the dag run was complete for {{ task_instance_key_str }}.</h3>   
         """)
 
     # copy finished  zipped archive to shared volume to let it bubble back up to the host
@@ -201,7 +201,7 @@ with DAG(
 
         container = client.containers.get(docker_name)
         no_space_path = chain.replace("-", "")
-        baseCmd = f"node ./src/transform.js compress --path /app/tmp/collections/{no_space_path}"
+        baseCmd = f"node ./src/transform.js compress --path /app/tmp/collections/{no_space_path} --name {docker_name}"
         print("executing $ ", baseCmd)
         code, output = container.exec_run(cmd=baseCmd,
             user="pptruser", environment={"EMAIL": email},
