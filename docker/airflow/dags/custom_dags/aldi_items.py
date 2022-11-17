@@ -189,7 +189,7 @@ with DAG(
 
         container = client.containers.get(docker_name)
         no_space_path = chain.replace("-", "")
-        baseCmd = f"node ./src/transform.js compress --path /app/tmp/collections/{no_space_path} --name {docker_name}"
+        baseCmd = f"node ./src/transform.js compress --path /app/tmp/collections/{no_space_path}"
         print("executing $ ", baseCmd)
         code, output = container.exec_run(cmd=baseCmd,
             user="pptruser", environment={"EMAIL": email},
