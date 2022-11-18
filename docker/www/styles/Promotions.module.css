@@ -1,0 +1,61 @@
+.item {
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin: 20px 0;
+padding: 13px;
+box-shadow: 2px 3px 5px rgba(0, 0, 0, 0.1);
+}
+
+.item h3 {
+    font-size: 25px;
+}
+
+.item p {
+    margin: 10px ;
+}
+
+.info {
+    flex: 2;
+    width: 50%;
+    display:left;
+}
+
+.img {
+    width: 33%;
+}
+
+.attributes {
+    width: 100%;
+    margin-left:0;
+}
+
+.controls {
+    position: absolute;
+    right: 30px;
+    top: 0;
+}
+
+.delete {
+    margin-left: 20px;
+    color: red;
+}
+
+.back {
+    display: block;
+    margin-top: 40px;
+}
+
+
+
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
