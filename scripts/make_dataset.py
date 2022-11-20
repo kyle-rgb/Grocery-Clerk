@@ -11,7 +11,7 @@ import win32gui
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 import pyperclip as clip
-from api_keys import DB_ARCHIVE_KEY, EXTENSION_ARCHIVE_KEY, MONGO_CONN_URL, ZIPCODE, PHONE_NUMBER, VERIFICATION_CODE
+from api_keys import DB_ARCHIVE_KEY, EXTENSION_ARCHIVE_KEY, MONGO_CONN_URL, ZIPCODE, PHONE_NUMBER, VERIFICATION_CODE, MONGO_DUMP_URI
 from tzwhere import tzwhere
 
 # Inside Will Find:
@@ -1433,7 +1433,7 @@ def backupDatabase():
     if os.path.exists("../data/collections"):
         subprocess.Popen(['7z', "a", "../data/archive.7z", "../data/collections", f"-p{EXTENSION_ARCHIVE_KEY}", "-mhe", "-sdel"])
     # helper to dump bsons and zip files for archive
-    process1 = subprocess.Popen(['mongodump', "--uri", MONGO_CONN_URL, "-o", "../data/data", "--authenticationDatabase", "admin"])
+    process1 = subprocess.Popen(['mongodump', "--uri", MONGO_DUMP_URI, "-o", "../data/data", "--authenticationDatabase", "admin"])
     process1.wait(90)
     # 7zip archive mongodumps w/ password
     process2 = subprocess.Popen(['7z', "a", "../data/data.7z", "../data/data", f"-p{DB_ARCHIVE_KEY}", "-mhe", "-sdel"])
@@ -2410,9 +2410,10 @@ def queryDB(db="new", collection="prices", pipeline=None, filterObject=None, sto
 def getCollectionFeatureCounts(db='new', collection='prices'):
     # Helper for Counting Features in Documetn Collection
     # REQ : os, pprint, pymongo
-    uri = os.environ.get("MONGO_CONN_URL")
+    uri = MONGO_CONN_URL
     client = MongoClient(uri)
     cursor = client[db]
+    collectionsList = cursor.list_collection_names()
     res = cursor[collection].aggregate(pipeline=[
         {'$project': {'features': {"$objectToArray": "$$ROOT"}}},
         {'$unwind': {'path': '$features', 'preserveNullAndEmptyArrays': False}},
@@ -2428,7 +2429,7 @@ def getCollectionFeatureCounts(db='new', collection='prices'):
 def getCollectionFeatureTypes(db='new', collection='items', feature='upc'):
     # DB helper for getting feature types from command line
     # REQ : os, pprint, pymongo
-    uri = os.environ.get("MONGO_CONN_URL")
+    uri = MONGO_CONN_URL
     client = MongoClient(uri)
     cursor = client[db]
     res = cursor[collection].aggregate(pipeline=[
@@ -2510,9 +2511,6 @@ def findAndInsertExtraPromotions(head):
     
     return None
 
-
-# findAndInsertExtraPromotions("./requests/server/collections/kroger/digital/")
-# findAndInsertExtraPromotions("./requests/server/collections/kroger/cashback/")
-# createDecompositions('./requests/server/collections/kroger', wantedPaths=["digital", "cashback"], additionalPaths=[])
-# backupDatabase()
-createDBSummaries('new')
+backupDatabase()
+createDBSummaries()
+getCollectionFeatureCounts(collection="items")

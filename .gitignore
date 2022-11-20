@@ -120,3 +120,4 @@ node_modules/
 .npmrc
 *.cfg
 *.gpg
+example_*.py

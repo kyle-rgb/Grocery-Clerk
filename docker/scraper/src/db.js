@@ -1,7 +1,8 @@
 const { MongoClient, ObjectId } = require("mongodb")
 const { Command } = require("commander");
 require("dotenv").config()
-const {setTimeout} = require("timers/promises")
+const json_summary = require("json-summary");
+var fs = require('fs')
 
 function cleanup(object){
   Object.entries(object).forEach(([k, v])=>{
@@ -101,16 +102,37 @@ async function insertRun({functionName, collection, executor, args=undefined, pu
   console.log(`id=${result}`)
   return null
 }
-const program = new Command();
 
-async function createSampleCommand(args){
-  console.log(args)
-  console.log("starting node timer")  
-  res = await setTimeout(5000, 'done');
-  console.log("resolved with ", res)
+async function summarizeCollections(dbName){
+  /**
+   * 
+  */
+  const client = new MongoClient(process.env.MONGO_CONN_URL);
+  await client.connect();
+  console.log("Connected to Server")
+  const db = client.db(dbName);
+  let resultingDocument = {}; 
+  let collections = db.listCollections({}, {nameOnly: true})
+  // collections = await collections
+  for await (let collection of collections){
+    console.log(`starting ${collection.name}.....`)
+    results = db.collection(collection.name).find({});
+    results = await results.toArray(); 
+    //results = cleanup(results)
+    resultingDocument[collection.name] = json_summary.summarize(results, {arraySampleCount: results.length < 5000 ? results.length : 5000})
+    console.log(`finished ${collection.name}.....`)
+  }
+
+  fs.writeFileSync("../../data/summary.json", JSON.stringify(resultingDocument, null, 3))
+  await client.close()
   return null
 }
 
+
+
+
+
+const program = new Command();
 
 program
     .command("insert")
@@ -137,7 +159,8 @@ program
     .option("-d, --data [data]", "data to pass", {})
     .action(async (options)=> {
       // await createSampleCommand(options)
-      console.log(cleanup(JSON.parse(options.data)))
+      // console.log(cleanup(JSON.parse(options.data)))
+      await summarizeCollections("new")
       return 0
     })
 program.parse();

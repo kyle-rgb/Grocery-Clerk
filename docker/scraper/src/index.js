@@ -159,10 +159,10 @@ async function setUpBrowser(task) {
     if (errorVisible){
       // force refresh to allow access if alert modal appears when accessing drop down
       await page.$eval("#global-message-modal button.global-modal__close-button", (el)=>el.click())
-      await page.waitForNetworkIdle({idleTime: 2000})
+      await page.waitForTimeout(8000)
       await page.reload();
       // set internal wait;
-      await page.waitForNetworkIdle({idleTime: 4000})
+      await page.waitForTimeout(8000)
       return true;
     }
     return false;
@@ -193,7 +193,7 @@ async function setUpBrowser(task) {
           var wantedModality = "PICKUP";
           var wantedAddress = "3559 Chamblee Tucker Rd"; // "4357 Lawrenceville Hwy"
           await page.goto("https://www.kroger.com")
-          await page.waitForTimeout(5500)// await page.waitForNetworkIdle({idleTime: 2200})
+          await page.waitForTimeout(5500)
           let introModals = await page.$$("button.kds-DismissalButton.kds-Modal-closeButton")
           if (introModals){
             for (let modal of introModals){
@@ -236,7 +236,7 @@ async function setUpBrowser(task) {
           const USERNAME_KROGER = process.env.USERNAME_KROGER;
           const PASSWORD_KROGER = process.env.PASSWORD_KROGER;
           await page.goto("https://www.kroger.com");
-          await page.waitForNetworkIdle({idleTime: 2000});
+          await page.waitForTimeout(10000)
           let introModals = await page.$$("button.kds-DismissalButton.kds-Modal-closeButton")
           if (introModals){
             for (let modal of introModals){
@@ -388,7 +388,7 @@ async function setUpBrowser(task) {
           });
           await targetStoreModal.click();
           // allow time for mapbox requests to complete & so mapbox comes into focus
-          await page.waitForNetworkIdle({idleTime: 4000})
+          await page.waitForTimeout(10000)
             await page.keyboard.press("Enter");
             page.on("response", async (response)=> {
               if (Object.keys(passDownArgs).length<1 && response.url().match(locationIdRegex)){
@@ -397,7 +397,7 @@ async function setUpBrowser(task) {
             })
             
           }
-          await page.waitForNetworkIdle({idleTime: 15500})
+          await page.waitForTimeout(15500)
         break;
       }  
       case "publixPromotions": {
@@ -432,7 +432,7 @@ async function setUpBrowser(task) {
       ])
       await 
       // wait for reload
-      await page.waitForNetworkIdle({idleTime: 4000})
+      await page.waitForTimeout(12000)
       // navigate to https://www.publix.com/savings/all-deals
       break;
       }
@@ -488,9 +488,7 @@ async function setUpBrowser(task) {
           let codeInput = await frameCoupons.waitForSelector("code-input")
           await codeInput.type(parsedVerificationCode, {delay: 200})
           // will send code typeFinish on completed 
-          await page.waitForNetworkIdle({
-            idleTime: 5500
-          })
+          await page.waitForTimeout(12000)
         }
         
         if (wantedAddress){
@@ -518,7 +516,7 @@ async function setUpBrowser(task) {
           await wantedStore.$eval("div.branch-info-collapse.is-iframe.is-open button", (el)=>el.click())
           var finalizeNewStore = await frameCoupons.waitForSelector("app-active-branch button.modal-btn.default")
           await finalizeNewStore.click()
-          await frameCoupons.waitForNetworkIdle({idleTime: 3000})
+          await frameCoupons.waitForTimeout(13000)
         }
         break;
       }
@@ -528,7 +526,7 @@ async function setUpBrowser(task) {
         var wasError, step = 0, tries = 0;
         // provide break points for evaluating existance of error modal at different steps of the setup procedure. If ever error, restart process with known workaround.        
         // navigate to homepage : 
-        await page.goto("https://www.dollargeneral.com/dgpickup")
+        await page.goto("https://www.dollargeneral.com/deals/weekly-ads")
         await page.waitForTimeout(12000)
         do {
           if (step===0){
@@ -578,7 +576,7 @@ async function setUpBrowser(task) {
         var wasError, step = 0, tries = 0;
         // provide break points for evaluating existance of error modal at different steps of the setup procedure. If ever error, restart process with known workaround.        
         // navigate to homepage : 
-        await page.goto("https://www.dollargeneral.com/dgpickup")
+        await page.goto("https://www.dollargeneral.com/deals/weekly-ads")
         await page.waitForTimeout(12000)
         do {
           if (step===0){
@@ -750,7 +748,9 @@ async function setUpBrowser(task) {
   }
   console.log("Success!") 
 } catch (e) {
+    console.log(e.stack)
     console.log(e)
+    throw new Error("startup error ")
   }
   // will pass down location ids where applicable and browser, page and run ObjectId  
   passDownArgs.browser = browser
@@ -786,7 +786,7 @@ async function getKrogerTrips({ page }){
     page.waitForNavigation({waitUntil: "load"}),
     page.$eval("#SignIn-submitButton", (el) => el.click())
   ])
-  await page.waitForNetworkIdle({idleTime: 4000})
+  await page.waitForTimeout(8000)
   
   const nextButton = async () => {
     let isNext = await page.$eval("button.kds-Pagination-next", (el)=>!el.disabled);
@@ -805,13 +805,13 @@ async function getKrogerTrips({ page }){
     // click to next page
     await element.click();
     // await product card render, images of items purchased to be rendered 
-    await page.waitForNetworkIdle({idleTime: 8000})
+    await page.waitForTimeout(14000)
     await page.waitForSelector("div[aria-label='Purchase History Order']");
     element = await nextButton();
     iterations++
     console.log(element, iterations, ' ', (Date.now()-start)/1000, ' seconds')
   }
-  await page.waitForNetworkIdle({idleTime: 5500});
+  await page.waitForTimeout(9000);
   await wrapFile(fileName);
   console.log("file finished : ", fileName);
   console.log("exiting....")
@@ -1011,9 +1011,15 @@ async function getKrogerSpecialPromotions({ page }) {
         var loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
         while (loadMoreButton){
           await loadMoreButton.click();
-          await page.waitForResponse(async (response)=> response.url().match(specialPromoRegex)!==null, {timeout: 20000})
-          await page.waitForTimeout(8000)
-          loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
+          let loadMoreResponse = await page.waitForResponse(async (response)=> response.url().match(specialPromoRegex)!==null)
+          console.log(loadMoreResponse, loadMoreResponse.ok())
+          if (loadMoreResponse.ok()){
+            await page.waitForTimeout(8000)
+            loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
+          } else {
+            throw new Error("response not logged...")
+          }
+          
         };
         console.log("finished category : ", page.url().match(/pl\/(.+?)\//))
 
@@ -1242,7 +1248,7 @@ async function getDollarGeneralPromotions({ page }){
   while (loadMoreButton!==null){
     await loadMoreButton.hover();
     await loadMoreButton.click(); 
-    await page.waitForNetworkIdle({idleTime: 3000, timeout: 15000});
+    await page.waitForTimeout(12000)
     loadMoreButton = await page.$("button[class='button coupons-results__load-more-button button--black']")
   }
   // start back at top of the page ; 
@@ -1318,7 +1324,7 @@ async function getDollarGeneralItems({ page }){
   })
   // go to sale page.
   await page.goto("https://www.dollargeneral.com/c/on-sale");
-  await page.waitForNetworkIdle({idleTime: 3600})
+  await page.waitForTimeout(13000)
   let button = await page.$("button[data-target='pagination-right-arrow']") ; 
   let disabled = await button.getProperty("disabled").then((jsHandle)=>jsHandle.jsonValue())
   console.log(button, disabled)
