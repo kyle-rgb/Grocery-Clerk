@@ -2422,6 +2422,8 @@ def getCollectionFeatureCounts(db='new', collection='prices'):
         {'$sort': {'count': -1}}
     ])
     res = [x for x in res]
+    total_docs = res[0]['count']
+    list(map(lambda x: x.update({"pct": round((x["count"]/total_docs)*100, 3)}) , res))
     pprint(res)
     client.close()
     return None
@@ -2513,4 +2515,4 @@ def findAndInsertExtraPromotions(head):
 
 backupDatabase()
 createDBSummaries()
-getCollectionFeatureCounts(collection="items")
+# getCollectionFeatureCounts(collection="prices")

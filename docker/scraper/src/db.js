@@ -113,13 +113,12 @@ async function summarizeCollections(dbName){
   const db = client.db(dbName);
   let resultingDocument = {}; 
   let collections = db.listCollections({}, {nameOnly: true})
-  // collections = await collections
   for await (let collection of collections){
     console.log(`starting ${collection.name}.....`)
     results = db.collection(collection.name).find({});
-    results = await results.toArray(); 
-    //results = cleanup(results)
+    results = await results.toArray();
     resultingDocument[collection.name] = json_summary.summarize(results, {arraySampleCount: results.length < 5000 ? results.length : 5000})
+    resultingDocument[collection.name].items["0"]["items"] = Object.entries(resultingDocument[collection.name].items["0"]["items"]).sort((a, b)=> a.type > b.type).map(([k,v])=> {let o = {}; o[k]=v; return o});
     console.log(`finished ${collection.name}.....`)
   }
 
@@ -158,8 +157,6 @@ program
     .description("runs a sample command with a 5 second sleeper to test docker logs")
     .option("-d, --data [data]", "data to pass", {})
     .action(async (options)=> {
-      // await createSampleCommand(options)
-      // console.log(cleanup(JSON.parse(options.data)))
       await summarizeCollections("new")
       return 0
     })
