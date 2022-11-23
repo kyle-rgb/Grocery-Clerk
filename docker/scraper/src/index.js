@@ -338,7 +338,7 @@ async function setUpBrowser(task) {
         var instacartLocationId; 
         var wantedModality = availableModalities[0]; // @param?
         await page.goto("https://delivery.publix.com/store/publix/storefront")
-        await page.waitForNetworkIdle({idleTime: 4000})
+        await page.waitForTimeout(14000)
         // click pickup modal // defaults to delivery
         var modalityButtons =await page.$$("div[aria-label='service type'] > button");
         var modalityButton = await asyncFilter(modalityButtons, async (storeItem, index)=> {
@@ -349,7 +349,7 @@ async function setUpBrowser(task) {
         });
         // click pickup button && wait for refresh
         await Promise.all([
-          page.waitForNetworkIdle({idleTime:2000}),
+          page.waitForTimeout(13000),
           modalityButton.click()
         ]);
         // click on pickup location picker
@@ -945,7 +945,7 @@ async function getKrogerSpecialPromotions({ page }) {
   console.log("specialPromoLinks = ", specialPromoLinks)
   // will give sections of all special promotions (w/o tabs)
   // var specialPromoSectionLinks = await page.$$eval("div[class$='.sectionwrapper'] a.kds-ProminentLink", (nodes)=>nodes.map((n)=>n.href))
-  var specialPromoBubbleLinks = await page.$$eval("div[class$='.sectionwrapper'] a[title][tabindex]", (nodes)=>nodes.map((n)=>n.href))
+  var specialPromoBubbleLinks = await page.$$eval("div[class$='.imagenav'] a[title][tabindex]", (nodes)=>nodes.map((n)=>n.href))
   specialPromoLinks = specialPromoLinks.concat(specialPromoBubbleLinks)//.concat(specialPromoSectionLinks);
   
   console.log("specialPromoLinks = w/ bubbles =>", specialPromoLinks)
@@ -959,6 +959,7 @@ async function getKrogerSpecialPromotions({ page }) {
   // where specfic promotion is segmented by item categories. Goal is to process special promotions once we have links for all available special promotions
   // that redirect us to items search page. specialPromoNonBubble links require a few extra steps.
   console.log("specialPromoLinks >>", specialPromoLinks)
+  console.log("specialPromoNonBubbleLinks {links that need navigation to own promotions page} >>", specialPromoNonBubbleLinks)
   var reachedSearchPage = false; 
   page.on("response", async (response)=> {
     if (reachedSearchPage && response.url().match(specialPromoRegex)){

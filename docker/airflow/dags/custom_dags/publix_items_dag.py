@@ -22,7 +22,7 @@ with DAG(
     dag_id="publix_scrape_items",
     schedule_interval="0 0 * * 2",
     start_date=pendulum.datetime(2022, 10, 25, tz="UTC"),
-    dagrun_timeout=datetime.timedelta(minutes=60*6),
+    dagrun_timeout=datetime.timedelta(minutes=60*26),
     catchup=False,
     default_args=default_args,
     tags=["grocery", "GroceryClerk", "ETL", "python", "node", "mongodb", "docker"]

@@ -2,32 +2,32 @@
    "db": "new",
    "collections": 11,
    "views": 0,
-   "objects": 4211089,
-   "avgObjSize": 248.6282025860769,
-   "dataSize": 1046995489.0,
-   "storageSize": 211988480.0,
+   "objects": 4331344,
+   "avgObjSize": 247.98387613636783,
+   "dataSize": 1074103474.0,
+   "storageSize": 219062272.0,
    "indexes": 11,
-   "indexSize": 42246144.0,
-   "totalSize": 254234624.0,
+   "indexSize": 43474944.0,
+   "totalSize": 262537216.0,
    "scaleFactor": 1.0,
-   "fsUsedSize": 225128185856.0,
+   "fsUsedSize": 225705488384.0,
    "fsTotalSize": 239380459520.0,
    "ok": 1.0,
    "collectionStats": [
       {
          "ns": "new.items",
-         "size": 230615217,
-         "count": 166907,
-         "avgObjSize": 1381,
-         "storageSize": 59699200,
-         "freeStorageSize": 221184,
+         "size": 237137373,
+         "count": 173524,
+         "avgObjSize": 1366,
+         "storageSize": 63295488,
+         "freeStorageSize": 2060288,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 1552384,
-         "totalSize": 61251584,
+         "totalIndexSize": 1609728,
+         "totalSize": 64905216,
          "indexSizes": {
-            "_id_": 1552384
+            "_id_": 1609728
          },
          "scaleFactor": 1,
          "ok": 1.0
@@ -88,16 +88,16 @@
       },
       {
          "ns": "new.runs",
-         "size": 536741,
-         "count": 303,
-         "avgObjSize": 1771,
-         "storageSize": 241664,
-         "freeStorageSize": 90112,
+         "size": 640265,
+         "count": 320,
+         "avgObjSize": 2000,
+         "storageSize": 221184,
+         "freeStorageSize": 45056,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
          "totalIndexSize": 45056,
-         "totalSize": 286720,
+         "totalSize": 266240,
          "indexSizes": {
             "_id_": 45056
          },
@@ -124,18 +124,18 @@
       },
       {
          "ns": "new.inventories",
-         "size": 254008586,
-         "count": 1669005,
+         "size": 262613926,
+         "count": 1725539,
          "avgObjSize": 152,
-         "storageSize": 39264256,
+         "storageSize": 40828928,
          "freeStorageSize": 81920,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 16646144,
-         "totalSize": 55910400,
+         "totalIndexSize": 17235968,
+         "totalSize": 58064896,
          "indexSizes": {
-            "_id_": 16646144
+            "_id_": 17235968
          },
          "scaleFactor": 1,
          "ok": 1.0
@@ -159,18 +159,18 @@
       },
       {
          "ns": "new.prices",
-         "size": 486218087,
-         "count": 2328532,
+         "size": 497679491,
+         "count": 2385264,
          "avgObjSize": 208,
-         "storageSize": 84434944,
-         "freeStorageSize": 94208,
+         "storageSize": 86253568,
+         "freeStorageSize": 86016,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 23334912,
-         "totalSize": 107769856,
+         "totalIndexSize": 23924736,
+         "totalSize": 110178304,
          "indexSizes": {
-            "_id_": 23334912
+            "_id_": 23924736
          },
          "scaleFactor": 1,
          "ok": 1.0
@@ -195,18 +195,18 @@
       },
       {
          "ns": "new.promotions",
-         "size": 35218268,
-         "count": 41540,
-         "avgObjSize": 847,
-         "storageSize": 11747328,
-         "freeStorageSize": 159744,
+         "size": 35633829,
+         "count": 41895,
+         "avgObjSize": 850,
+         "storageSize": 11862016,
+         "freeStorageSize": 167936,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 425984,
-         "totalSize": 12173312,
+         "totalIndexSize": 417792,
+         "totalSize": 12279808,
          "indexSizes": {
-            "_id_": 425984
+            "_id_": 417792
          },
          "scaleFactor": 1,
          "ok": 1.0

@@ -45,11 +45,11 @@ with DAG(
         connections = load_connections_dict("/run/secrets/secrets-connections.json")
         os.environ["MONGO_CONN_URL"] = connections["MONGO_CONN_URL"].get_uri()
 
-        # tempFiles = [os.path.join(folder, file) for folder, __, files in os.walk("/tmp/archive/.venv_files/collections/kroger/promotions/") for file in files]
-        # if len(tempFiles)==0:
-        #     raise ValueError("/tmp/archive/.venv_files is empty")
-        # for tempFile in tempFiles:
-        #     deconstructKrogerFile(tempFile)
+        tempFiles = [os.path.join(folder, file) for folder, __, files in os.walk("/tmp/archive/.venv_files/collections/kroger/promotions/") for file in files]
+        if len(tempFiles)==0:
+            raise ValueError("/tmp/archive/.venv_files is empty")
+        for tempFile in tempFiles:
+            deconstructKrogerFile(tempFile)
 
         print("successfully transformed promotions files in python venv")
         shutil.rmtree("/tmp/archive/.venv_files/collections")
