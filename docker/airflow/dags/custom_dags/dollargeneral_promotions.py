@@ -21,7 +21,7 @@ with DAG(
     dag_id="dollar_general_scrape_promotions",
     schedule_interval="0 0 * * 6", # runs every saturday, the last turnover date before next publicized promotion date (as given by their weekly ads)
     start_date=pendulum.datetime(2022, 10, 25, tz="UTC"),
-    dagrun_timeout=datetime.timedelta(minutes=6*60),
+    dagrun_timeout=datetime.timedelta(minutes=26*60),
     catchup=False,
     default_args=default_args,
     tags=["grocery", "GroceryClerk", "ETL", "python", "node", "mongodb", "docker"]
