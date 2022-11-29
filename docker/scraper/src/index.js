@@ -982,6 +982,9 @@ async function getKrogerSpecialPromotions({ page }) {
       await page.goto(shopAllLink);
       // get all categories in departments dropdown then proceed with waiting for and getting load more button
       await page.waitForTimeout(10000);
+      await page.goto(shopAllLink);
+      // get all categories in departments dropdown then proceed with waiting for and getting load more button
+      await page.waitForTimeout(15000);
       let departmentFilter = await page.waitForSelector("span[aria-label='Open the Departments filter']")
       await departmentFilter.click(); // will change upon click
       // get show all categories button
@@ -1046,7 +1049,13 @@ async function getKrogerSpecialPromotions({ page }) {
 
   for (let link of specialPromoLinks){
     await page.goto(link);
-    await page.waitForTimeout(6500);
+    await page.waitForTimeout(13500);
+    // test to see if file exists
+    if (!fs.existsSync(linkFileName)){
+      await page.goto(link)
+      await page.waitForTimeout(17500)
+    }
+
     // find see more button (will not appear there are no more items)
     var loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
     while (loadMoreButton){
