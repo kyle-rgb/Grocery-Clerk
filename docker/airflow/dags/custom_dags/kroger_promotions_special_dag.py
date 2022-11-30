@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 default_args = {
     "chain": "kroger",
     "target_data": "special",
-    "docker_name": "scraper_kroger_promotions_special"
+    "docker_name": "scraper_kroger_promotions_special",
 }
 
 with DAG(
@@ -29,7 +29,8 @@ with DAG(
 ) as dag:
     # [START kroger_operator_transform_file]
     @task.virtualenv(
-        task_id="virtualenv_transform_python", requirements=["pymongo==3.11.0"], system_site_packages=True
+        task_id="virtualenv_transform_python", requirements=["pymongo==3.11.0"], system_site_packages=True,
+        email = ["kylel9815@gmail.com"], email_on_failure=True
     )
     def transformData():
         """

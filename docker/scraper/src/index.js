@@ -982,13 +982,17 @@ async function getKrogerSpecialPromotions({ page }) {
       await page.goto(shopAllLink);
       // get all categories in departments dropdown then proceed with waiting for and getting load more button
       await page.waitForTimeout(10000);
-      await page.goto(shopAllLink);
-      // get all categories in departments dropdown then proceed with waiting for and getting load more button
-      await page.waitForTimeout(15000);
-      let departmentFilter = await page.waitForSelector("span[aria-label='Open the Departments filter']")
+      let departmentFilter = await page.$("span[aria-label='Open the Departments filter']")
+      if (departmentFilter===null){
+        await page.goto(shopAllLink);
+        // get all categories in departments dropdown then proceed with waiting for and getting load more button
+        await page.waitForTimeout(15000);
+        departmentFilter = await page.$("span[aria-label='Open the Departments filter']")
+      }
       await departmentFilter.click(); // will change upon click
+      await page.waitForTimeout(8800)
       // get show all categories button
-      let loadAllCategoriesButton = await page.waitForSelector("button[data-test='sliced-filters-show-more-button']");
+      let loadAllCategoriesButton = await page.$("button[data-test='sliced-filters-show-more-button']");
       await loadAllCategoriesButton.click();
       await page.waitForSelector("button.x-filter.x-sliced-filters__button.x-sliced-filters__button--show-less")
       let categoryFilters = await page.$$("ul.x-staggering-transition-group.x-staggered-fade-and-slide.x-list.x-filters > li > div > div > label > input")
@@ -1047,28 +1051,39 @@ async function getKrogerSpecialPromotions({ page }) {
   */
   console.log("getting remaining special promo links ...> ", specialPromoLinks)
 
-  for (let link of specialPromoLinks){
+  for (let i = 0 ; i < specialPromoLinks.length ; i++ ){
+    let link = specialPromoLinks[i]
+    let dirName = link.match(/keyword=(.+?)\&/)[1]
+    let linkFileName = path+dirName+"/"+fileName 
     await page.goto(link);
     await page.waitForTimeout(13500);
-    // test to see if file exists
-    if (!fs.existsSync(linkFileName)){
-      await page.goto(link)
-      await page.waitForTimeout(17500)
-    }
+    try {
+      // test to see if file exists
+      if (!fs.existsSync(linkFileName)){
+        await page.goto(link)
+        await page.waitForTimeout(17500)
+      }
 
-    // find see more button (will not appear there are no more items)
-    var loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
-    while (loadMoreButton){
-      await loadMoreButton.click();
-      await page.waitForResponse(async (response)=> response.url().match(specialPromoRegex)!==null, {timeout: 20000})
-      await page.waitForTimeout(6500)
-      loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
-    };
-    let dirName = page.url().match(/keyword=(.+?)\&/)[1]
-    let linkFileName = path+dirName+"/"+fileName 
-    await wrapFile(linkFileName)
-    console.log("finished ", linkFileName)
-    console.log("finished link : ", link)
+      // find see more button (will not appear there are no more items)
+      var loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
+      let loadPage = 0
+      while (loadMoreButton){
+        await loadMoreButton.click();
+        await page.waitForResponse(async (response)=> response.url().match(specialPromoRegex)!==null, {timeout: 20000})
+        await page.waitForTimeout(6500)
+        loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
+        console.log(`for ${page.url()} @ load iteration ${loadPage}`)
+        loadPage++;
+      };
+      await page.waitForTimeout(20000)
+      await wrapFile(linkFileName)
+      console.log("finished ", linkFileName)
+      console.log("finished link : ", link)
+    } catch (err){
+      console.log(err);
+      console.log("restarting iteration for ", link)
+      i--
+    }
     await page.waitForTimeout(9000)
   }
   page.removeAllListeners("response")
