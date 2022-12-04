@@ -63,7 +63,7 @@ configs = {
             }
         }
     },
-    "familyDollar": {
+    "family-dollar": {
         "items": {
             "dag_vars": {
                 "schedule_interval": "0 0 * * 6",
@@ -86,7 +86,7 @@ configs = {
             }
         }
     },
-    "dollarGeneral": {
+    "dollar-general": {
         "items": {
             "dag_vars": {
                 "schedule_interval": "0 0 * * 6",
@@ -102,7 +102,7 @@ configs = {
             }
         }
     },
-    "foodDepot": {
+    "food-depot": {
         "items": {
             "dag_vars": {
                 "schedule_interval": "0 0 * * 0",
@@ -144,13 +144,13 @@ for chain, dag_types in configs.items():
                 
                 email = load_variables("/run/secrets/secrets-vars.json")["EMAIL"]
                 client = docker.from_env()
-                if chain=="foodDepot" and target_data=="promotions":
+                if chain=="food-depot" and target_data=="promotions":
                     extra_ports = {"5000/tcp": "5000"} # only use case for temporary space for spin up server in food depot promotions confirmation via iphone shortcut
                 else:
                     extra_ports = {} 
                 container = client.containers.run("docker-scraper:latest", working_dir='/app', detach=True, name=docker_name,
                         ports={
-                            "5900/tcp": None # mapping for xvnc 
+                            "5900/tcp": None, # mapping for xvnc 
                             **extra_ports  
                         },
                         environment={"GPG_TTY": "/dev/pts/0", "DISPLAY": ":1", "XVFB_RESOLUTION": "1920x1080x16", "EMAIL": email},
@@ -251,8 +251,8 @@ for chain, dag_types in configs.items():
                 )
                 output = output.decode("ascii")
                 print(output)
-                if "error" in output:
-                    return 1
+                if code != 0:
+                    raise ValueError("return code from container was not null : ", code)
                 else :
                     return 0
 
@@ -320,7 +320,7 @@ for chain, dag_types in configs.items():
 
                 container = client.containers.get(docker_name)
                 no_space_path = chain.replace("-", "").lower()
-                baseCmd = f"node ./src/transform.js compress --path /app/tmp/collections/{no_space_path}"
+                baseCmd = f"node ./src/transform.js compress --path /app/tmp/collections/{no_space_path} --name {docker_name}"
                 print("executing $ ", baseCmd)
                 code, output = container.exec_run(cmd=baseCmd,
                     user="pptruser", environment={"EMAIL": email},
@@ -340,7 +340,7 @@ for chain, dag_types in configs.items():
                     <h4>{{params.docker_name}}</h4>   
             """, params=kwargs["default_args"])
 
-            docker_cp_bash = BashOperator(task_id="bash_docker_cp", bash_command="docker cp {{docker_name}}:/app/tmp/collections /tmp/archive/")
+            docker_cp_bash = BashOperator(task_id="bash_docker_cp", bash_command=f"docker cp {kwargs['default_args']['docker_name']}:/app/tmp/collections /tmp/archive/")
 
             # [START main_flow_non_kroger]
             if chain != "kroger":
