@@ -138,7 +138,7 @@ for chain, dag_types in configs.items():
         )
         def dynamic_generated_dag():
             @task(task_id="start_container")
-            def start_container(docker_name=None):
+            def start_container(docker_name=None, chain=None, target_data=None):
                 import docker, shutil
                 from airflow.secrets.local_filesystem import load_variables
                 
@@ -296,14 +296,14 @@ for chain, dag_types in configs.items():
                 connections = load_connections_dict("/run/secrets/secrets-connections.json")
                 os.environ["MONGO_CONN_URL"] = connections["MONGO_CONN_URL"].get_uri()
 
-                tempFiles = [os.path.join(folder, file) for folder, __, files in os.walk(f"/tmp/archive/.venv_files/kroger/promotions/{target_data}/") for file in files]
+                tempFiles = [os.path.join(folder, file) for folder, __, files in os.walk(f"/tmp/archive/.venv_files/collections/kroger/promotions/{target_data}/") for file in files]
                 if len(tempFiles)==0:
                     raise ValueError("/tmp/archive/.venv_files is empty")
                 for tempFile in tempFiles:
                     deconstructKrogerFile(tempFile)
 
                 print("successfully transformed promotions files in python venv")
-                shutil.rmtree("/tmp/archive/.venv_files/kroger")
+                shutil.rmtree("/tmp/archive/.venv_files/collections/kroger")
                 print("cleaned up tmp files in archive volume")
 
 
