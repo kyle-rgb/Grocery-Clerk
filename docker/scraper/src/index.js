@@ -1017,16 +1017,21 @@ async function getKrogerSpecialPromotions({ page }) {
         await page.waitForTimeout(12500)
         // check for load button
         var loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
+        console.log('starting load loop for :', page.url())
         while (loadMoreButton){
           await loadMoreButton.click();
-          let loadMoreResponse = await page.waitForResponse(async (response)=> response.url().match(specialPromoRegex)!==null)
-          console.log(loadMoreResponse, loadMoreResponse.ok())
-          if (loadMoreResponse.ok()){
-            await page.waitForTimeout(8000)
-            loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
-          } else {
-            throw new Error("response not logged...")
-          }
+          try{
+            let loadMoreResponse = await page.waitForResponse(async (response)=> response.url().match(specialPromoRegex)!==null, {timeout: 20000})
+            if (loadMoreResponse.ok()){
+              console.log(loadMoreResponse.url(), loadMoreResponse.ok())
+              await page.waitForTimeout(6000)
+            }
+          } catch (err){
+            continue; 
+          } 
+          await page.waitForTimeout(12000)
+          loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
+
           
         };
         console.log("finished category : ", page.url().match(/pl\/(.+?)\//))
@@ -1224,7 +1229,7 @@ async function getPublixPromotions({ page }){
     return ; 
   })
   await page.goto("https://www.publix.com/savings/all-deals");
-  await page.waitForNetworkIdle({idleTime: 8000});
+  await page.waitForTimeout(12000);
   await wrapFile(fileName);
   console.log("file finished : ", fileName) ;
   await page.removeAllListeners('response')

@@ -249,7 +249,10 @@ for chain, dag_types in configs.items():
                 code, output = container.exec_run(f"node ./src/index.js scrape --{chain} {target_data}", workdir="/app", user="pptruser",
                     environment=var_dict
                 )
-                output = output.decode("ascii")
+                try:
+                    output = output.decode("ascii")
+                except UnicodeDecodeError:
+                    output = output.decode("ascii", errors="replace") 
                 print(output)
                 if code != 0:
                     raise ValueError("return code from container was not null : ", code)
