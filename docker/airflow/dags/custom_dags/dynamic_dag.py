@@ -142,7 +142,13 @@ for chain, dag_types in configs.items():
                 import docker, shutil
                 from airflow.secrets.local_filesystem import load_variables
                 
-                email = load_variables("/run/secrets/secrets-vars.json")["EMAIL"]
+                var_dict = load_variables("/run/secrets/secrets-vars.json")
+                email = var_dict["EMAIL"]
+                if chain == 'kroger' and target_data == 'trips':
+                    extra_env = {"USERNAME_KROGER": var_dict["KROGER_USERNAME"], "PASSWORD_KROGER": var_dict["KROGER_PASSWORD"]}
+                else:
+                    extra_env = {}
+
                 client = docker.from_env()
                 if chain=="food-depot" and target_data=="promotions":
                     extra_ports = {"5000/tcp": "5000"} # only use case for temporary space for spin up server in food depot promotions confirmation via iphone shortcut
@@ -153,7 +159,7 @@ for chain, dag_types in configs.items():
                             "5900/tcp": None, # mapping for xvnc 
                             **extra_ports  
                         },
-                        environment={"GPG_TTY": "/dev/pts/0", "DISPLAY": ":1", "XVFB_RESOLUTION": "1920x1080x16", "EMAIL": email},
+                        environment={"GPG_TTY": "/dev/pts/0", "DISPLAY": ":1", "XVFB_RESOLUTION": "1920x1080x16", "EMAIL": email, **extra_env},
                         init=True, stdin_open=True,
                         privileged =True
                 )
@@ -187,21 +193,22 @@ for chain, dag_types in configs.items():
 
                 connections = load_connections_dict("/run/secrets/secrets-connections.json")
 
-                client = docker.from_env()
-                container = client.containers.get(docker_name)
-                baseCmd = "node ./src/db.js insert -c runs -e airflow"
-                functionName = pipeline_action + chain.title() + target_data.title() 
-                description = description or pipeline_action +" "+ chain.title() + target_data.title() 
-                args["pre_execute_stats"] = container.stats(stream=False) 
-                baseCmd += f" -f {functionName} -d {description} --args '{json.dumps(args)}' " 
-                print("executing $ ", baseCmd)
-                code, output = container.exec_run(cmd=baseCmd,
-                    user="pptruser", environment={"MONGO_CONN_URL": connections["MONGO_CONN_URL"].get_uri()},
-                    workdir="/app"
-                )
-                output = output.decode("ascii")
-                print(output)
-                output = re.findall(r"id=([a-f0-9]+)", output)[0]
+                # client = docker.from_env()
+                # container = client.containers.get(docker_name)
+                # baseCmd = "node ./src/db.js insert -c runs -e airflow"
+                # functionName = pipeline_action + chain.title() + target_data.title() 
+                # description = description or pipeline_action +" "+ chain.title() + target_data.title() 
+                # args["pre_execute_stats"] = container.stats(stream=False) 
+                # baseCmd += f" -f {functionName} -d {description} --args '{json.dumps(args)}' " 
+                # print("executing $ ", baseCmd)
+                # code, output = container.exec_run(cmd=baseCmd,
+                #     user="pptruser", environment={"MONGO_CONN_URL": connections["MONGO_CONN_URL"].get_uri()},
+                #     workdir="/app"
+                # )
+                # output = output.decode("ascii")
+                # print(output)
+                # output = re.findall(r"id=([a-f0-9]+)", output)[0]
+                output = "63901212693fe791331b70d5"
                 ti.xcom_push(key="run_object_id", value=output)
                 return 0
 
@@ -299,7 +306,7 @@ for chain, dag_types in configs.items():
                 connections = load_connections_dict("/run/secrets/secrets-connections.json")
                 os.environ["MONGO_CONN_URL"] = connections["MONGO_CONN_URL"].get_uri()
 
-                tempFiles = [os.path.join(folder, file) for folder, __, files in os.walk(f"/tmp/archive/.venv_files/collections/kroger/promotions/{target_data}/") for file in files]
+                tempFiles = [os.path.join(folder, file) for folder, __, files in os.walk("/tmp/archive/.venv_files/collections/kroger/") for file in files]
                 if len(tempFiles)==0:
                     raise ValueError("/tmp/archive/.venv_files is empty")
                 for tempFile in tempFiles:
@@ -351,6 +358,7 @@ for chain, dag_types in configs.items():
             else:
                 docker_cp_venv_files = BashOperator(task_id="bash_docker_cp_venv_files", bash_command=f"docker cp {f'scraper_{chain}_{target_data}'}:/app/tmp/collections /tmp/archive/.venv_files")
                 start_container() >> insertRun() >> scrapeData() >> updateRun(pipeline_action="transform", push=True)  >> docker_cp_venv_files >> transformDataVenv() >> updateRun(pipeline_action="archive", push=True) >> archiveData() >> docker_cp_bash >> updateRun(push=False)>> stopContainer() >> send_email
+                
             # [END main_flow_non_kroger]
 
         globals()[dag_id] = dynamic_generated_dag()

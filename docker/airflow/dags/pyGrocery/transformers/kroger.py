@@ -3,6 +3,27 @@ from pprint import pprint
 from pymongo import MongoClient
 import pytz
 
+def updateGasoline(data):
+    # Kroger Deconstruction Helper
+    # cleaner function for Kroger trip data
+    # Kroger Fuel Points (previously in price modifiers) now show up as duplicate entry of gasoline with a quantity of zero and a negative price paid to correspond to savings
+    # Must be run before deconstructions.
+    # Raises ZeroDivisionError on Calucations that use Quantity 
+
+    for trip_index, trip in enumerate(data):
+        for item_index, item in enumerate(trip.get('items')):
+            if item.get('quantity')==0:
+                if item_index==0:
+                    data[trip_index]['items'][item_index+1]['pricePaid'] = round(data[trip_index]['items'][item_index]['pricePaid']+data[trip_index]['items'][item_index]['pricePaid'], 2)
+                    data[trip_index]['items'][item_index+1]['totalSavings'] = round(data[trip_index]['items'][item_index]['totalSavings']+data[trip_index]['items'][item_index]['totalSavings'], 2)
+                    data[trip_index]['items'][item_index+1]['priceModifiers'].extend(data[trip_index]['items'][item_index]['priceModifiers'])
+                else:
+                    data[trip_index]['items'][item_index-1]['pricePaid'] = round(data[trip_index]['items'][item_index]['pricePaid']+data[trip_index]['items'][item_index-1]['pricePaid'], 2)
+                    data[trip_index]['items'][item_index-1]['totalSavings'] = round(data[trip_index]['items'][item_index]['totalSavings']+data[trip_index]['items'][item_index-1]['totalSavings'], 2)
+                    data[trip_index]['items'][item_index-1]['priceModifiers'].extend(data[trip_index]['items'][item_index]['priceModifiers'])
+                data[trip_index]['items'].pop(item_index)
+
+    return data
 
 def deconstructKrogerFile(filename):
     mytz=pytz.timezone('America/New_York')
