@@ -110,6 +110,7 @@ report_unittest.xml
 api_keys.*
 config/
 logs/
+logs.*
 docker/airflow/dags/pyGrocery/*.json
 scripts/requests/server/collections/
 collection.json
