@@ -963,6 +963,7 @@ async function getKrogerSpecialPromotions({ page }) {
   var reachedSearchPage = false; 
   page.on("response", async (response)=> {
     if (reachedSearchPage && response.url().match(specialPromoRegex)){
+      console.log("captured URL : ", response.url())
       let tempId = page.url().match(/keyword=(.+?)\&/)[1]
       let linkFileName = path+tempId+"/"+fileName 
       offset += await writeResponse(linkFileName, response, url=response.url(), offset)
@@ -1042,7 +1043,9 @@ async function getKrogerSpecialPromotions({ page }) {
       await wrapFile(linkFileName)
       console.log("finished ", linkFileName)
     }    
-  } 
+  } else {
+    reachedSearchPage = true
+  }
 
 
   /**
