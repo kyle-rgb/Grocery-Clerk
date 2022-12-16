@@ -1357,7 +1357,7 @@ async function getDollarGeneralItems({ page }){
   })
   // go to sale page.
   await page.goto("https://www.dollargeneral.com/c/on-sale");
-  await page.waitForTimeout(13000)
+  await page.waitForTimeout(23000)
   let button = await page.$("button[data-target='pagination-right-arrow']") ; 
   let disabled = await button.getProperty("disabled").then((jsHandle)=>jsHandle.jsonValue())
   console.log(button, disabled)

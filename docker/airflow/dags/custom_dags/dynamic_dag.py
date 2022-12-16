@@ -124,7 +124,7 @@ for chain, dag_types in configs.items():
 
     for target_data, setup_vars in dag_types.items():
         kwargs = setup_vars["dag_vars"]
-        kwargs["default_args"] = {"target_data": target_data, "chain": chain, "docker_name": f"scraper_{chain}_{target_data}"}
+        kwargs["default_args"] = {"target_data": target_data, "chain": chain, "docker_name": f"scraper_{chain}_{target_data}", "email_on_failure": True}
         kwargs["tags"] += ["grocery", "GroceryClerk", "ETL", "python", "node", "mongodb", "docker"]
     
         dag_id = f"dynamic_generated_dag_scrape_{chain}_{target_data}"
@@ -138,7 +138,7 @@ for chain, dag_types in configs.items():
         )
         def dynamic_generated_dag():
             @task(task_id="start_container")
-            def start_container(docker_name=None, chain=None, target_data=None):
+            def start_container(docker_name=None, chain=None, target_data=None, email_on_failure=None):
                 import docker, shutil
                 from airflow.secrets.local_filesystem import load_variables
                 
@@ -186,34 +186,33 @@ for chain, dag_types in configs.items():
                 return 0
                 
             @task(task_id="insert_run")
-            def insertRun(pipeline_action="scrape", description=None, args={}, docker_name=None, chain=None, target_data=None, ti=None):
+            def insertRun(pipeline_action="scrape", description=None, args={}, docker_name=None, chain=None, target_data=None, ti=None, email_on_failure=None):
                 import docker
                 from airflow.secrets.local_filesystem import load_connections_dict
                 import json, re
 
                 connections = load_connections_dict("/run/secrets/secrets-connections.json")
 
-                # client = docker.from_env()
-                # container = client.containers.get(docker_name)
-                # baseCmd = "node ./src/db.js insert -c runs -e airflow"
-                # functionName = pipeline_action + chain.title() + target_data.title() 
-                # description = description or pipeline_action +" "+ chain.title() + target_data.title() 
-                # args["pre_execute_stats"] = container.stats(stream=False) 
-                # baseCmd += f" -f {functionName} -d {description} --args '{json.dumps(args)}' " 
-                # print("executing $ ", baseCmd)
-                # code, output = container.exec_run(cmd=baseCmd,
-                #     user="pptruser", environment={"MONGO_CONN_URL": connections["MONGO_CONN_URL"].get_uri()},
-                #     workdir="/app"
-                # )
-                # output = output.decode("ascii")
-                # print(output)
-                # output = re.findall(r"id=([a-f0-9]+)", output)[0]
-                output = "63901212693fe791331b70d5"
+                client = docker.from_env()
+                container = client.containers.get(docker_name)
+                baseCmd = "node ./src/db.js insert -c runs -e airflow"
+                functionName = pipeline_action + chain.title() + target_data.title() 
+                description = description or pipeline_action +" "+ chain.title() + target_data.title() 
+                args["pre_execute_stats"] = container.stats(stream=False) 
+                baseCmd += f" -f {functionName} -d {description} --args '{json.dumps(args)}' " 
+                print("executing $ ", baseCmd)
+                code, output = container.exec_run(cmd=baseCmd,
+                    user="pptruser", environment={"MONGO_CONN_URL": connections["MONGO_CONN_URL"].get_uri()},
+                    workdir="/app"
+                )
+                output = output.decode("ascii")
+                print(output)
+                output = re.findall(r"id=([a-f0-9]+)", output)[0]
                 ti.xcom_push(key="run_object_id", value=output)
                 return 0
 
             @task(task_id="update_run")
-            def updateRun(pipeline_action="scrape", args={}, push=False, docker_name=None, description=None, chain=None, target_data=None, ti=None):
+            def updateRun(pipeline_action="scrape", args={}, push=False, docker_name=None, description=None, chain=None, target_data=None, ti=None, email_on_failure=None):
                 import docker
                 from airflow.secrets.local_filesystem import load_connections_dict
                 import json 
@@ -242,7 +241,7 @@ for chain, dag_types in configs.items():
                 return 0
 
             @task(task_id="scrape_dataset")
-            def scrapeData(chain=None, target_data=None, docker_name=None):
+            def scrapeData(chain=None, target_data=None, docker_name=None, email_on_failure=None):
                 import docker
                 from airflow.secrets.local_filesystem import load_variables
                 client = docker.from_env()
@@ -267,7 +266,7 @@ for chain, dag_types in configs.items():
                     return 0
 
             @task(task_id="transform_data_via_node")
-            def transformData(chain=None, target_data=None, docker_name=None):
+            def transformData(chain=None, target_data=None, docker_name=None, email_on_failure=None):
                 # legal values for chain = food-depot, family-dollar, aldi, publix, dollar-general
                 # legal values for target_data = items, instacartItems, promotions
                 import docker
@@ -292,7 +291,7 @@ for chain, dag_types in configs.items():
             @task.virtualenv(
                 task_id="transform_data_via_python_virtualenv", requirements=["pymongo==3.11.0"], system_site_packages=True
             )
-            def transformDataVenv(chain, target_data):
+            def transformDataVenv(chain, target_data, email_on_failure=None):
                 """
                     Task will be performed in a virtual environment that mirrors my own environment.
 
@@ -320,7 +319,7 @@ for chain, dag_types in configs.items():
                 return 0
 
             @task(task_id="archive_data")
-            def archiveData(chain=None, target_data=None, docker_name=None):
+            def archiveData(chain=None, target_data=None, docker_name=None, email_on_failure=None):
                 # legal values for chain = food-depot, family-dollar, aldi, publix, dollar-general
                 # legal values for target_data = items, instacartItems, promotions
                 import docker
