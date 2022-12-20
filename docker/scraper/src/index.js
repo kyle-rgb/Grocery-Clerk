@@ -954,7 +954,7 @@ async function getKrogerSpecialPromotions({ page }) {
   specialPromoLinks = specialPromoLinks.concat(specialPromoNonBubbleLinks.filter((link)=>link.match(/search\?/)))
   specialPromoLinks = Array.from(new Set(specialPromoLinks.filter((a)=>a.match(/\/search\?/))))
   // remove link that redirects to standard digital coupon page and adds special promotions
-  specialPromoNonBubbleLinks = specialPromoNonBubbleLinks.filter((href)=>href.match(/pr\/(?!weekly-digital-deals)/))
+  specialPromoNonBubbleLinks = specialPromoNonBubbleLinks.filter((href)=>href.match(/pr\/(?!weekly-digital-deals|5x-digital-coupon-event)/))
   // iff specialPromoNonBubbleLinks is not empty, it will only send you to that specific promotions page similar to all promotions page
   // where specfic promotion is segmented by item categories. Goal is to process special promotions once we have links for all available special promotions
   // that redirect us to items search page. specialPromoNonBubble links require a few extra steps.
