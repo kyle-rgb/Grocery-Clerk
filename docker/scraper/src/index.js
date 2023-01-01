@@ -1326,11 +1326,11 @@ async function getDollarGeneralPromotions({ page }){
     await page.waitForTimeout(5000);
     await wrapFile(fileName);
     console.log("file finished : ", fileName) ;
-    if (badRequests.length>0){
-      console.log(`Writing ${badRequests.length} to file ./temp.json.`)
-      let br = JSON.stringify(badRequests);
-      await fs.promises.writeFile("./temp.json", br)
-    }
+    // if (badRequests.length>0){
+    //   console.log(`Writing ${badRequests.length} to file ./temp.json.`)
+    //   let br = JSON.stringify(badRequests);
+    //   await fs.promises.writeFile("/app/tmp/temp.json", br)
+    // }
   await page.removeAllListeners('response')
   return null;
 }
