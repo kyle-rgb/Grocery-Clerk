@@ -660,7 +660,7 @@ async function setUpBrowser(task) {
         if (locationChangedModal){
           await locationChangedModal.click();
         }
-        await page.goto("https://www.familydollar.com/categories?N=categories.1%3ADepartment&No=0&Nr=product.active:1")
+        await page.goto("https://www.familydollar.com/categories")
         await page.waitForTimeout(8000)
         break;
       }
@@ -1419,7 +1419,7 @@ async function getFamilyDollarItems({ page }){
     */
     // set request interception on pa
     var offset = 0;
-    var wantedRequestRegex = /dollartree-cors\.groupbycloud\.com\/api/
+    var wantedRequestRegex = /(dollartree-cors\.groupbycloud\.com\/api|https:\/\/www\.familydollar\.com\/ccstoreui\/v1\/search)/
     let fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
     fileName = "/app/tmp/collections/familydollar/items/" + fileName; 
     page.on("response", async (res)=> {
@@ -1441,13 +1441,13 @@ async function getFamilyDollarItems({ page }){
     await Promise.all([
       selectDiv.press("Enter"),
       // wait for reload
-      page.waitForResponse(res=> res.url().includes("api/v1/search"), {timeout: 15000}), 
+      page.waitForResponse(res=> res.url().includes("search"), {timeout: 15000}), 
     ])
     console.log("wait")
     await page.waitForTimeout(10000)
 
-    let iterations = await page.$eval("span.category-count", (el)=>{
-      return +el.textContent.replaceAll(/(\(|\))/g, "")
+    let iterations = await page.$eval("div.occ-left-nav-items-count", (el)=>{
+      return +el.textContent.match(/\d+/)[0]
     })
     iterations = Math.floor(iterations/96) + 1;
     // wait for page reload
