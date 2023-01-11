@@ -434,10 +434,153 @@ function processInternalCoupons({target, parser, uuid}){
     return null
 }
 
+/**
+ * prices 
+    * {minimum_quantity, price, upc || id , {locationId, isPurchase, value}}
+    * d.minimum_quantity !== d.casepack ?
+    * {casepack, price, upc || id , {locationId, isPurchase, value}},
+    * d.sale_price && d.sale_price !== "0.00" ?
+    * *again if minimum quantity is not the same then add casepack
+    * {casepack, price, upc || id , {locationId, isPurchase, value}}
+ * 
+{
+    "DollarProductType.averageRating":
+    "DollarProductType.callCenterOnly":
+    "DollarProductType.casePackSize":,
+    "DollarProductType.color1":,
+    "DollarProductType.color2":,
+    "DollarProductType.color3":,
+    "DollarProductType.color4":,
+    "DollarProductType.dtdIndicator":,
+    "DollarProductType.madeInUSA":,
+    "DollarProductType.new":,
+    "DollarProductType.numberOrReviews":,
+    "DollarProductType.showOnWeb":,
+    "DollarProductType.splitCaseMultiple":,
+    "DollarProductType.x_minimumQuantityNumber":,
+    "parentCategory.displayName":,
+    "parentCategory.displayName":,
+    "product.BPAFree":,
+    "product.active":,
+    "product.assortmentByStyleColor":,
+    "product.averageRatingRounded":,
+    "product.baseUrl":,
+    "product.brand":,
+    "product.casePrice":,
+    "product.catalogId":,
+    "product.category":,
+    "product.clearance":,
+    "product.colors":,
+    "product.configurable":,
+    "product.creationDate":,
+    "product.dateAvailable":,
+    "product.daysAvailable":,
+    "product.depthDimension":,
+    "product.description":,
+    "product.catalogId":,
+    "product.diameterDimension":,
+    "product.displayName":,
+    "product.displayType":,
+    "product.finish":,
+    "product.fullImageURLs":,
+    "product.glutenFree":,
+    "product.heightDimension":,
+    "product.id":,
+    "product.largeImageURLs":,
+    "product.lengthDimension":,
+    "product.licensedProduct":,
+    "product.listPrice":,
+    "product.longDescription":,
+    "product.material":,
+    "product.mediumImageURLs":,
+    "product.minimumQuantity":,
+    "product.notForIndividualSale":,
+    "product.pattern":,
+    "product.priceRange":,
+    "product.primaryFullImageURL":,
+    "product.primaryImageAltText":,
+    "product.primaryImageTitle":,
+    "product.primaryLargeImageURL":,
+    "product.primaryMediumImageURL":,
+    "product.primarySmallImageURL":,
+    "product.primaryThumbImageURL":,
+    "product.productImagesMetadata":,
+    "product.repositoryId":,
+    "product.route":,
+    "product.salePrice":,
+    "product.scent":,
+    "product.seoTitle":,
+    "product.seoUrlSlug":,
+    "product.smallImageURLs":,
+    "product.smsb_availableInStoreOnly":,
+    "product.smsb_batterySize":,
+    "product.smsb_beddingSize":,
+    "product.smsb_beddingSizeBase":,
+    "product.smsb_combustible_string":,
+    "product.smsb_comesWithBatteries_string":,
+    "product.smsb_containsDairy_string":,
+    "product.smsb_containsEggs_string":,
+    "product.smsb_containsNuts_string":,
+    "product.smsb_containsSoy_string":,
+    "product.smsb_containsWheat_string":,
+    "product.smsb_fit":,
+    "product.smsb_fitBase":,
+    "product.smsb_flammable_string":,
+    "product.smsb_flavor":,
+    "product.smsb_flavorBase":,
+    "product.smsb_pet":,
+    "product.smsb_petBase":,
+    "product.smsb_requireBatteries_string":,
+    "product.smsb_sockSize":,
+    "product.smsb_sockSizeBase":,
+    "product.smsb_wineType":,
+    "product.smsb_wineVarietal":,
+    "product.sourceImageURLs":,
+    "product.splitCaseAvailable":,
+    "product.thumbImageURLs":,
+    "product.url":,
+    "product.volumnDimension":,
+    "product.weightDimension":,
+    "product.widthDimension":,
+    "product.x_apparelSizeBase":,
+    "product.x_averageRatingRoundedAndUp":,
+    "product.x_colorBase":,
+    "product.x_deals":,
+    "product.x_displayTypeBase":,
+    "product.x_finishBase":, 
+    "product.x_licensedProductBase":,
+    "product.x_materialBase":,
+    "product.x_patternBase":,
+    "product.x_scentBase":,
+    "product.x_unitBase":,
+    "record.collection":,
+    "record.id":,
+    "record.type":,
+    "record.urn":,
+    "sku.active":,
+    "sku.activePrice":,
+    "sku.availabilityStatus":,
+    "sku.baseUrl":,
+    "sku.color":,
+    "sku.creationDate":,
+    "sku.listPrice":,
+    "sku.listingId":,
+    "sku.listingOptionIndex":,
+    "sku.onSale":,
+    "sku.repositoryId":,
+    "sku.salePrice":,
+    "sku.size":,
+    "sku.styleProperty":,
+    "sku.stylePropertyValue":,
+    "sku.translations.repositoryId":,
+    "sku.url":
+ } 
+ */
+
 function processFamilyDollarItems({target, defaultLocation="2394"}){
     // need new for family dollar items => prices, items, promotions<-items 
     var newParser = {
-        combustible: {keep: true},
+        combustible: {keep: true}, 
         made_in_usa: {keep: true},
         flammable: {keep: true},
         microwave_safe: {keep: true},
@@ -450,7 +593,7 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
         flavor: {keep: true},
         wine_type: {keep:true},
         wine_varietal: {keep: true},
-        id: {keep: "true"},
+        id: {keep: true},
         description: {to: "romanceDescription", convert: function(x){return `<p>${x}</p>`}},
         minimum_quantity: {to: "minimumOrderQuantity"},
         categories: {to: "taxonomies", convert: function(x){
@@ -467,7 +610,49 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
         }},
         UPCS: {to: "upc"},
         canonical: {to: "link"}
-    }
+    };
+    let newParser2 = {
+        "product.microwaveSafe": {keep: true},
+        "product.BPAFree": {keep: true},
+        "product.dishwasherSafe": {keep: true},
+        "product.foodSafe": {keep: true},
+        "product.smsb_combustible_string": {keep: true}, 
+        "DollarProductType.madeInUSA": {keep: true},
+        "product.smsb_flammable_string": {keep: true},
+        "product.scent": {keep: true},
+        "product.smsb_flavor": {keep: true},
+        "product.repositoryId": {keep: true},
+        "product.longDescription": {to: "romanceDescription", convert: function(x){return `<p>${x}</p>`}},
+        "product.minimumQuantity": {to: "minimumOrderQuantity"},
+        "product.category": {to: "categories", convert: function(x){
+            x = x.filter((d)=>d !== 'Default Collection For Products' && d!=='Non-Navigable FD Collection');
+            return x;
+        }},
+        "product.route": {to: "link", convert: function (x){return "https://www.familydollar.com" + x}},
+        "sku.listPrice": {to: "salePrice"},
+        "sku.activePrice": {to: "salePrice"},
+        "product.x_unitprice": {to: "regPrice"},
+        "product.x_deals": {to: "saleType"},
+        "product.primaryFullImageURL": {to: "images", convert: function (x){
+            return [{main: true, perspective: 'front', url: x, size: "xlarge"}]
+        }},
+        "product.priceRange": {to: "priceRange"},
+        "product.displayName": {to: "description"},
+        "product.casePrice": {to: "casePrice"},
+        "product.brand": {to: "brand", convert: (x)=>{
+            return x.map((brand)=>{return{name:  brand.replaceAll(/&.+;/g, '')}})
+        }},
+        "DollarProductType.splitCaseMultiple": {to: "splitCaseMultiple"},
+        "DollarProductType.numberOfReviews": {to: "reviewCt"},
+        "DollarProductType.casePackSize": {to: "casePackSize"},
+        "DollarProductType.callCenterOnly": {to: "modalities", convert: (x)=>{
+            return x==='Y'? true : false;
+        }},
+        "DollarProductType.averageRating": {to: "reviewAvg"}
+    };
+
+
+
     !target.endsWith("/") ? target+="/" : 0 ; 
     let storeRegex = /publix|aldi|kroger|dollargeneral|familydollar|fooddepot/
     let targetHeirarchy = target.match(storeRegex)
@@ -565,9 +750,9 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
             } else if (nk.startsWith("weight")){
                 x["weight"] = x[nk]
                 delete x[nk];
-            } else if (nk.endsWith("_dimension")){ 
+            } else if (nk.endsWith("Dimension")){ 
                 let dimObj = {}
-                dimObj[nk.replace("_dimension", "")] = x[nk]
+                dimObj[nk.replace("Dimension", "")] = x[nk]
                 "dimensions" in x ? x["dimensions"] = {...x.dimensions, ...dimObj} : x["dimensions"] = dimObj;
                 delete x[nk];
             } else if (nk === "available_in_store_only" && x[nk]){
@@ -987,6 +1172,34 @@ program
     .option("--name <name>", "name to give gpg archive tar file")
     .action(async (options)=>{
         zipUp(options.path, options.name)
+    })
+
+program
+    .command("peek")
+    .description("Look at raw jsons generated by a website's api from gpg tar files and create summary files using json-summary")
+    .option("--input <path>", "input api file")
+    .option("--output <path>", "output summary file")
+    .action(async (options)=>{
+        const json = require("json-summary");
+        var data = fs.readFileSync(options.input); 
+        data = JSON.parse(data)
+        let baseItems = data.map((wholeQuery)=>
+            wholeQuery.resultsList.records.map((rec)=>{
+                let attr = rec.attributes;
+                let records = rec.records[0].attributes;
+                Object.entries(records).map(([k, v])=>{
+                    if (v.length === 1){
+                        records[k] = v[0]
+                    }
+                })
+                return {...attr, ...records}
+            })
+        );
+        var summary = json.summarize(baseItems);
+        summary = JSON.stringify(summary, null, 3)
+        fs.writeFileSync(options.output, summary);
+        console.log("wrote summary to ", options.output);
+        return null; 
     })
 
 program.parse();
