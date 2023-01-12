@@ -578,7 +578,15 @@ function processInternalCoupons({target, parser, uuid}){
  */
 
 function processFamilyDollarItems({target, defaultLocation="2394"}){
-    // need new for family dollar items => prices, items, promotions<-items 
+    // need new for family dollar items => prices, items, promotions<-items
+    !target.endsWith("/") ? target+="/" : 0 ; 
+    let storeRegex = /publix|aldi|kroger|dollargeneral|familydollar|fooddepot/
+    let targetHeirarchy = target.match(storeRegex)
+    targetHeirarchy = target.slice(targetHeirarchy.index)
+    var allItems = []
+    var allPrices = []
+    
+    
     var newParser = {
         combustible: {keep: true}, 
         made_in_usa: {keep: true},
@@ -612,16 +620,18 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
         canonical: {to: "link"}
     };
     let newParser2 = {
-        "product.microwaveSafe": {keep: true},
-        "product.BPAFree": {keep: true},
-        "product.dishwasherSafe": {keep: true},
-        "product.foodSafe": {keep: true},
-        "product.smsb_combustible_string": {keep: true}, 
-        "DollarProductType.madeInUSA": {keep: true},
-        "product.smsb_flammable_string": {keep: true},
-        "product.scent": {keep: true},
-        "product.smsb_flavor": {keep: true},
-        "product.repositoryId": {keep: true},
+        "product.smsb_combustible_string": {"to": "combustible"},
+        "DollarProductType.madeInUSA": {"to":"made_in_usa"},
+        "product.smsb_flammable_string": {"to": "flammable"},
+        "product.microwaveSafe": {"to": "microwave_safe"},
+        "product.BPAFree": {"to": "bpa_free"},
+        "product.dishwasherSafe": {"to": "dishwasher_safe"},
+        "product.foodSafe": {"to": "food_safe"},
+        "product.scent": {"to":"scent"},
+        "product.smsb_flavor": {"to":"flavor"},
+        "product.smsb_wineType": {"to":"wine_type"},
+        "product.smsb_wineVarietal": {"to":"wine_varietal"},
+        "product.repositoryId": {to: "id"},
         "product.longDescription": {to: "romanceDescription", convert: function(x){return `<p>${x}</p>`}},
         "product.minimumQuantity": {to: "minimumOrderQuantity"},
         "product.category": {to: "categories", convert: function(x){
@@ -629,6 +639,7 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
             return x;
         }},
         "product.route": {to: "link", convert: function (x){return "https://www.familydollar.com" + x}},
+        
         "sku.listPrice": {to: "salePrice"},
         "sku.activePrice": {to: "salePrice"},
         "product.x_unitprice": {to: "regPrice"},
@@ -652,162 +663,206 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
     };
 
 
+    fs.readdirSync(target).map((file) => {
+        let data = JSON.parse(fs.readFileSync(target+file)).map((x)=>cleanup(x));        
+        data=data.filter((d)=>"records" in d || "_auditInfo" in d)
+        allItems = [], allPrices = [], isOrignalItems = false;;
 
-    !target.endsWith("/") ? target+="/" : 0 ; 
-    let storeRegex = /publix|aldi|kroger|dollargeneral|familydollar|fooddepot/
-    let targetHeirarchy = target.match(storeRegex)
-    targetHeirarchy = target.slice(targetHeirarchy.index)
-    var allItems = []
-    var allPrices = []
-    let files = fs.readdirSync(target).map((d) => {
-        let data = JSON.parse(fs.readFileSync(target+d)).map((x)=>cleanup(x))
-        data=data.filter((d)=>"records" in d)
-        data.map((z)=> z.records.map((r)=> r["utcTimestamp"]=z.acquisition_timestamp))
-        allItems= allItems.concat(data.map((e)=>e.records).flat())
+        data.map((z)=> {
+            if ('records' in z){
+                isOrignalItems = true
+                let unwindRecords = z.records.map((record)=>{
+                    record.utcTimestamp = z.acquisition_timestamp
+                    let allMeta = record.allMeta
+                    if ("badges" in allMeta){
+                        let badges = allMeta.badges[0]
+                        allMeta = {...allMeta, ...badges}
+                    }
+                    delete record["allMeta"]
+                    let vv = allMeta['visualVariant'][0]['nonvisualVariant'][0]
+                    delete allMeta['visualVariant'];
+                    let attr = allMeta['attributes'][0]
+                    delete allMeta['attributes']
+                    record = {...allMeta, ...vv, ...attr, ...record}
+                    Object.entries(record).map(([k, v])=> {if (v==="Y"){record[k]=true} else if (v==="N") {record[k]=false}})
+                    return record
+                }).filter((d)=>"minimum_quantity" in d);
+                allItems = allItems.concat(unwindRecords)
+                console.log("allItems ", allItems.length)
+            } else if ('_auditInfo' in z){
+                let unwindRecords = z.resultsList.records.map((rec)=>{
+                        rec.utcTimestamp = z.acquisition_timestamp
+                        let attr = rec.attributes;
+                        let records = rec.records[0].attributes;
+                        let unwindRecord = {...attr, ...records}
+                        Object.entries(unwindRecord).map(([k, v])=>{
+                            if (v.length === 1){
+                                let unwoundValue = v[0]
+                                if (unwoundValue.match(/^[0-9\.\$]+$/)){
+                                    unwoundValue = +unwoundValue.replaceAll("$", "")
+                                } else if (unwoundValue.match(/^(Y|N)$/)){
+                                    unwoundValue = unwoundValue === "Y"
+                                };
+                                unwindRecord[k] = unwoundValue
+                            }
+                        })
+                        return unwindRecord
+
+                }).flat();
+                allItems = allItems.concat(unwindRecords)
+                console.log("allItems ", allItems.length)
+            }
+            
+        })
+        
+        // allItems= allItems.concat(data.map((e)=>e.records).flat())
         allItems=allItems.filter((d)=>d)
-        console.log(`parsed ${d}. ${allItems.length}`)
-
-    })
-    
-    allItems = allItems.map((x)=> {
-        let am =  x['allMeta']
-        if ("badges" in am){
-            let badges = am["badges"][0]
-            delete am["badges"]
-            am = {...am, ...badges}
-        }
-        delete x["allMeta"]
-        let vv = am['visualVariant'][0]['nonvisualVariant'][0]
-        delete am['visualVariant'];
-        let attr = am['attributes'][0]
-        delete am['attributes']
-        x = {...am, ...vv, ...attr, ...x}
-        Object.entries(x).map(([k, v])=> {if (v==="Y"){x[k]=true} else if (v==="N") {x[k]=false}})
-        return x
-    }).filter((d)=>"minimum_quantity" in d)
-    
-    allItems.map((d)=>{
-        // minimumQuantity, Case, Sale if Exists
-        allPrices.push({
-            "quantity": d.minimum_quantity,
-            locationId: defaultLocation, 
-            isPurchase: false,
-            utcTimestamp: new Date(d.utcTimestamp), 
-            value: d.price
-        })
-        d.upc ? allPrices.slice(-1)[0]['upc'] = d.upc : allPrices.slice(-1)[0]['id'] = d.id ;
-        // for Case
-        if (d.minimum_quantity != d.casepack){
-            allPrices.push({
-                "quantity": +d.casepack,
-                locationId: defaultLocation, 
-                isPurchase: false,
-                utcTimestamp: new Date(d.utcTimestamp), 
-                value: d.price
-            })
-            d.upc ? allPrices.slice(-1)[0]['upc'] = d.upc : allPrices.slice(-1)[0]['id'] = d.id ;
-        }
-
-        if (d.sale_price && d.sale_price!=="0.00"){
-            allPrices.push({
-                "quantity": d.minimum_quantity,
-                locationId: defaultLocation, 
-                isPurchase: false,
-                utcTimestamp: new Date(d.utcTimestamp), 
-                value: d.sale_price
-            })
-            d.upc ? allPrices.slice(-1)[0]['upc'] = d.upc : allPrices.slice(-1)[0]['id'] = d.id ;
-            d.promo_price ? allPrices.slice(-1)[0]['type'] = d.promo_price : null ; 
-            if (d.minimum_quantity!=d.casepack){
+        console.log(`parsed ${file}. ${allItems.length}`)
+        if (isOrignalItems){
+            allItems.map((d)=>{
+                // minimumQuantity, Case, Sale if Exists
                 allPrices.push({
-                    "quantity": +d.casepack,
-                    locationId: defaultLocation, 
+                    "quantity": d.minimum_quantity, // ["product.minimumQuantity", "DollarProductType.x_minimumQuantityNumber"]
+                    locationId: defaultLocation, // "searchEventSummary.context.siteId"
                     isPurchase: false,
-                    utcTimestamp: new Date(d.utcTimestamp), 
-                    value: d.sale_price
+                    utcTimestamp: new Date(d.utcTimestamp), // "acquisition_timestamp"
+                    value: d.price // "product.listPrice"
                 })
-                d.upc ? allPrices.slice(-1)[0]['upc'] = d.upc : allPrices.slice(-1)[0]['id'] = d.id ;
-                d.promo_price ? allPrices.slice(-1)[0]['type'] = d.promo_price : null ; 
-            }
-            
-        }
-    })
-
-    allItems.map((x)=> {
-        Object.keys(x).map((nk)=>{
-            if (nk.startsWith("contains") || nk.startsWith("sugar") || nk.startsWith("gluten")){
-                nk.endsWith("free") ? nk=nk.slice(0, -1): nk;
-                let nutObj = {}
-                if (nk.endsWith("free")){
-                    let newKey = nk.split("_").map((str)=> str[0].toUpperCase() +str.slice(1))
-                    nutObj[newKey] = x[nk]
-                } else if (nk.startsWith("contains")){
-                    let newKey = nk.split("_").slice(-1).map((str)=> str[0].toUpperCase() +str.slice(1) + "Free").join("")
-                    nutObj[newKey] = !x[nk]
+                d.upc ? 
+                    allPrices.slice(-1)[0]['upc'] = d.upc :
+                    allPrices.slice(-1)[0]['id'] = d.id // product.id minus FD
+                ;
+                // for Case
+                if (d.minimum_quantity != d.casepack){
+                    //  "product.minimumQuantity" != product.casePackSize
+                    allPrices.push({
+                        "quantity": +d.casepack, // product.casePackSize
+                        locationId: defaultLocation, 
+                        isPurchase: false,
+                        utcTimestamp: new Date(d.utcTimestamp), 
+                        value: d.price // product.x_unitprice
+                    })
+                    d.upc ? 
+                    allPrices.slice(-1)[0]['upc'] = d.upc :
+                    allPrices.slice(-1)[0]['id'] = d.id // product.id minus FD
+                    ;
                 }
-                "nutrition" in x ? x["nutrition"] = {...x["nutrition"], ...nutObj}: x["nutrition"] = nutObj;
-                delete x[nk]; 
-            } else if (nk.startsWith("weight")){
-                x["weight"] = x[nk]
-                delete x[nk];
-            } else if (nk.endsWith("Dimension")){ 
-                let dimObj = {}
-                dimObj[nk.replace("Dimension", "")] = x[nk]
-                "dimensions" in x ? x["dimensions"] = {...x.dimensions, ...dimObj} : x["dimensions"] = dimObj;
-                delete x[nk];
-            } else if (nk === "available_in_store_only" && x[nk]){
-                x["modalities"] = ["IN_STORE"]
-                delete x[nk];
-            } else if (nk === "call_center_only" && x[nk]){
-                x["modalities"] = ["CALL_CENTER"]
-                delete x[nk];
-            } else if (nk==="brand"){
-                brands = x[nk]
-                x[nk] = brands.map((brand)=>{return{name:  brand.replaceAll(/&.+;/g, '')}})
-            } else if (nk==="num_reviews" && x[nk]){
-                x["ratings"] = {ct: x[nk], avg: x["average_rating"]}
-                delete x[nk];
-                delete x["average_rating"]
-            } else if (nk==="name"){
-                let name = x[nk]
-                name = name.replace("?", "")
-                let customerFacingSize = name.split(",").slice(1).filter((s)=>s.match(/\d+/g)!==null).map((match)=>{return match.trim()})
-                x[nk] = name.split(",")[0]
-                if (!customerFacingSize===""){
-                    x["customerFacingSize"] = customerFacingSize.reverse().join(" / ")
+        
+                if (d.sale_price && d.sale_price!=="0.00"){ // product.salePrice
+                    allPrices.push({
+                        "quantity": d.minimum_quantity,
+                        locationId: defaultLocation, 
+                        isPurchase: false,
+                        utcTimestamp: new Date(d.utcTimestamp), 
+                        value: d.sale_price // product.SalePrice
+                    })
+                    d.upc ? allPrices.slice(-1)[0]['upc'] = d.upc : allPrices.slice(-1)[0]['id'] = d.id ;
+                    d.promo_price ? allPrices.slice(-1)[0]['type'] = d.promo_price : null ; // product.x_deals
+        
+                    if (d.minimum_quantity!=d.casepack){
+                        allPrices.push({
+                            "quantity": +d.casepack,
+                            locationId: defaultLocation, 
+                            isPurchase: false,
+                            utcTimestamp: new Date(d.utcTimestamp), 
+                            value: d.sale_price // product.salePrice
+                        })
+                        d.upc ? allPrices.slice(-1)[0]['upc'] = d.upc : allPrices.slice(-1)[0]['id'] = d.id ;
+                        d.promo_price ? allPrices.slice(-1)[0]['type'] = d.promo_price : null ; 
+                    }
+                    
                 }
-                x["description"] = x[nk]
-                delete x[nk];
-                
-            } else if (Object.keys(newParser).includes(nk)){
-                let actions = newParser[nk]
-                if (newParser[nk].convert){
-                    x[nk] = actions.convert(x[nk])
+            })
+        
+            allItems.map((x)=> {
+                Object.keys(x).map((nk)=>{
+                    if (nk.startsWith("contains") || nk.startsWith("sugar") || nk.startsWith("gluten")){
+                        nk.endsWith("free") ? nk=nk.slice(0, -1): nk;
+                        let nutObj = {}
+                        if (nk.endsWith("free")){
+                            let newKey = nk.split("_").map((str)=> str[0].toUpperCase() +str.slice(1))
+                            nutObj[newKey] = x[nk]
+                        } else if (nk.startsWith("contains")){
+                            let newKey = nk.split("_").slice(-1).map((str)=> str[0].toUpperCase() +str.slice(1) + "Free").join("")
+                            nutObj[newKey] = !x[nk]
+                        }
+                        "nutrition" in x ? x["nutrition"] = {...x["nutrition"], ...nutObj}: x["nutrition"] = nutObj;
+                        delete x[nk]; 
+                    } else if (nk.startsWith("weight")){
+                        x["weight"] = x[nk]
+                        delete x[nk];
+                    } else if (nk.endsWith("Dimension")){ 
+                        let dimObj = {}
+                        dimObj[nk.replace("Dimension", "")] = x[nk]
+                        "dimensions" in x ? x["dimensions"] = {...x.dimensions, ...dimObj} : x["dimensions"] = dimObj;
+                        delete x[nk];
+                    } else if (nk === "available_in_store_only" && x[nk]){
+                        x["modalities"] = ["IN_STORE"]
+                        delete x[nk];
+                    } else if (nk === "call_center_only" && x[nk]){
+                        x["modalities"] = ["CALL_CENTER"]
+                        delete x[nk];
+                    } else if (nk==="brand"){
+                        brands = x[nk]
+                        x[nk] = brands.map((brand)=>{return{name:  brand.replaceAll(/&.+;/g, '')}})
+                    } else if (nk==="num_reviews" && x[nk]){
+                        x["ratings"] = {ct: x[nk], avg: x["average_rating"]}
+                        delete x[nk];
+                        delete x["average_rating"]
+                    } else if (nk==="name"){
+                        let name = x[nk]
+                        name = name.replace("?", "")
+                        let customerFacingSize = name.split(",").slice(1).filter((s)=>s.match(/\d+/g)!==null).map((match)=>{return match.trim()})
+                        x[nk] = name.split(",")[0]
+                        if (!customerFacingSize===""){
+                            x["customerFacingSize"] = customerFacingSize.reverse().join(" / ")
+                        }
+                        x["description"] = x[nk]
+                        delete x[nk];
+                        
+                    } else if (Object.keys(newParser).includes(nk)){
+                        let actions = newParser[nk]
+                        if (newParser[nk].convert){
+                            x[nk] = actions.convert(x[nk])
+                        }
+                        if (actions.to){
+                            x[actions.to] = x[nk];
+                        }
+                        if (actions.keep===undefined){
+                            delete x[nk]
+                        }
+        
+                    } else {
+                        delete x[nk]
+                    }
+                    
+                })
+            })
+            let idSet = new Set()
+            allItems = allItems.filter((i)=>{
+                if (idSet.has(i.id)){
+                    return false;
+                } else {
+                    idSet.add(i.id)
+                    return true
                 }
-                if (actions.to){
-                    x[actions.to] = x[nk];
-                }
-                if (actions.keep===undefined){
-                    delete x[nk]
-                }
-
-            } else {
-                delete x[nk]
-            }
-            
-        })
-    })
-    let idSet = new Set()
-    allItems = allItems.filter((i)=>{
-        if (idSet.has(i.id)){
-            return false;
+            })
+            console.log(allItems[0])
+            console.log(allPrices[0])
         } else {
-            idSet.add(i.id)
-            return true
+            return 
         }
     })
-    insertData(allPrices, "prices")
-    insertFilteredData("id", "items", allItems)
+    
+    
+    
+    
+    
+    
+    
+    
+    // insertData(allPrices, "prices")
+    // insertFilteredData("id", "items", allItems)
     return null
 }
 
@@ -1139,7 +1194,8 @@ program
             }},
             "familyDollarItems": {func: processFamilyDollarItems, args: {
                 defaultLocation: "2394",
-                target: "/app/tmp/collections/familydollar/items/"
+                target: "../tmp/collections/familydollar/items/"
+                //target: "/app/tmp/collections/familydollar/items/"
             }},
             "familyDollarInstacartItems": {func: processInstacartItems, args: {
                 uuid: "legacyId",
@@ -1183,21 +1239,70 @@ program
         const json = require("json-summary");
         var data = fs.readFileSync(options.input); 
         data = JSON.parse(data)
+        console.log(data.length)
         let baseItems = data.map((wholeQuery)=>
-            wholeQuery.resultsList.records.map((rec)=>{
-                let attr = rec.attributes;
-                let records = rec.records[0].attributes;
-                Object.entries(records).map(([k, v])=>{
-                    if (v.length === 1){
-                        records[k] = v[0]
-                    }
-                })
-                return {...attr, ...records}
-            })
-        );
-        var summary = json.summarize(baseItems);
+            {
+            //console.log(wholeQuery.resultsList.records.length)
+            return wholeQuery
+                // .resultsList.records.map((rec)=>{
+                //     let attr = rec.attributes;
+                //     let records = rec.records[0].attributes;
+                //     s = {...attr, ...records}
+                //     Object.entries(s).map(([k, v])=>{
+                //         if (v.length === 1){
+                //             s[k] = v[0]
+                //         }
+                //     })
+
+                //     // for (let key of Object.keys(s)){
+                //     //     if (!(key.toLowerCase().includes('price')) && key!=="product.splitCaseAvailable" && key!=='product.displayName'&& key!=='parentCategory.displayName'){
+                //     //         delete s[key]
+                //     //     }
+                //     // };
+                    
+                // return s
+                // })
+        }).flat();
+        // col1 = "product.displayName"
+        // col2 = "product.description"
+        // counter = {}, newSet = new Set(); 
+        // counter["T"] = 0
+        // counter["F"] = 0
+        // baseItems.map((d)=>{  
+        //     if (col2 in d){
+        //     d[col1] === d[col2] ? counter["T"]++ : counter["F"]++;
+        //     if (d[col2]!== d[col1] && counter.F<=4) console.log(d[col1], d[col2])//newSet.add(d[col2])
+        //     }
+        // })
+        // console.log(counter, newSet)
+        //console.log(data.map(d=> Object.keys(d).includes('records')))
+        console.log(data[1].records)
+        console.log(baseItems.slice(0, 5))
+        counter = {}
+        counter["T"] = 0
+        counter["F"] = 0
+        baseItems.map((d)=>{  
+            col1 in d ? counter["T"]++ : counter["F"]++;
+            
+        })
+        console.log(counter)
+       
+        var summary = json.summarize(baseItems, {arraySampleCount: baseItems.length});
+        keys = Object.keys(summary.items["0"].items)
+        keys.sort((a, b)=> summary.items["0"].items[b].count - summary.items["0"].items[a].count)
+        obj = summary.items["0"].items
+        summary.items["0"].items = {}
+        for (key of keys){
+            summary.items["0"].items[key] = obj[key]
+        }
+        summary.items["0"].keys = keys
+        // s2 = {}
+        // keys.map((k)=>{
+        //     s2[k] = summary.items["0"].items[k].count
+        // })
         summary = JSON.stringify(summary, null, 3)
         fs.writeFileSync(options.output, summary);
+
         console.log("wrote summary to ", options.output);
         return null; 
     })
