@@ -444,136 +444,49 @@ function processInternalCoupons({target, parser, uuid}){
     * {casepack, price, upc || id , {locationId, isPurchase, value}}
  * 
 {
-    "DollarProductType.averageRating":
-    "DollarProductType.callCenterOnly":
-    "DollarProductType.casePackSize":,
-    "DollarProductType.color1":,
-    "DollarProductType.color2":,
-    "DollarProductType.color3":,
-    "DollarProductType.color4":,
-    "DollarProductType.dtdIndicator":,
-    "DollarProductType.madeInUSA":,
-    "DollarProductType.new":,
-    "DollarProductType.numberOrReviews":,
-    "DollarProductType.showOnWeb":,
-    "DollarProductType.splitCaseMultiple":,
-    "DollarProductType.x_minimumQuantityNumber":,
-    "parentCategory.displayName":,
-    "parentCategory.displayName":,
-    "product.BPAFree":,
-    "product.active":,
-    "product.assortmentByStyleColor":,
-    "product.averageRatingRounded":,
-    "product.baseUrl":,
-    "product.brand":,
-    "product.casePrice":,
-    "product.catalogId":,
-    "product.category":,
-    "product.clearance":,
-    "product.colors":,
-    "product.configurable":,
-    "product.creationDate":,
-    "product.dateAvailable":,
-    "product.daysAvailable":,
-    "product.depthDimension":,
-    "product.description":,
-    "product.catalogId":,
-    "product.diameterDimension":,
-    "product.displayName":,
-    "product.displayType":,
-    "product.finish":,
-    "product.fullImageURLs":,
-    "product.glutenFree":,
-    "product.heightDimension":,
-    "product.id":,
-    "product.largeImageURLs":,
-    "product.lengthDimension":,
-    "product.licensedProduct":,
-    "product.listPrice":,
-    "product.longDescription":,
-    "product.material":,
-    "product.mediumImageURLs":,
-    "product.minimumQuantity":,
-    "product.notForIndividualSale":,
-    "product.pattern":,
-    "product.priceRange":,
-    "product.primaryFullImageURL":,
-    "product.primaryImageAltText":,
-    "product.primaryImageTitle":,
-    "product.primaryLargeImageURL":,
-    "product.primaryMediumImageURL":,
-    "product.primarySmallImageURL":,
-    "product.primaryThumbImageURL":,
-    "product.productImagesMetadata":,
-    "product.repositoryId":,
-    "product.route":,
-    "product.salePrice":,
-    "product.scent":,
-    "product.seoTitle":,
-    "product.seoUrlSlug":,
-    "product.smallImageURLs":,
-    "product.smsb_availableInStoreOnly":,
-    "product.smsb_batterySize":,
-    "product.smsb_beddingSize":,
-    "product.smsb_beddingSizeBase":,
-    "product.smsb_combustible_string":,
-    "product.smsb_comesWithBatteries_string":,
-    "product.smsb_containsDairy_string":,
-    "product.smsb_containsEggs_string":,
-    "product.smsb_containsNuts_string":,
-    "product.smsb_containsSoy_string":,
-    "product.smsb_containsWheat_string":,
-    "product.smsb_fit":,
-    "product.smsb_fitBase":,
-    "product.smsb_flammable_string":,
-    "product.smsb_flavor":,
-    "product.smsb_flavorBase":,
-    "product.smsb_pet":,
-    "product.smsb_petBase":,
-    "product.smsb_requireBatteries_string":,
-    "product.smsb_sockSize":,
-    "product.smsb_sockSizeBase":,
-    "product.smsb_wineType":,
-    "product.smsb_wineVarietal":,
-    "product.sourceImageURLs":,
-    "product.splitCaseAvailable":,
-    "product.thumbImageURLs":,
-    "product.url":,
-    "product.volumnDimension":,
-    "product.weightDimension":,
-    "product.widthDimension":,
-    "product.x_apparelSizeBase":,
-    "product.x_averageRatingRoundedAndUp":,
-    "product.x_colorBase":,
-    "product.x_deals":,
-    "product.x_displayTypeBase":,
-    "product.x_finishBase":, 
-    "product.x_licensedProductBase":,
-    "product.x_materialBase":,
-    "product.x_patternBase":,
-    "product.x_scentBase":,
-    "product.x_unitBase":,
-    "record.collection":,
-    "record.id":,
-    "record.type":,
-    "record.urn":,
-    "sku.active":,
-    "sku.activePrice":,
-    "sku.availabilityStatus":,
-    "sku.baseUrl":,
-    "sku.color":,
-    "sku.creationDate":,
-    "sku.listPrice":,
-    "sku.listingId":,
-    "sku.listingOptionIndex":,
-    "sku.onSale":,
-    "sku.repositoryId":,
-    "sku.salePrice":,
-    "sku.size":,
-    "sku.styleProperty":,
-    "sku.stylePropertyValue":,
-    "sku.translations.repositoryId":,
-    "sku.url":
+    --inventory--
+    "product.creationDate", => TODO
+    "sku.availabilityStatus", => TODO
+
+    -- product individual features--
+    [x] "product.id", => "id"
+    [o] "product.displayName", => "desciption"
+    [x] "product.longDescription", => "romanceDescription"
+    -- product categories -- 
+    [x] "parentCategory.displayName", => TODO "categories" / "taxonomies"  STRING
+    [x] "product.brand", => "brand" STRING
+    [x] "product.category", TODO "categories" / "taxonomies" STRING
+    [x] "product.smsb_pet", // delete 'No' string TODO "categories" / "taxonomies" 
+    [x] "product.collection", TODO "categories" / "taxonomies" 
+    [x] "product.x_collectionBase",
+
+    -- product.web -- 
+    [x] "product.primaryFullImageURL", ==> TODO "images" {url: "http://www.familydollar.com" + this, perspective: "front", main: true, size: "large"}
+
+    -- url -- 
+    [x] "product.route", // url + familydollar.com => TODO 'link'
+    
+    -- product.booleans -- 
+    [x]"product.BPAFree", => bpa_free
+    [x]"DollarProductType.madeInUSA", made_in_usa
+    [x]"product.microwaveSafe", => microwave_safe
+    [x]"product.dishwasherSafe", => dishwasher_safe
+    [x]"product.foodSafe", => food_safe
+    [x]"product.smsb_dryCleanOnly_string", => dry_clean_only
+    [x]"product.smsb_combustible_string", => combustible
+    [x]"product.smsb_flammable_string", => flammable
+    [x]"product.smsb_flavor", => "flavor"
+    [x]"product.scent", => "scent"
+    [x]"product.smsb_wineType", => "wine_type"
+    [x]"product.smsb_wineVarietal", => "wine_varietal"
+    [x]"product.smsb_beveragePackSize", => "packSize"
+
+    "product.splitCaseAvailable"
+    
+    -- quantity for minimumOrder and allPrices -- 
+    [x] "product.minimumQuantity", => minimumOrderQuantity
+    "DollarProductType.casePackSize", => TODO caseSize
+    
  } 
  */
 
@@ -631,7 +544,15 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
         "product.smsb_flavor": {"to":"flavor"},
         "product.smsb_wineType": {"to":"wine_type"},
         "product.smsb_wineVarietal": {"to":"wine_varietal"},
-        "product.repositoryId": {to: "id"},
+        "product.smsb_dryCleanOnly_string": {"to":"dry_clean_only"},
+        "product.smsb_flavor" : {to: "flavor"},
+        "product.scent" : {to: "scent"},
+        "product.smsb_wineType": {to: "wine_type"},
+        "product.smsb_wineVarietal": {to: "wine_varietal"},
+        "product.smsb_beveragePackSize": {to: "packSize"},
+
+        "product.repositoryId": {to: "id", convert: (x)=> x.replace("FD", "")},
+
         "product.longDescription": {to: "romanceDescription", convert: function(x){return `<p>${x}</p>`}},
         "product.minimumQuantity": {to: "minimumOrderQuantity"},
         "product.category": {to: "categories", convert: function(x){
@@ -640,11 +561,8 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
         }},
         "product.route": {to: "link", convert: function (x){return "https://www.familydollar.com" + x}},
         
-        "sku.listPrice": {to: "salePrice"},
-        "sku.activePrice": {to: "salePrice"},
-        "product.x_unitprice": {to: "regPrice"},
-        "product.x_deals": {to: "saleType"},
         "product.primaryFullImageURL": {to: "images", convert: function (x){
+            x = "https://www.familydollar.com" + x
             return [{main: true, perspective: 'front', url: x, size: "xlarge"}]
         }},
         "product.priceRange": {to: "priceRange"},
@@ -691,10 +609,9 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
                 console.log("allItems ", allItems.length)
             } else if ('_auditInfo' in z){
                 let unwindRecords = z.resultsList.records.map((rec)=>{
-                        rec.utcTimestamp = z.acquisition_timestamp
                         let attr = rec.attributes;
                         let records = rec.records[0].attributes;
-                        let unwindRecord = {...attr, ...records}
+                        let unwindRecord = {...attr, ...records, "utcTimestamp": z.acquisition_timestamp}
                         Object.entries(unwindRecord).map(([k, v])=>{
                             if (v.length === 1){
                                 let unwoundValue = v[0]
@@ -773,11 +690,11 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
                     
                 }
             })
-        
+            
             allItems.map((x)=> {
                 Object.keys(x).map((nk)=>{
                     if (nk.startsWith("contains") || nk.startsWith("sugar") || nk.startsWith("gluten")){
-                        nk.endsWith("free") ? nk=nk.slice(0, -1): nk;
+                        //nk.endsWith("free") ? nk=nk.slice(0, -1): nk;
                         let nutObj = {}
                         if (nk.endsWith("free")){
                             let newKey = nk.split("_").map((str)=> str[0].toUpperCase() +str.slice(1))
@@ -850,7 +767,180 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
             console.log(allItems[0])
             console.log(allPrices[0])
         } else {
-            return 
+            console.log('utcTimestamp' in allItems[0])
+            allItems.map((d)=>{
+                let fdId = typeof d["product.id"] === 'string' ? d["product.id"].replace("FD", "") : String(d["product.id"]); 
+                // minimumQuantity, Case, Sale if Exists
+                allPrices.push({
+                    "quantity": +d["product.minimumQuantity"], // ["product.minimumQuantity"]
+                    locationId: defaultLocation, // "searchEventSummary.context.siteId" || defaultLocation
+                    isPurchase: false,
+                    utcTimestamp: new Date(d.utcTimestamp), // "acquisition_timestamp"
+                    value: +d["product.listPrice"], // "product.listPrice"
+                    id: fdId
+                })
+                // d.upc ? 
+                //     allPrices.slice(-1)[0]['upc'] = d.upc :
+                //     allPrices.slice(-1)[0]['id'] = d.id // product.id minus FD
+                // ;
+                
+                // for Case
+                if (d['product.splitCaseAvailable']==='N' && d["product.minimumQuantity"] != d["DollarProductType.casePackSize"]){
+                    allPrices.push({
+                        "quantity": +d["DollarProductType.casePackSize"], // product.casePackSize
+                        locationId: defaultLocation, 
+                        isPurchase: false,
+                        utcTimestamp: new Date(d.utcTimestamp), 
+                        value: +d["product.listPrice"] ,// product.x_unitprice
+                        id: fdId
+
+                    })
+                    // d.upc ? 
+                    // allPrices.slice(-1)[0]['upc'] = d.upc :
+                    // allPrices.slice(-1)[0]['id'] = d.id // product.id minus FD
+                    // ;
+                }
+        
+                if ("product.salePrice" in d){ // product.salePrice
+                    allPrices.push({
+                        "quantity": d["product.minimumQuantity"],
+                        locationId: defaultLocation, 
+                        isPurchase: false,
+                        utcTimestamp: new Date(d.utcTimestamp), 
+                        value: +d["product.SalePrice"], // product.SalePrice
+                        type: d["product.clearance"] ? "Clearance" : "Sale",
+                        id: fdId
+                    })
+                    // d.upc ? allPrices.slice(-1)[0]['upc'] = d.upc : allPrices.slice(-1)[0]['id'] = d.id ;
+                    // d.promo_price ? allPrices.slice(-1)[0]['type'] = d.promo_price : null ; // product.x_deals
+        
+                    if (d["product.minimumQuantity"] != d["DollarProductType.casePackSize"]){
+                        allPrices.push({
+                            "quantity": +d["DollarProductType.casePackSize"],
+                            locationId: defaultLocation, 
+                            isPurchase: false,
+                            utcTimestamp: new Date(d.utcTimestamp), 
+                            value: +d["product.SalePrice"], // product.salePrice
+                            id: fdId
+                        })
+                        
+                    }
+                    
+                }
+            })
+            
+            let nutritionMap= {
+                "product.smsb_containsWheat_string": "WheatFree",
+                "product.smsb_containsSoy_string": "SoyFree",
+                "product.smsb_containsDairy_string": "DairyFree",
+                "product.smsb_containsNuts_string" : "NutsFree",
+                "product.smsb_containsEggs_string": "EggsFree",
+                "product.sugarFree": "SugarFree",
+                "product.glutenFree": "GlutenFree",
+            };
+            let nutritionalCategories = Object.keys(nutritionMap)
+            let categoryList = [
+                "parentCategory.displayName", 
+                "product.category",
+                "product.brand",
+                "product.smsb_pet", 
+                "product.collection",
+                "product.x_collectionBase",
+            ];
+
+            //console.log(allItems[0])
+            allItems.map((x)=> {
+                Object.keys(x).map((nk)=>{
+                    if (nutritionalCategories.includes(nk)){
+                        let nutritionObj = {}
+                        if (nk.includes("Free")){
+                            nutritionObj[nutritionMap[nk]] = x[nk]
+                        } else if (nk.startsWith("contains")){
+                            nutritionObj[nutritionMap[nk]] = !x[nk]
+                        }
+                        "nutrition" in x ? x["nutrition"] = {...x["nutrition"], ...nutritionObj}: x["nutrition"] = nutritionObj;
+                        delete x[nk]; 
+                    } else if (categoryList.includes(nk)){
+                        if (Array.isArray(x[nk])){
+                            x[nk] = x[nk].filter((c)=>c!== 'Non-Navigable FD Collection' && c!=='Default Collection For Products')
+                            "categories" in x ? x["categories"] = x["categories"].concat(x[nk]) : x["categories"] = x[nk]; 
+                        } else {
+                            //x[nk] = typeof x[nk] === 'string' ? x[nk] : String(x[nk]); 
+                            "categories" in x ? x["categories"].push(x[nk]) : x["categories"] =[x[nk]]; 
+                        }
+                        delete x[nk]
+
+                    } 
+                    else if (nk === "product.weightDimension"){
+                        x["weight"] = x[nk]
+                        delete x[nk];
+                    } else if (nk.endsWith("Dimension")){ 
+                        let dimObj = {}
+                        dimObj[nk.replace("Dimension", "")] = x[nk]
+                        "dimensions" in x ? x["dimensions"] = {...x.dimensions, ...dimObj} : x["dimensions"] = dimObj;
+                        delete x[nk];
+                    } else if (nk === "product.smsb_availableInStoreOnly" && x[nk]){
+                        x["modalities"] = ["IN_STORE"]
+                        delete x[nk];
+                    } else if (nk === "DollarProductType.callCenterOnly" && x[nk]){
+                        x["modalities"] = ["CALL_CENTER"]
+                        delete x[nk];
+                    } else if (nk==="product.brand"){
+                        brands = x[nk]
+                        if (!Array.isArray(brands)){
+                            brands = [brands];
+                        } else {
+                            brands = brands.filter((b)=>b.match(/^(llc|inc|ltd)(\.)?(\&[A-z]+\;)?$/gi))
+                        }
+                        x["brand"] = brands.map((brand)=>{return{name:  brand.replaceAll(/(&.+;|\([A-Z]+\))/g, '')}})
+                    } else if ((nk==="DollarProductType.numberOfReviews" || nk==="DollarProductType.averageRating")){
+                        console.log( x["DollarProductType.averageRating"])
+                        x["ratings"] = {ct: x["DollarProductType.numberOfReviews"], avg: x["DollarProductType.averageRating"]}
+                        // delete x[nk];
+                        // delete x["DollarProductType.averageRating"]
+                    } else if (nk==="product.displayName"){
+                        let name = x[nk]
+                        name = name.replace("?", "")
+                        let customerFacingSize = name.split(",").slice(-1).filter((s)=>s.match(/\d+/g)!==null).map((match)=>{return match.trim()})
+                        x[nk] = name.split(",")[0]
+                        if (customerFacingSize.length>1){
+                            x["customerFacingSize"] = customerFacingSize.reverse().join(" / ")
+                        } else {
+                            x["customerFacingSize"] = customerFacingSize[0]
+                        }
+                        x["description"] = x[nk]
+                        delete x[nk];
+                        
+                    // } else if (Object.keys(newParser).includes(nk)){
+                    //     let actions = newParser[nk]
+                    //     if (newParser[nk].convert){
+                    //         x[nk] = actions.convert(x[nk])
+                    //     }
+                    //     if (actions.to){
+                    //         x[actions.to] = x[nk];
+                    //     }
+                    //     if (actions.keep===undefined){
+                    //         delete x[nk]
+                    //     }
+        
+                    } else {
+                        delete x[nk]
+                    }
+                    
+                })
+            })
+            let idSet = new Set()
+            allItems.map((item)=>item.categories = Array.from(new Set(item.categories)))
+            allItems = allItems.filter((i)=>{
+                if (idSet.has(i.id)){
+                    return false;
+                } else {
+                    idSet.add(i.id)
+                    return true
+                }
+            })
+            console.log(allItems[0])
+            console.log(allPrices[0])
         }
     })
     
@@ -1243,50 +1333,71 @@ program
         let baseItems = data.map((wholeQuery)=>
             {
             //console.log(wholeQuery.resultsList.records.length)
-            return wholeQuery
-                // .resultsList.records.map((rec)=>{
-                //     let attr = rec.attributes;
-                //     let records = rec.records[0].attributes;
-                //     s = {...attr, ...records}
-                //     Object.entries(s).map(([k, v])=>{
-                //         if (v.length === 1){
-                //             s[k] = v[0]
-                //         }
-                //     })
-
-                //     // for (let key of Object.keys(s)){
-                //     //     if (!(key.toLowerCase().includes('price')) && key!=="product.splitCaseAvailable" && key!=='product.displayName'&& key!=='parentCategory.displayName'){
-                //     //         delete s[key]
-                //     //     }
-                //     // };
+            return wholeQuery.resultsList.records.map((rec)=>{
+                    let attr = rec.attributes;
+                    let records = rec.records[0].attributes;
                     
-                // return s
-                // })
+                    s = {...attr, ...records, "utcTimestamp": wholeQuery.acquisition_timestamp}
+                    Object.entries(s).map(([k, v])=>{
+                        if (v.length === 1){
+                            s[k] = v[0]
+                        }
+                    })
+
+                    // for (let key of Object.keys(s)){
+                    //     if (!(key.toLowerCase().includes('price')) && key!=='product.clearance' && key!=="sku.onSale" && key!== "product.x_deals"&& key!=="product.splitCaseAvailable" && key!=='product.displayName'&& key!== "DollarProductType.splitCaseMultiple" &&  key!=='parentCategory.displayName' && key!=="DollarProductType.casePackSize" && key!=="product.minimumQuantity"){
+                    //         delete s[key]
+                    //     }
+                    // };
+                    
+                return s
+                })
         }).flat();
-        // col1 = "product.displayName"
-        // col2 = "product.description"
+        // col1 = "DollarProductType.splitCaseMultiple"
+        // col2 = 'product.minimumQuantity'
         // counter = {}, newSet = new Set(); 
         // counter["T"] = 0
         // counter["F"] = 0
         // baseItems.map((d)=>{  
-        //     if (col2 in d){
-        //     d[col1] === d[col2] ? counter["T"]++ : counter["F"]++;
-        //     if (d[col2]!== d[col1] && counter.F<=4) console.log(d[col1], d[col2])//newSet.add(d[col2])
+        //     if (col2 in d || col1 in d){
+        //         d[col1] !== undefined ? newSet.add(d[col1]) : 0;
+        //         //d[col2] !== undefined ? newSet.add(d[col2]) : 0;     
+        //     //d[col1]==="N" ? counter["T"]++ : counter["F"]++;
+        //     // if (d[col2]!==d[col1]) console.log(d[col2], "||", d[col1]) ;
+        //     // if (d[col2]!== d[col1] && counter.F<=4) console.log(d, "\n\n")//newSet.add(d[col2])
         //     }
         // })
-        // console.log(counter, newSet)
+        //console.log(baseItems.filter((d)=>+d[col1]!=+d[col2] && +d[col1]>1).length, newSet)
         //console.log(data.map(d=> Object.keys(d).includes('records')))
-        console.log(data[1].records)
-        console.log(baseItems.slice(0, 5))
-        counter = {}
-        counter["T"] = 0
-        counter["F"] = 0
-        baseItems.map((d)=>{  
-            col1 in d ? counter["T"]++ : counter["F"]++;
+        // console.log(data[1].records)
+        // console.log(baseItems.slice(0, 5))
+        // counter = {}
+        // counter["T"] = 0
+        // counter["F"] = 0
+        // baseItems.map((d)=>{  
+        //     col1 in d ? counter["T"]++ : counter["F"]++;
+            
+        // })
+        // console.log(counter)
+        // newS = new Set(); 
+        // let i ; 
+        // baseItems.map((e)=>{
+        //     newS.add(e["product.x_deals"])
+        // })
+        //console.log(Array.from(newS))
+        let catList = ["parentCategory.displayName", 
+        "product.brand",
+        "product.category",
+        "product.smsb_pet", 
+        "product.collection",
+        "product.x_collectionBase",
+        ]
+        let catSet = new Set(); 
+        baseItems.map((d)=>{
+            Object.keys(d).filter((z)=>z===catList[0]).map((zd)=>{Array.isArray(d[zd]) ? d[zd].map((zz)=>catSet.add(zz)) : catSet.add(d[zd])})
             
         })
-        console.log(counter)
-       
+        console.log(catSet);
         var summary = json.summarize(baseItems, {arraySampleCount: baseItems.length});
         keys = Object.keys(summary.items["0"].items)
         keys.sort((a, b)=> summary.items["0"].items[b].count - summary.items["0"].items[a].count)
@@ -1300,6 +1411,7 @@ program
         // keys.map((k)=>{
         //     s2[k] = summary.items["0"].items[k].count
         // })
+        console.log(baseItems.filter((d)=>d["product.clearance"]==="N"&&d["product.x_deals"]).map((d)=>d["product.x_deals"]).length)
         summary = JSON.stringify(summary, null, 3)
         fs.writeFileSync(options.output, summary);
 
