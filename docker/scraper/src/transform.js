@@ -447,11 +447,21 @@ function processInternalCoupons({target, parser, uuid}){
     --inventory--
     "product.creationDate", => TODO
     "sku.availabilityStatus", => TODO
+    "product.creationDate" => TODO
+
+    -- prices --
+    "product.clearance"
+    "product." 
 
     -- product individual features--
-    [x] "product.id", => "id"
+    [x] "product.repositoryId", => "id"
     [o] "product.displayName", => "desciption"
     [x] "product.longDescription", => "romanceDescription"
+    -- quantity for minimumOrder and allPrices -- 
+    [x] "product.minimumQuantity", => minimumOrderQuantity
+    "DollarProductType.casePackSize", => TODO caseSize
+    "product.splitCaseAvailable" => TODO
+
     -- product categories -- 
     [x] "parentCategory.displayName", => TODO "categories" / "taxonomies"  STRING
     [x] "product.brand", => "brand" STRING
@@ -463,7 +473,7 @@ function processInternalCoupons({target, parser, uuid}){
     -- product.web -- 
     [x] "product.primaryFullImageURL", ==> TODO "images" {url: "http://www.familydollar.com" + this, perspective: "front", main: true, size: "large"}
 
-    -- url -- 
+    -- product.link -- 
     [x] "product.route", // url + familydollar.com => TODO 'link'
     
     -- product.booleans -- 
@@ -480,12 +490,12 @@ function processInternalCoupons({target, parser, uuid}){
     [x]"product.smsb_wineType", => "wine_type"
     [x]"product.smsb_wineVarietal", => "wine_varietal"
     [x]"product.smsb_beveragePackSize", => "packSize"
+    -- modalities --
+    DollarProductType.callCenterOnly
+    product.smsb_availableInStoreOnly
 
-    "product.splitCaseAvailable"
     
-    -- quantity for minimumOrder and allPrices -- 
-    [x] "product.minimumQuantity", => minimumOrderQuantity
-    "DollarProductType.casePackSize", => TODO caseSize
+    
     
  } 
  */
@@ -533,6 +543,7 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
         canonical: {to: "link"}
     };
     let newParser2 = {
+        // simple rename
         "product.smsb_combustible_string": {"to": "combustible"},
         "DollarProductType.madeInUSA": {"to":"made_in_usa"},
         "product.smsb_flammable_string": {"to": "flammable"},
@@ -550,41 +561,180 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
         "product.smsb_wineType": {to: "wine_type"},
         "product.smsb_wineVarietal": {to: "wine_varietal"},
         "product.smsb_beveragePackSize": {to: "packSize"},
+        "product.displayName": {to: "description", convert: (x)=> {
+            x = x.replace("?", "")
+            let customerFacingSize = x.split(",").slice(-1).filter((s)=>s.match(/\d+/g)!==null).map((match)=>{return match.trim()})
+            x = x.split(",")[0]
+            if (customerFacingSize.length>1){
+                customerFacingSize= customerFacingSize.reverse().join(" / ")
+            } else {
+                customerFacingSize = customerFacingSize[0]
+            }
+            return {desciption: x, customerFacingSize: customerFacingSize}
+        }},
+        "DollarProductType.casePackSize": {to: "casePackSize"},
 
-        "product.repositoryId": {to: "id", convert: (x)=> x.replace("FD", "")},
 
+        // simple conversion exclusive to single feature
+        "product.repositoryId": {to: "id", convert: (x)=> {
+            if (typeof x !== 'string') x = String(x);
+            return x.replace("FD", "")
+        }},
         "product.longDescription": {to: "romanceDescription", convert: function(x){return `<p>${x}</p>`}},
         "product.minimumQuantity": {to: "minimumOrderQuantity"},
-        "product.category": {to: "categories", convert: function(x){
-            x = x.filter((d)=>d !== 'Default Collection For Products' && d!=='Non-Navigable FD Collection');
-            return x;
-        }},
         "product.route": {to: "link", convert: function (x){return "https://www.familydollar.com" + x}},
-        
         "product.primaryFullImageURL": {to: "images", convert: function (x){
             x = "https://www.familydollar.com" + x
             return [{main: true, perspective: 'front', url: x, size: "xlarge"}]
         }},
-        "product.priceRange": {to: "priceRange"},
-        "product.displayName": {to: "description"},
-        "product.casePrice": {to: "casePrice"},
-        "product.brand": {to: "brand", convert: (x)=>{
-            return x.map((brand)=>{return{name:  brand.replaceAll(/&.+;/g, '')}})
+        "product.brand": {to: "brand", convert: (brand)=>{
+            let brands; 
+            if (!Array.isArray(brand)){
+                brands = [brand];
+            } else {
+                brands = brand.filter((b)=>b.match(/^(llc|inc|ltd)(\.)?(\&[A-z]+\;)?$/gi))
+            }
+            return brands.map((brand)=>{return{name:  brand.replaceAll(/(&.+;|\([A-Z]+\))/g, '')}})
+
         }},
-        "DollarProductType.splitCaseMultiple": {to: "splitCaseMultiple"},
-        "DollarProductType.numberOfReviews": {to: "reviewCt"},
-        "DollarProductType.casePackSize": {to: "casePackSize"},
-        "DollarProductType.callCenterOnly": {to: "modalities", convert: (x)=>{
-            return x==='Y'? true : false;
+        "product.weightDimension": {to: "weight"},
+        "_categories": {convert: function(wholeItem, filterVars=[
+            "parentCategory.displayName", 
+            "product.category",
+            "product.brand",
+            "product.smsb_petBase", 
+            "product.collection",
+            "product.x_collectionBase",
+        ]){
+            let returnValues = []
+            Object.keys(wholeItem).map((key)=>{
+                if (filterVars.includes(key)){
+                    if (Array.isArray(wholeItem[key])){
+                        returnValues = returnValues.concat(wholeItem[key].map((c)=>c.replaceAll(/(&.+;|\([A-Z]+\))/g, '')).filter((c)=>c && c!== 'Non-Navigable FD Collection' && c!=='Default Collection For Products'))
+                    } else {
+                        returnValues.push(wholeItem[key].replaceAll(/(&.+;|\([A-Z]+\))/g, ''))
+                    }
+                }
+            })
+            return Array.from(new Set(returnValues));
         }},
-        "DollarProductType.averageRating": {to: "reviewAvg"}
+        "_nutrition": {convert: function(wholeItem, filterVars={
+            "product.smsb_containsWheat_string": "WheatFree",
+            "product.smsb_containsSoy_string": "SoyFree",
+            "product.smsb_containsDairy_string": "DairyFree",
+            "product.smsb_containsNuts_string" : "NutsFree",
+            "product.smsb_containsEggs_string": "EggsFree",
+            "product.sugarFree": "SugarFree",
+            "product.glutenFree": "GlutenFree",
+        }){
+            let returnValues = {}
+            let nutritionalCategories = Object.keys(filterVars)
+            Object.keys(wholeItem).map((key)=>{
+                if (nutritionalCategories.includes(key)){
+                    if (key.includes("Free")){
+                        returnValues[filterVars[key]] = wholeItem[key]
+                    } else if (key.startsWith("contains")){
+                        returnValues[filterVars[key]] = !wholeItem[key]
+                    }
+                }
+            })
+            return returnValues;
+        }},
+        "_dimensions": {convert: (wholeItem, filterVars=[
+            "product.widthDimension",
+            "product.depthDimension",
+            "product.heightDimension",
+            "product.lengthDimension",
+        ])=> {
+            let returnValues = {};
+            for (filterVar of filterVars){
+                returnValues[filterVar.split(".")[1].replace("Dimension", "")] = wholeItem[filterVar]
+            }
+            return returnValues
+        }},
+        "_modalities": {convert: (wholeItem, filterVars=[
+            "product.smsb_availableInStoreOnly",
+            "DollarProductType.callCenterOnly"
+        ])=> {
+            if (wholeItem[filterVars[0]]) {
+                return ["IN_STORE"]
+            } else if (wholeItem[filterVars[1]]){
+                return ["CALL_CENTER"]
+            } else {
+                return ["SHIP", "IN_STORE"]
+            }
+        }},
+        "_ratings": {convert : (wholeItem, filterVars=[
+            "DollarProductType.numberOfReviews",
+            "DollarProductType.averageRating"
+        ])=>{
+            return {ct: wholeItem[filterVars[0]], avg: wholeItem[filterVars[1]]}
+        }},
+        "*inventories": {convert: (wholeItem)=> {
+            let fdId = typeof wholeItem["product.id"] === 'string' ? wholeItem["product.id"].replace("FD", "") : String(wholeItem["product.id"]); 
+            let itemStatus = wholeItem["sku.availabilityStatus"]; 
+            itemStatus = itemStatus == "INSTOCK" ? "IN_STOCK" : "OUT_OF_STOCK"; 
+            return {"stockLevel": itemStatus, "locationId": defaultLocation,
+            "utcTimestamp": new Date(wholeItem.utcTimestamp), "id": fdId}
+        }},
+        "*prices": {convert: (wholeItem)=> {
+            let fdId = typeof wholeItem["product.id"] === 'string' ? wholeItem["product.id"].replace("FD", "") : String(wholeItem["product.id"]); 
+            let productPrices = []
+            productPrices.push({
+                "quantity": +wholeItem["product.minimumQuantity"], // ["product.minimumQuantity"]
+                locationId: defaultLocation, // "searchEventSummary.context.siteId" || defaultLocation
+                isPurchase: false,
+                utcTimestamp: new Date(wholeItem.utcTimestamp), // "acquisition_timestamp"
+                value: +wholeItem["product.listPrice"], // "product.listPrice"
+                id: fdId
+            })
+            if (wholeItem['product.splitCaseAvailable'] && wholeItem["product.minimumQuantity"] != wholeItem["DollarProductType.casePackSize"]){
+                productPrices.push({
+                    "quantity": +wholeItem["DollarProductType.casePackSize"], // product.casePackSize
+                    locationId: defaultLocation, 
+                    isPurchase: false,
+                    utcTimestamp: new Date(wholeItem.utcTimestamp), 
+                    value: +wholeItem["product.listPrice"] ,// product.x_unitprice
+                    id: fdId
+
+                })
+
+            }
+    
+            if ("product.salePrice" in wholeItem){ // product.salePrice
+                productPrices.push({
+                    "quantity": +wholeItem["product.minimumQuantity"],
+                    locationId: defaultLocation, 
+                    isPurchase: false,
+                    utcTimestamp: new Date(wholeItem.utcTimestamp), 
+                    value: +wholeItem["product.SalePrice"], // product.SalePrice
+                    type: wholeItem["product.clearance"] ? "Clearance" : "Sale",
+                    id: fdId
+                })
+
+                if (wholeItem["product.minimumQuantity"] != wholeItem["DollarProductType.casePackSize"]){
+                    productPrices.push({
+                        "quantity": +wholeItem["DollarProductType.casePackSize"],
+                        locationId: defaultLocation, 
+                        isPurchase: false,
+                        utcTimestamp: new Date(wholeItem.utcTimestamp), 
+                        value: +wholeItem["product.SalePrice"], // product.salePrice
+                        id: fdId
+                    })                    
+                }
+            }
+            return productPrices
+        }}
+        
+        
+
     };
 
 
     fs.readdirSync(target).map((file) => {
         let data = JSON.parse(fs.readFileSync(target+file)).map((x)=>cleanup(x));        
         data=data.filter((d)=>"records" in d || "_auditInfo" in d)
-        allItems = [], allPrices = [], isOrignalItems = false;;
+        allItems = [], allPrices = [], allInventories = [], isOrignalItems = false;;
 
         data.map((z)=> {
             if ('records' in z){
@@ -767,170 +917,29 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
             console.log(allItems[0])
             console.log(allPrices[0])
         } else {
-            console.log('utcTimestamp' in allItems[0])
-            allItems.map((d)=>{
-                let fdId = typeof d["product.id"] === 'string' ? d["product.id"].replace("FD", "") : String(d["product.id"]); 
-                // minimumQuantity, Case, Sale if Exists
-                allPrices.push({
-                    "quantity": +d["product.minimumQuantity"], // ["product.minimumQuantity"]
-                    locationId: defaultLocation, // "searchEventSummary.context.siteId" || defaultLocation
-                    isPurchase: false,
-                    utcTimestamp: new Date(d.utcTimestamp), // "acquisition_timestamp"
-                    value: +d["product.listPrice"], // "product.listPrice"
-                    id: fdId
-                })
-                // d.upc ? 
-                //     allPrices.slice(-1)[0]['upc'] = d.upc :
-                //     allPrices.slice(-1)[0]['id'] = d.id // product.id minus FD
-                // ;
-                
-                // for Case
-                if (d['product.splitCaseAvailable']==='N' && d["product.minimumQuantity"] != d["DollarProductType.casePackSize"]){
-                    allPrices.push({
-                        "quantity": +d["DollarProductType.casePackSize"], // product.casePackSize
-                        locationId: defaultLocation, 
-                        isPurchase: false,
-                        utcTimestamp: new Date(d.utcTimestamp), 
-                        value: +d["product.listPrice"] ,// product.x_unitprice
-                        id: fdId
-
-                    })
-                    // d.upc ? 
-                    // allPrices.slice(-1)[0]['upc'] = d.upc :
-                    // allPrices.slice(-1)[0]['id'] = d.id // product.id minus FD
-                    // ;
-                }
-        
-                if ("product.salePrice" in d){ // product.salePrice
-                    allPrices.push({
-                        "quantity": d["product.minimumQuantity"],
-                        locationId: defaultLocation, 
-                        isPurchase: false,
-                        utcTimestamp: new Date(d.utcTimestamp), 
-                        value: +d["product.SalePrice"], // product.SalePrice
-                        type: d["product.clearance"] ? "Clearance" : "Sale",
-                        id: fdId
-                    })
-                    // d.upc ? allPrices.slice(-1)[0]['upc'] = d.upc : allPrices.slice(-1)[0]['id'] = d.id ;
-                    // d.promo_price ? allPrices.slice(-1)[0]['type'] = d.promo_price : null ; // product.x_deals
-        
-                    if (d["product.minimumQuantity"] != d["DollarProductType.casePackSize"]){
-                        allPrices.push({
-                            "quantity": +d["DollarProductType.casePackSize"],
-                            locationId: defaultLocation, 
-                            isPurchase: false,
-                            utcTimestamp: new Date(d.utcTimestamp), 
-                            value: +d["product.SalePrice"], // product.salePrice
-                            id: fdId
-                        })
-                        
+            allItems = allItems.map((x)=> {
+                let returnItem = {};
+                for (let key of Object.keys(newParser2)){
+                    let actions = newParser2[key]
+                    if (actions.convert && key.startsWith("_")){
+                        returnItem[key.slice(1)] = actions.convert(x)
+                    } else if (actions.convert && key === "*prices"){
+                        allPrices = allPrices.concat(actions.convert(x))
+                    } else if (actions.convert && key === "*inventories"){
+                        allInventories = allInventories.concat(actions.convert(x))
+                    } else if (key === 'product.displayName' && key in x) {
+                        let obj = actions.convert(x[key]);
+                        returnItem = {...returnItem, ...obj}
+                    } else if (actions.convert && actions.to && key in x){
+                        returnItem[actions.to] = actions.convert(x[key])
+                    } else if (actions.to  && key in x){
+                        returnItem[actions.to] = x[key]
                     }
-                    
                 }
+                return cleanup(returnItem)
             })
-            
-            let nutritionMap= {
-                "product.smsb_containsWheat_string": "WheatFree",
-                "product.smsb_containsSoy_string": "SoyFree",
-                "product.smsb_containsDairy_string": "DairyFree",
-                "product.smsb_containsNuts_string" : "NutsFree",
-                "product.smsb_containsEggs_string": "EggsFree",
-                "product.sugarFree": "SugarFree",
-                "product.glutenFree": "GlutenFree",
-            };
-            let nutritionalCategories = Object.keys(nutritionMap)
-            let categoryList = [
-                "parentCategory.displayName", 
-                "product.category",
-                "product.brand",
-                "product.smsb_pet", 
-                "product.collection",
-                "product.x_collectionBase",
-            ];
 
-            //console.log(allItems[0])
-            allItems.map((x)=> {
-                Object.keys(x).map((nk)=>{
-                    if (nutritionalCategories.includes(nk)){
-                        let nutritionObj = {}
-                        if (nk.includes("Free")){
-                            nutritionObj[nutritionMap[nk]] = x[nk]
-                        } else if (nk.startsWith("contains")){
-                            nutritionObj[nutritionMap[nk]] = !x[nk]
-                        }
-                        "nutrition" in x ? x["nutrition"] = {...x["nutrition"], ...nutritionObj}: x["nutrition"] = nutritionObj;
-                        delete x[nk]; 
-                    } else if (categoryList.includes(nk)){
-                        if (Array.isArray(x[nk])){
-                            x[nk] = x[nk].filter((c)=>c!== 'Non-Navigable FD Collection' && c!=='Default Collection For Products')
-                            "categories" in x ? x["categories"] = x["categories"].concat(x[nk]) : x["categories"] = x[nk]; 
-                        } else {
-                            //x[nk] = typeof x[nk] === 'string' ? x[nk] : String(x[nk]); 
-                            "categories" in x ? x["categories"].push(x[nk]) : x["categories"] =[x[nk]]; 
-                        }
-                        delete x[nk]
-
-                    } 
-                    else if (nk === "product.weightDimension"){
-                        x["weight"] = x[nk]
-                        delete x[nk];
-                    } else if (nk.endsWith("Dimension")){ 
-                        let dimObj = {}
-                        dimObj[nk.replace("Dimension", "")] = x[nk]
-                        "dimensions" in x ? x["dimensions"] = {...x.dimensions, ...dimObj} : x["dimensions"] = dimObj;
-                        delete x[nk];
-                    } else if (nk === "product.smsb_availableInStoreOnly" && x[nk]){
-                        x["modalities"] = ["IN_STORE"]
-                        delete x[nk];
-                    } else if (nk === "DollarProductType.callCenterOnly" && x[nk]){
-                        x["modalities"] = ["CALL_CENTER"]
-                        delete x[nk];
-                    } else if (nk==="product.brand"){
-                        brands = x[nk]
-                        if (!Array.isArray(brands)){
-                            brands = [brands];
-                        } else {
-                            brands = brands.filter((b)=>b.match(/^(llc|inc|ltd)(\.)?(\&[A-z]+\;)?$/gi))
-                        }
-                        x["brand"] = brands.map((brand)=>{return{name:  brand.replaceAll(/(&.+;|\([A-Z]+\))/g, '')}})
-                    } else if ((nk==="DollarProductType.numberOfReviews" || nk==="DollarProductType.averageRating")){
-                        console.log( x["DollarProductType.averageRating"])
-                        x["ratings"] = {ct: x["DollarProductType.numberOfReviews"], avg: x["DollarProductType.averageRating"]}
-                        // delete x[nk];
-                        // delete x["DollarProductType.averageRating"]
-                    } else if (nk==="product.displayName"){
-                        let name = x[nk]
-                        name = name.replace("?", "")
-                        let customerFacingSize = name.split(",").slice(-1).filter((s)=>s.match(/\d+/g)!==null).map((match)=>{return match.trim()})
-                        x[nk] = name.split(",")[0]
-                        if (customerFacingSize.length>1){
-                            x["customerFacingSize"] = customerFacingSize.reverse().join(" / ")
-                        } else {
-                            x["customerFacingSize"] = customerFacingSize[0]
-                        }
-                        x["description"] = x[nk]
-                        delete x[nk];
-                        
-                    // } else if (Object.keys(newParser).includes(nk)){
-                    //     let actions = newParser[nk]
-                    //     if (newParser[nk].convert){
-                    //         x[nk] = actions.convert(x[nk])
-                    //     }
-                    //     if (actions.to){
-                    //         x[actions.to] = x[nk];
-                    //     }
-                    //     if (actions.keep===undefined){
-                    //         delete x[nk]
-                    //     }
-        
-                    } else {
-                        delete x[nk]
-                    }
-                    
-                })
-            })
             let idSet = new Set()
-            allItems.map((item)=>item.categories = Array.from(new Set(item.categories)))
             allItems = allItems.filter((i)=>{
                 if (idSet.has(i.id)){
                     return false;
@@ -939,20 +948,13 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
                     return true
                 }
             })
-            console.log(allItems[0])
-            console.log(allPrices[0])
+            insertData(allPrices, "prices")
+            insertData(allInventories, "inventories")
+            insertFilteredData("id", "items", allItems)
+            
         }
     })
-    
-    
-    
-    
-    
-    
-    
-    
-    // insertData(allPrices, "prices")
-    // insertFilteredData("id", "items", allItems)
+
     return null
 }
 
@@ -1284,8 +1286,7 @@ program
             }},
             "familyDollarItems": {func: processFamilyDollarItems, args: {
                 defaultLocation: "2394",
-                target: "../tmp/collections/familydollar/items/"
-                //target: "/app/tmp/collections/familydollar/items/"
+                target: "/app/tmp/collections/familydollar/items/"
             }},
             "familyDollarInstacartItems": {func: processInstacartItems, args: {
                 uuid: "legacyId",
@@ -1327,95 +1328,65 @@ program
     .option("--output <path>", "output summary file")
     .action(async (options)=>{
         const json = require("json-summary");
+        // var data = fs.readFileSync(options.input); 
+        // data = JSON.parse(data)
+        // console.log(data.length)
+        processFamilyDollarItems({target: options.input})
+        // let baseItems = data.map((wholeQuery)=>
+        //     {
+        //     //console.log(wholeQuery.resultsList.records.length)
+        //     return wholeQuery.resultsList.records.map((rec)=>{
+        //             let attr = rec.attributes;
+        //             let records = rec.records[0].attributes;
+                    
+        //             s = {...attr, ...records, "utcTimestamp": wholeQuery.acquisition_timestamp}
+        //             Object.entries(s).map(([k, v])=>{
+        //                 if (v.length === 1){
+        //                     s[k] = v[0]
+        //                 }
+        //             })
+
+        //             // for (let key of Object.keys(s)){
+        //             //     if (!(key.toLowerCase().includes('price')) && key!=='product.clearance' && key!=="sku.onSale" && key!== "product.x_deals"&& key!=="product.splitCaseAvailable" && key!=='product.displayName'&& key!== "DollarProductType.splitCaseMultiple" &&  key!=='parentCategory.displayName' && key!=="DollarProductType.casePackSize" && key!=="product.minimumQuantity"){
+        //             //         delete s[key]
+        //             //     }
+        //             // };
+                    
+        //         return s
+        //         })
+        // }).flat();
+        // console.log(new Set (baseItems.map((d)=>d["sku.availabilityStatus"])))
+        // //processFamilyDollarItems({target: "../../tmp/collections/familydollar/items/"})
+        // let summary = json.summarize(baseItems);
+        // summary = JSON.stringify(summary, null, 4);
+        // fs.writeFileSync(options.output, summary)
+        return null; 
+    })
+
+program
+    .command("hash")
+    .description("test hash values for old transforms so that it process legacy files the same")
+    .option("--input <path>", "input api file")
+    .action(async (options)=>{
+        const crypto = require('crypto');
+        const processFamilyDollarItems2 = require("./transform1.js");
         var data = fs.readFileSync(options.input); 
         data = JSON.parse(data)
         console.log(data.length)
-        let baseItems = data.map((wholeQuery)=>
-            {
-            //console.log(wholeQuery.resultsList.records.length)
-            return wholeQuery.resultsList.records.map((rec)=>{
-                    let attr = rec.attributes;
-                    let records = rec.records[0].attributes;
-                    
-                    s = {...attr, ...records, "utcTimestamp": wholeQuery.acquisition_timestamp}
-                    Object.entries(s).map(([k, v])=>{
-                        if (v.length === 1){
-                            s[k] = v[0]
-                        }
-                    })
 
-                    // for (let key of Object.keys(s)){
-                    //     if (!(key.toLowerCase().includes('price')) && key!=='product.clearance' && key!=="sku.onSale" && key!== "product.x_deals"&& key!=="product.splitCaseAvailable" && key!=='product.displayName'&& key!== "DollarProductType.splitCaseMultiple" &&  key!=='parentCategory.displayName' && key!=="DollarProductType.casePackSize" && key!=="product.minimumQuantity"){
-                    //         delete s[key]
-                    //     }
-                    // };
-                    
-                return s
-                })
-        }).flat();
-        // col1 = "DollarProductType.splitCaseMultiple"
-        // col2 = 'product.minimumQuantity'
-        // counter = {}, newSet = new Set(); 
-        // counter["T"] = 0
-        // counter["F"] = 0
-        // baseItems.map((d)=>{  
-        //     if (col2 in d || col1 in d){
-        //         d[col1] !== undefined ? newSet.add(d[col1]) : 0;
-        //         //d[col2] !== undefined ? newSet.add(d[col2]) : 0;     
-        //     //d[col1]==="N" ? counter["T"]++ : counter["F"]++;
-        //     // if (d[col2]!==d[col1]) console.log(d[col2], "||", d[col1]) ;
-        //     // if (d[col2]!== d[col1] && counter.F<=4) console.log(d, "\n\n")//newSet.add(d[col2])
-        //     }
-        // })
-        //console.log(baseItems.filter((d)=>+d[col1]!=+d[col2] && +d[col1]>1).length, newSet)
-        //console.log(data.map(d=> Object.keys(d).includes('records')))
-        // console.log(data[1].records)
-        // console.log(baseItems.slice(0, 5))
-        // counter = {}
-        // counter["T"] = 0
-        // counter["F"] = 0
-        // baseItems.map((d)=>{  
-        //     col1 in d ? counter["T"]++ : counter["F"]++;
-            
-        // })
-        // console.log(counter)
-        // newS = new Set(); 
-        // let i ; 
-        // baseItems.map((e)=>{
-        //     newS.add(e["product.x_deals"])
-        // })
-        //console.log(Array.from(newS))
-        let catList = ["parentCategory.displayName", 
-        "product.brand",
-        "product.category",
-        "product.smsb_pet", 
-        "product.collection",
-        "product.x_collectionBase",
-        ]
-        let catSet = new Set(); 
-        baseItems.map((d)=>{
-            Object.keys(d).filter((z)=>z===catList[0]).map((zd)=>{Array.isArray(d[zd]) ? d[zd].map((zz)=>catSet.add(zz)) : catSet.add(d[zd])})
-            
-        })
-        console.log(catSet);
-        var summary = json.summarize(baseItems, {arraySampleCount: baseItems.length});
-        keys = Object.keys(summary.items["0"].items)
-        keys.sort((a, b)=> summary.items["0"].items[b].count - summary.items["0"].items[a].count)
-        obj = summary.items["0"].items
-        summary.items["0"].items = {}
-        for (key of keys){
-            summary.items["0"].items[key] = obj[key]
-        }
-        summary.items["0"].keys = keys
-        // s2 = {}
-        // keys.map((k)=>{
-        //     s2[k] = summary.items["0"].items[k].count
-        // })
-        console.log(baseItems.filter((d)=>d["product.clearance"]==="N"&&d["product.x_deals"]).map((d)=>d["product.x_deals"]).length)
-        summary = JSON.stringify(summary, null, 3)
-        fs.writeFileSync(options.output, summary);
-
-        console.log("wrote summary to ", options.output);
+        var secret = 'test'
+        console.log(processFamilyDollarItems2)
+        let originalTransform = processFamilyDollarItems2({target: "../tmp/collections/familydollar/items/"}).toString();
+        let newTransform = processFamilyDollarItems({target: "../tmp/collections/familydollar/items/"} ).toString(); 
+        
+        let hash1 = crypto.createHmac('sha256', secret)
+            .update(originalTransform)
+            .digest('hex');
+        let hash2 = crypto.createHmac('sha256', secret)
+            .update(newTransform)
+            .digest('hex');
+        
+        console.log(hash1, hash2, hash1 === hash2);
         return null; 
     })
 
