@@ -521,13 +521,25 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
         travel_size: {keep: true},
         food_safe: {keep: true},
         scent: {keep: true},
-        flavor: {keep: true},
+        flavor: {keep: true, convert: (x)=> {
+            if (Array.isArray(x) && x.length===1){
+                return x[0]
+            } else {
+                return x
+            }
+        }},
         wine_type: {keep:true},
         wine_varietal: {keep: true},
         id: {keep: true},
+        UPCS: {to: "upc"},
+        canonical: {to: "link"},
+        weight_dimension: {to: "weight"},
         description: {to: "romanceDescription", convert: function(x){return `<p>${x}</p>`}},
         minimum_quantity: {to: "minimumOrderQuantity"},
-        categories: {to: "taxonomies", convert: function(x){
+        brand: {to: "brand", convert: function (x) {
+            return x.filter((b)=>b.match(/^\s*(llc|inc|ltd)(\.)?(\&[A-z]+\;)?$/gi)===null).map((b)=>{return {name: b.replaceAll(/&.+;/g, '')}})
+        }},
+        categories: {to: "categories", convert: function(x){
             let cats = x[0]
             let cparse = {"2": "department", "3": "commodity", "4": "subCommodity"}
             Object.keys(cats).map((k)=> {
@@ -539,8 +551,114 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
             }})
             return cats;
         }},
-        UPCS: {to: "upc"},
-        canonical: {to: "link"}
+        name: {convert: function (name){
+            name = name.replace("?", "")
+            let customerFacingSize = name.split(",").slice(1).filter((s)=>s.match(/\d+/g)!==null).map((match)=>{return match.trim()})
+            name = name.split(",")[0]
+            if (!customerFacingSize===""){
+                customerFacingSize = customerFacingSize.reverse().join(" / ")
+            }
+            if (Array.isArray(customerFacingSize) && customerFacingSize.length===1){
+                customerFacingSize = customerFacingSize[0]
+            }
+            return {description: name, customerFacingSize: customerFacingSize}
+        }},
+        _nutrition: {convert: (wholeItem)=>{
+            let keyRegex = /^(contains|gluten|sugar)/i
+            let nutObj = {}
+            Object.keys(wholeItem).filter((key)=>key.match(keyRegex)!==null).map((key)=>{
+                if (key.includes('free')){
+                    let newKey = key.split("_").map((str)=> str[0].toUpperCase() +str.slice(1))
+                    nutObj[newKey] = key
+                } else if (key.includes('contains')){
+                    let newKey = key.split("_").slice(-1).map((str)=> str[0].toUpperCase() +str.slice(1) + "Free").join("")
+                    nutObj[newKey] = !wholeItem[key]
+                }
+            })
+            return nutObj
+            
+        }},
+        _dimensions: {convert: (wholeItem)=>{
+            let dimObj = {};
+            Object.keys(wholeItem).filter((key)=> !key.startsWith('weight') && key.endsWith('dimension')).map((key)=>{
+                dimObj[key.replace("dimension")] = wholeItem[key]
+            })
+            return dimObj
+        }},
+        _modalities: {convert: (wholeItem)=>{
+            if (wholeItem.call_center_only){
+                return ["CALL_CENTER"]
+            } else if (wholeItem.available_in_store_only){
+                return ["IN_STORE"]
+            } else {
+                return ["SHIP", "IN_STORE"]
+            }
+        }},
+        _ratings: {convert: (wholeItem)=> {
+            if (wholeItem.num_reviews) {
+                return {ct: wholeItem.num_reviews, avg: wholeItem.average_rating}
+            } else {
+                return undefined
+            }
+        }},
+        "*prices": {convert: (wholeItem)=> {
+            let newPrice = []
+            newPrice.push({
+                "quantity": wholeItem.minimum_quantity, 
+                locationId: defaultLocation, 
+                isPurchase: false,
+                utcTimestamp: new Date(wholeItem.utcTimestamp),
+                value: wholeItem.price 
+            })
+            wholeItem.upc ? 
+                newPrice.slice(-1)[0]['upc'] = wholeItem.upc :
+                newPrice.slice(-1)[0]['id'] = wholeItem.id
+            ;
+
+            if (wholeItem.minimum_quantity != wholeItem.casepack){
+                newPrice.push({
+                    "quantity": +wholeItem.casepack, 
+                    locationId: defaultLocation, 
+                    isPurchase: false,
+                    utcTimestamp: new Date(wholeItem.utcTimestamp), 
+                    value: wholeItem.price 
+                })
+                wholeItem.upc ? 
+                newPrice.slice(-1)[0]['upc'] = wholeItem.upc :
+                newPrice.slice(-1)[0]['id'] = wholeItem.id
+                ;
+            }
+    
+            if (wholeItem.sale_price && wholeItem.sale_price!=="0.00"){ 
+                newPrice.push({
+                    "quantity": wholeItem.minimum_quantity,
+                    locationId: defaultLocation, 
+                    isPurchase: false,
+                    utcTimestamp: new Date(wholeItem.utcTimestamp), 
+                    value: wholeItem.sale_price 
+                })
+                wholeItem.upc ? newPrice.slice(-1)[0]['upc'] = wholeItem.upc : newPrice.slice(-1)[0]['id'] = wholeItem.id ;
+                wholeItem.promo_price ? newPrice.slice(-1)[0]['type'] = wholeItem.promo_price : null ; 
+    
+                if (wholeItem.minimum_quantity!=wholeItem.casepack){
+                    allPrices.push({
+                        "quantity": +wholeItem.casepack,
+                        locationId: defaultLocation, 
+                        isPurchase: false,
+                        utcTimestamp: new Date(wholeItem.utcTimestamp), 
+                        value: +wholeItem.sale_price 
+                    })
+                    wholeItem.upc ? newPrice.slice(-1)[0]['upc'] = wholeItem.upc : newPrice.slice(-1)[0]['id'] = wholeItem.id ;
+                    wholeItem.promo_price ? newPrice.slice(-1)[0]['type'] = wholeItem.promo_price : null ; 
+                }
+                
+            }
+
+
+        }}
+
+
+        
     };
     let newParser2 = {
         // simple rename
@@ -570,7 +688,7 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
             } else {
                 customerFacingSize = customerFacingSize[0]
             }
-            return {desciption: x, customerFacingSize: customerFacingSize}
+            return {description: x, customerFacingSize: customerFacingSize}
         }},
         "DollarProductType.casePackSize": {to: "casePackSize"},
 
@@ -756,7 +874,6 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
                     return record
                 }).filter((d)=>"minimum_quantity" in d);
                 allItems = allItems.concat(unwindRecords)
-                console.log("allItems ", allItems.length)
             } else if ('_auditInfo' in z){
                 let unwindRecords = z.resultsList.records.map((rec)=>{
                         let attr = rec.attributes;
@@ -777,7 +894,6 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
 
                 }).flat();
                 allItems = allItems.concat(unwindRecords)
-                console.log("allItems ", allItems.length)
             }
             
         })
@@ -785,137 +901,30 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
         // allItems= allItems.concat(data.map((e)=>e.records).flat())
         allItems=allItems.filter((d)=>d)
         console.log(`parsed ${file}. ${allItems.length}`)
-        if (isOrignalItems){
-            allItems.map((d)=>{
-                // minimumQuantity, Case, Sale if Exists
-                allPrices.push({
-                    "quantity": d.minimum_quantity, // ["product.minimumQuantity", "DollarProductType.x_minimumQuantityNumber"]
-                    locationId: defaultLocation, // "searchEventSummary.context.siteId"
-                    isPurchase: false,
-                    utcTimestamp: new Date(d.utcTimestamp), // "acquisition_timestamp"
-                    value: d.price // "product.listPrice"
-                })
-                d.upc ? 
-                    allPrices.slice(-1)[0]['upc'] = d.upc :
-                    allPrices.slice(-1)[0]['id'] = d.id // product.id minus FD
-                ;
-                // for Case
-                if (d.minimum_quantity != d.casepack){
-                    //  "product.minimumQuantity" != product.casePackSize
-                    allPrices.push({
-                        "quantity": +d.casepack, // product.casePackSize
-                        locationId: defaultLocation, 
-                        isPurchase: false,
-                        utcTimestamp: new Date(d.utcTimestamp), 
-                        value: d.price // product.x_unitprice
-                    })
-                    d.upc ? 
-                    allPrices.slice(-1)[0]['upc'] = d.upc :
-                    allPrices.slice(-1)[0]['id'] = d.id // product.id minus FD
-                    ;
+        if (isOrignalItems){ 
+            allItems = allItems.map((x)=> {
+                let returnItem = {};
+                for (let key of Object.keys(newParser)){
+                    let actions = newParser[key]
+                    if (actions.convert && key.startsWith("_")){
+                        returnItem[key.slice(1)] = actions.convert(x)
+                    } else if (actions.convert && key === "*prices"){
+                        allPrices = allPrices.concat(actions.convert(x))
+                    } else if (key === 'name' && key in x) {
+                        let obj = actions.convert(x[key]);
+                        returnItem = {...returnItem, ...obj}
+                    } else if (actions.convert && actions.to && key in x){
+                        returnItem[actions.to] = actions.convert(x[key])
+                    } else if (actions.to  && key in x){
+                        returnItem[actions.to] = x[key]
+                    } else if (actions.keep && key in x && actions.convert){
+                        returnItem[key] = actions.convert(x[key])
+                    } else if (actions.keep && key in x && x[key]){
+                        returnItem[key] = x[key]
+                    }  
                 }
-        
-                if (d.sale_price && d.sale_price!=="0.00"){ // product.salePrice
-                    allPrices.push({
-                        "quantity": d.minimum_quantity,
-                        locationId: defaultLocation, 
-                        isPurchase: false,
-                        utcTimestamp: new Date(d.utcTimestamp), 
-                        value: d.sale_price // product.SalePrice
-                    })
-                    d.upc ? allPrices.slice(-1)[0]['upc'] = d.upc : allPrices.slice(-1)[0]['id'] = d.id ;
-                    d.promo_price ? allPrices.slice(-1)[0]['type'] = d.promo_price : null ; // product.x_deals
-        
-                    if (d.minimum_quantity!=d.casepack){
-                        allPrices.push({
-                            "quantity": +d.casepack,
-                            locationId: defaultLocation, 
-                            isPurchase: false,
-                            utcTimestamp: new Date(d.utcTimestamp), 
-                            value: d.sale_price // product.salePrice
-                        })
-                        d.upc ? allPrices.slice(-1)[0]['upc'] = d.upc : allPrices.slice(-1)[0]['id'] = d.id ;
-                        d.promo_price ? allPrices.slice(-1)[0]['type'] = d.promo_price : null ; 
-                    }
-                    
-                }
+                return cleanup(returnItem)
             })
-            
-            allItems.map((x)=> {
-                Object.keys(x).map((nk)=>{
-                    if (nk.startsWith("contains") || nk.startsWith("sugar") || nk.startsWith("gluten")){
-                        //nk.endsWith("free") ? nk=nk.slice(0, -1): nk;
-                        let nutObj = {}
-                        if (nk.endsWith("free")){
-                            let newKey = nk.split("_").map((str)=> str[0].toUpperCase() +str.slice(1))
-                            nutObj[newKey] = x[nk]
-                        } else if (nk.startsWith("contains")){
-                            let newKey = nk.split("_").slice(-1).map((str)=> str[0].toUpperCase() +str.slice(1) + "Free").join("")
-                            nutObj[newKey] = !x[nk]
-                        }
-                        "nutrition" in x ? x["nutrition"] = {...x["nutrition"], ...nutObj}: x["nutrition"] = nutObj;
-                        delete x[nk]; 
-                    } else if (nk.startsWith("weight")){
-                        x["weight"] = x[nk]
-                        delete x[nk];
-                    } else if (nk.endsWith("Dimension")){ 
-                        let dimObj = {}
-                        dimObj[nk.replace("Dimension", "")] = x[nk]
-                        "dimensions" in x ? x["dimensions"] = {...x.dimensions, ...dimObj} : x["dimensions"] = dimObj;
-                        delete x[nk];
-                    } else if (nk === "available_in_store_only" && x[nk]){
-                        x["modalities"] = ["IN_STORE"]
-                        delete x[nk];
-                    } else if (nk === "call_center_only" && x[nk]){
-                        x["modalities"] = ["CALL_CENTER"]
-                        delete x[nk];
-                    } else if (nk==="brand"){
-                        brands = x[nk]
-                        x[nk] = brands.map((brand)=>{return{name:  brand.replaceAll(/&.+;/g, '')}})
-                    } else if (nk==="num_reviews" && x[nk]){
-                        x["ratings"] = {ct: x[nk], avg: x["average_rating"]}
-                        delete x[nk];
-                        delete x["average_rating"]
-                    } else if (nk==="name"){
-                        let name = x[nk]
-                        name = name.replace("?", "")
-                        let customerFacingSize = name.split(",").slice(1).filter((s)=>s.match(/\d+/g)!==null).map((match)=>{return match.trim()})
-                        x[nk] = name.split(",")[0]
-                        if (!customerFacingSize===""){
-                            x["customerFacingSize"] = customerFacingSize.reverse().join(" / ")
-                        }
-                        x["description"] = x[nk]
-                        delete x[nk];
-                        
-                    } else if (Object.keys(newParser).includes(nk)){
-                        let actions = newParser[nk]
-                        if (newParser[nk].convert){
-                            x[nk] = actions.convert(x[nk])
-                        }
-                        if (actions.to){
-                            x[actions.to] = x[nk];
-                        }
-                        if (actions.keep===undefined){
-                            delete x[nk]
-                        }
-        
-                    } else {
-                        delete x[nk]
-                    }
-                    
-                })
-            })
-            let idSet = new Set()
-            allItems = allItems.filter((i)=>{
-                if (idSet.has(i.id)){
-                    return false;
-                } else {
-                    idSet.add(i.id)
-                    return true
-                }
-            })
-            console.log(allItems[0])
-            console.log(allPrices[0])
         } else {
             allItems = allItems.map((x)=> {
                 let returnItem = {};
@@ -938,23 +947,24 @@ function processFamilyDollarItems({target, defaultLocation="2394"}){
                 }
                 return cleanup(returnItem)
             })
-
-            let idSet = new Set()
-            allItems = allItems.filter((i)=>{
-                if (idSet.has(i.id)){
-                    return false;
-                } else {
-                    idSet.add(i.id)
-                    return true
-                }
-            })
-            insertData(allPrices, "prices")
-            insertData(allInventories, "inventories")
-            insertFilteredData("id", "items", allItems)
-            
         }
-    })
 
+        let idSet = new Set()
+        allItems = allItems.filter((i)=>{
+            if (idSet.has(i.id)){
+                return false;
+            } else {
+                idSet.add(i.id)
+                return true
+            }
+        });
+        
+        console.log(target+file)
+        allPrices.length > 0 ? insertData(allPrices, "prices") : 0 ;  
+        allInventories.length > 0 ? insertData(allInventories, "inventories") : 0 ; 
+        allItems.length > 0 ? insertFilteredData("id", "items", allItems) : 0;
+    })
+    
     return null
 }
 
@@ -1327,66 +1337,7 @@ program
     .option("--input <path>", "input api file")
     .option("--output <path>", "output summary file")
     .action(async (options)=>{
-        const json = require("json-summary");
-        // var data = fs.readFileSync(options.input); 
-        // data = JSON.parse(data)
-        // console.log(data.length)
         processFamilyDollarItems({target: options.input})
-        // let baseItems = data.map((wholeQuery)=>
-        //     {
-        //     //console.log(wholeQuery.resultsList.records.length)
-        //     return wholeQuery.resultsList.records.map((rec)=>{
-        //             let attr = rec.attributes;
-        //             let records = rec.records[0].attributes;
-                    
-        //             s = {...attr, ...records, "utcTimestamp": wholeQuery.acquisition_timestamp}
-        //             Object.entries(s).map(([k, v])=>{
-        //                 if (v.length === 1){
-        //                     s[k] = v[0]
-        //                 }
-        //             })
-
-        //             // for (let key of Object.keys(s)){
-        //             //     if (!(key.toLowerCase().includes('price')) && key!=='product.clearance' && key!=="sku.onSale" && key!== "product.x_deals"&& key!=="product.splitCaseAvailable" && key!=='product.displayName'&& key!== "DollarProductType.splitCaseMultiple" &&  key!=='parentCategory.displayName' && key!=="DollarProductType.casePackSize" && key!=="product.minimumQuantity"){
-        //             //         delete s[key]
-        //             //     }
-        //             // };
-                    
-        //         return s
-        //         })
-        // }).flat();
-        // console.log(new Set (baseItems.map((d)=>d["sku.availabilityStatus"])))
-        // //processFamilyDollarItems({target: "../../tmp/collections/familydollar/items/"})
-        // let summary = json.summarize(baseItems);
-        // summary = JSON.stringify(summary, null, 4);
-        // fs.writeFileSync(options.output, summary)
-        return null; 
-    })
-
-program
-    .command("hash")
-    .description("test hash values for old transforms so that it process legacy files the same")
-    .option("--input <path>", "input api file")
-    .action(async (options)=>{
-        const crypto = require('crypto');
-        const processFamilyDollarItems2 = require("./transform1.js");
-        var data = fs.readFileSync(options.input); 
-        data = JSON.parse(data)
-        console.log(data.length)
-
-        var secret = 'test'
-        console.log(processFamilyDollarItems2)
-        let originalTransform = processFamilyDollarItems2({target: "../tmp/collections/familydollar/items/"}).toString();
-        let newTransform = processFamilyDollarItems({target: "../tmp/collections/familydollar/items/"} ).toString(); 
-        
-        let hash1 = crypto.createHmac('sha256', secret)
-            .update(originalTransform)
-            .digest('hex');
-        let hash2 = crypto.createHmac('sha256', secret)
-            .update(newTransform)
-            .digest('hex');
-        
-        console.log(hash1, hash2, hash1 === hash2);
         return null; 
     })
 
