@@ -2,32 +2,32 @@
    "db": "new",
    "collections": 11,
    "views": 0,
-   "objects": 5463393,
-   "avgObjSize": 235.65778427435112,
-   "dataSize": 1287491089.0,
-   "storageSize": 263073792.0,
+   "objects": 5507546,
+   "avgObjSize": 235.5803726378318,
+   "dataSize": 1297469739.0,
+   "storageSize": 265015296.0,
    "indexes": 11,
-   "indexSize": 54919168.0,
-   "totalSize": 317992960.0,
+   "indexSize": 55336960.0,
+   "totalSize": 320352256.0,
    "scaleFactor": 1.0,
-   "fsUsedSize": 221300043776.0,
+   "fsUsedSize": 222578745344.0,
    "fsTotalSize": 239380459520.0,
    "ok": 1.0,
    "collectionStats": [
       {
          "ns": "new.items",
-         "size": 263396731,
-         "count": 193727,
-         "avgObjSize": 1359,
+         "size": 264719872,
+         "count": 194229,
+         "avgObjSize": 1362,
          "storageSize": 69427200,
-         "freeStorageSize": 1634304,
+         "freeStorageSize": 1298432,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 1814528,
-         "totalSize": 71241728,
+         "totalIndexSize": 1798144,
+         "totalSize": 71225344,
          "indexSizes": {
-            "_id_": 1814528
+            "_id_": 1798144
          },
          "scaleFactor": 1,
          "ok": 1.0
@@ -88,16 +88,16 @@
       },
       {
          "ns": "new.runs",
-         "size": 1624553,
-         "count": 494,
-         "avgObjSize": 3288,
-         "storageSize": 499712,
-         "freeStorageSize": 65536,
+         "size": 1656697,
+         "count": 500,
+         "avgObjSize": 3313,
+         "storageSize": 544768,
+         "freeStorageSize": 98304,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
          "totalIndexSize": 45056,
-         "totalSize": 544768,
+         "totalSize": 589824,
          "indexSizes": {
             "_id_": 45056
          },
@@ -124,18 +124,18 @@
       },
       {
          "ns": "new.inventories",
-         "size": 325990199,
-         "count": 2154119,
+         "size": 329300363,
+         "count": 2175573,
          "avgObjSize": 151,
-         "storageSize": 52977664,
+         "storageSize": 53526528,
          "freeStorageSize": 135168,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 21569536,
-         "totalSize": 74547200,
+         "totalIndexSize": 21782528,
+         "totalSize": 75309056,
          "indexSizes": {
-            "_id_": 21569536
+            "_id_": 21782528
          },
          "scaleFactor": 1,
          "ok": 1.0
@@ -159,18 +159,18 @@
       },
       {
          "ns": "new.prices",
-         "size": 615105527,
-         "count": 3059881,
+         "size": 619910675,
+         "count": 3081104,
          "avgObjSize": 201,
-         "storageSize": 109727744,
-         "freeStorageSize": 135168,
+         "storageSize": 110850048,
+         "freeStorageSize": 536576,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 30760960,
-         "totalSize": 140488704,
+         "totalIndexSize": 30973952,
+         "totalSize": 141824000,
          "indexSizes": {
-            "_id_": 30760960
+            "_id_": 30973952
          },
          "scaleFactor": 1,
          "ok": 1.0
@@ -195,18 +195,18 @@
       },
       {
          "ns": "new.promotions",
-         "size": 40938190,
-         "count": 50227,
-         "avgObjSize": 815,
-         "storageSize": 13840384,
-         "freeStorageSize": 344064,
+         "size": 41446243,
+         "count": 51195,
+         "avgObjSize": 809,
+         "storageSize": 14065664,
+         "freeStorageSize": 372736,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 487424,
-         "totalSize": 14327808,
+         "totalIndexSize": 495616,
+         "totalSize": 14561280,
          "indexSizes": {
-            "_id_": 487424
+            "_id_": 495616
          },
          "scaleFactor": 1,
          "ok": 1.0
