@@ -115,7 +115,6 @@ docker/airflow/dags/pyGrocery/*.json
 scripts/requests/server/collections/
 collection.json
 scripts/data/
-archive.*
 *summary.json
 node_modules/
 .npmrc
