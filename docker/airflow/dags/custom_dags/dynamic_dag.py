@@ -124,7 +124,8 @@ for chain, dag_types in configs.items():
 
     for target_data, setup_vars in dag_types.items():
         kwargs = setup_vars["dag_vars"]
-        kwargs["default_args"] = {"target_data": target_data, "chain": chain, "docker_name": f"scraper_{chain}_{target_data}", "email_on_failure": True}
+        kwargs["default_args"] = {"target_data": target_data, "chain": chain, "docker_name": f"scraper_{chain}_{target_data}",
+        "email_on_failure": True, "email": "kylel9815@gmail.com", "retries": 4, "retry_delay": timedelta(seconds=60)}
         kwargs["tags"] += ["grocery", "GroceryClerk", "ETL", "python", "node", "mongodb", "docker"]
     
         dag_id = f"dynamic_generated_dag_scrape_{chain}_{target_data}"
