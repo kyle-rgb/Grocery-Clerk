@@ -1,11 +1,35 @@
-
+#! /bin/bash
 normalize_legacy_files(){
-    7z x ./archive.7z ; 
+    cd /m/gpg/archives/ ;
+    7z x ./archive.7z;
     # find all gpg files in ./collections folder and ./nov_6 folder
+    mv ./collections/nov_6/* ./collections ;
+    rm -r ./collections/nov_6 ;
+    # decrypt remaining gpg files in collections/ 
+    for gpg_file in $(find collections/ -type f | grep -E "gpg$") ; do
+        gpg -d "$gpg_file" | tar -xvzf - ;
+    done ;
+    for gpg_folder in ./app/tmp/collections/*/; do 
+        cp -vRT "$gpg_folder" ./collections ;
+        # find ./app/tmp/collections -type f -exec sh -c 'mv "$@" ./collections' sh {} + 
+    done ;
+    
+    for i in /m/gpg/archives/archive/*/*/coupons; do 
+        mv $i ${i/coupons/promotions} ; 
+    done;
     # move them to ../archive/collections
-    # create parent directory for ./kroger in ./collections : mv ./collections/kroger ./collections/kroger/promotions both cashback and digital
-    # move all folders with new structure from ./collections to ../archive/collections
-    # ensure no clobber files on mv
+    for folder in collections/*/*/ ; do
+        if [[ -d "$folder" && ! "$folder" =~ "kroger" ]]; then 
+            mv -nv /m/gpg/archives/${folder}* /m/gpg/archives/archive/${folder};
+        elif [[ -d "$folder" ]]; then
+            mv -nv /m/gpg/archives/${folder}* /m/gpg/archives/archive/${folder/kroger\//kroger\/promotions/} ;
+        fi;
+    done; 
+    
+    
+    # rm -r ./app ;
+
+
     # delete ./collections
     # rename coupon folders to promotions
 }
@@ -36,6 +60,13 @@ combine_container_files(){
     # ls -F | grep -E "^[^s][^\/]+$" | tar -tvzif - | grep -e ^d
 }
 
+main() {
+    normalize_legacy_files
+}
+
+main ; 
+
+exit; 
 
 # gpg -d scraper_publix_promotions1_17_2023.tar.gz.gpg > pubP.tar.gz
 # cat pubI.tar.gz pubP.yat.gz > combined.tar.gz
