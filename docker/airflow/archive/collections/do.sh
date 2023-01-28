@@ -7,25 +7,28 @@ normalize_legacy_files(){
     rm -r ./collections/nov_6 ;
     # decrypt remaining gpg files in collections/ 
     for gpg_file in $(find collections/ -type f | grep -E "gpg$") ; do
-        gpg -d "$gpg_file" | tar -xvzf - ;
-    done ;
-    for gpg_folder in ./app/tmp/collections/*/; do 
-        cp -vRT "$gpg_folder" ./collections ;
-        # find ./app/tmp/collections -type f -exec sh -c 'mv "$@" ./collections' sh {} + 
+        gpg -d "$gpg_file" | tar --strip=2 --transform='flags=r;s|\([0-9A-z_]\+\).json|'$(echo $gpg_file | sed -E "s|.*/(.*).tar.gz.gpg|\1.json|g")'|g' -xvzf - ;
+        # mv -nv "$gpg_file" .. ; 
     done ;
     
-    for i in /m/gpg/archives/archive/*/*/coupons; do 
+    for i in ./archive/*/*/coupons; do 
         mv $i ${i/coupons/promotions} ; 
     done;
     # move them to ../archive/collections
     for folder in collections/*/*/ ; do
-        if [[ -d "$folder" && ! "$folder" =~ "kroger" ]]; then 
+        if [[ -d "$folder" && ! "$folder" =~ "kroger" && ! "$folder" =~ "coupons" ]]; then 
             mv -nv /m/gpg/archives/${folder}* /m/gpg/archives/archive/${folder};
+        elif [[ -d "$folder" && "$folder" =~ "coupons" ]]; then
+            mv -nv /m/gpg/archives/${folder}* /m/gpg/archives/archive/${folder/coupons/promotions/};
         elif [[ -d "$folder" ]]; then
             mv -nv /m/gpg/archives/${folder}* /m/gpg/archives/archive/${folder/kroger\//kroger\/promotions/} ;
         fi;
     done; 
     
+    # for gpg_folder in ./app/tmp/collections/*/; do 
+    #     cp -vR "$gpg_folder" ./collections ;
+    #     # find ./app/tmp/collections -type f -exec sh -c 'mv "$@" ./collections' sh {} + 
+    # done ;
     
     # rm -r ./app ;
 
@@ -36,6 +39,7 @@ normalize_legacy_files(){
 
 # one function that combines all gpg files together and re-encrypts is
 combine_container_files(){
+    cd /m/gpg/
     # combine single gpg files down to one tar.gz file cat together
     declare -a files ; 
     declare file_name="$( date -I)_combined.tar.gz.gpg" ; 
@@ -53,15 +57,21 @@ combine_container_files(){
     cat "${files[@]}" | gpg --output "./$file_name" --encrypt -r kylel9815@gmail.com  ;
     # remove intermediary files
     shred -u "${files[@]}" ;
-    mv ./"$file_name" "../../../../data/" ;
-    cd ../../../../data ;
+    echo "combined all files into $file_name >:)"; 
+    # list all with:
+    gpg -d $file_name | tar -tvzif - ; 
+    # extract with :
+    gpg -d $file_name | tar -xvzif - ; 
+    # mv ./"$file_name" "../../../../data/" ;
+    # cd ../../../../data ;
     # add new files to archive for version control
-    7z a ./archive.7z "./$file_name" -p -mhe ;
+    # 7z a ./archive.7z "./$file_name" -p -mhe ;
     # ls -F | grep -E "^[^s][^\/]+$" | tar -tvzif - | grep -e ^d
 }
 
 main() {
-    normalize_legacy_files
+    # normalize_legacy_files
+    combine_container_files
 }
 
 main ; 
