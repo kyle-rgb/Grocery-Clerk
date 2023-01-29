@@ -42,26 +42,50 @@ combine_container_files(){
     cd /m/gpg/
     # combine single gpg files down to one tar.gz file cat together
     declare -a files ; 
-    declare file_name="$( date -I)_combined.tar.gz.gpg" ; 
+    declare file_name="$( date -I)_combined.tar.gz" ; 
 
     # decrypt files and make files
     for i in * ; do
         if [[ "$i" =~ .gpg$ ]]; then 
             echo "decrpyting $i"
-            gpg -dq "$i"  > "${i/.gpg/}" ; 
+            gpg -dq "$i"  >> "${i/.gpg}" ; 
             files+=("${i/.gpg}")
         fi ; 
     done ;
 
-    # create combined tar and re-encrypt it 
-    cat "${files[@]}" | gpg --output "./$file_name" --encrypt -r kylel9815@gmail.com  ;
+    # # create combined tar and re-encrypt it 
+    cat "${files[@]}" | gpg --output "./$file_name.gpg" --encrypt -r kylel9815@gmail.com;
+    # extract combined file into ./app/
+    gpg -d "./$file_name.gpg" | tar -xvzif - ;
+    # if ./archives/archive exists
+    if [[ -e ./archives/archive ]]; then
+        for gpg_file in ./archives/collections/*.gpg ; do
+            local fn=${gpg_file/archives\/collections\//}
+            gpg -dq "$gpg_file" >> ${fn/.gpg/} ; 
+            mv -vn $gpg_file . ; 
+            files+=(${fn/.gpg}) ; 
+        done ;
+        # move all files from ./archives/archive/collections into ./app/collections
+        for original_file in ./archives/archive/collections/*/*/; do 
+            mv -nv $original_file*  ${original_file/archives\/archive\/collections/app\/tmp\/collections};
+        done ;
+    fi ;
+            # mv -vn "$gpg_file" ..; 
+            # gpg -d "$gpg_file"
+    # move gpg files into /m/gpg
+    # and append them to combined tar
+
+    # move regular files into ./app/
+
+
     # remove intermediary files
+    cat "${files[@]}" | gpg --output "./ALL_GPGs.tar.gz.gpg" --encrypt -r kylel9815@gmail.com;
     shred -u "${files[@]}" ;
-    echo "combined all files into $file_name >:)"; 
-    # list all with:
-    gpg -d $file_name | tar -tvzif - ; 
-    # extract with :
-    gpg -d $file_name | tar -xvzif - ; 
+    # echo "combined all files into $file_name >:)"; 
+    # # list all with:
+    # gpg -d $file_name | tar -tvzif - ; 
+    # # extract with :
+    # gpg -d $file_name | tar -xvzif - ; 
     # mv ./"$file_name" "../../../../data/" ;
     # cd ../../../../data ;
     # add new files to archive for version control
@@ -70,7 +94,7 @@ combine_container_files(){
 }
 
 main() {
-    # normalize_legacy_files
+    normalize_legacy_files
     combine_container_files
 }
 
