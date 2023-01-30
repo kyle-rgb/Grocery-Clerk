@@ -39,10 +39,18 @@ normalize_legacy_files(){
 
 # one function that combines all gpg files together and re-encrypts is
 combine_container_files(){
+    # check to see if new gpg files exists
+    if [ "$( ls -A . | grep gpg$ )" ]; then
+        mv -nv ./*.gpg /m/gpg ;
+    else 
+        echo "no new docker files to move" ;
+    fi ;  
+
+    
     cd /m/gpg/
     # combine single gpg files down to one tar.gz file cat together
     declare -a files ; 
-    declare file_name="$( date -I)_combined.tar.gz" ; 
+    declare file_name="$( date -I)_combined.tar.gz" ;
 
     # decrypt files and make files
     for i in * ; do
@@ -66,31 +74,37 @@ combine_container_files(){
             files+=(${fn/.gpg}) ; 
         done ;
         # move all files from ./archives/archive/collections into ./app/collections
-        for original_file in ./archives/archive/collections/*/*/; do 
-            mv -nv $original_file*  ${original_file/archives\/archive\/collections/app\/tmp\/collections};
+        for original_file in ./archives/archive/collections/*/; do 
+            cp -Rvn "$original_file" ./app/tmp/collections;
         done ;
     fi ;
-            # mv -vn "$gpg_file" ..; 
-            # gpg -d "$gpg_file"
-    # move gpg files into /m/gpg
-    # and append them to combined tar
 
-    # move regular files into ./app/
+    # move ./aldi/ ./app/tmp/collections/
+    # move ./kroger/ ./app/tmp/collections
+    # move ./app/tmp/collections/kroger/digital ./app/tmp/collections/kroger/promotions
+    # move ./app/tmp/collections/kroger/cashback ./app/tmp/collections/kroger/promotions
+    # then remove all these folders
+    local move_folders=("aldi/" "kroger/" "app/tmp/collections/kroger/digital" "app/tmp/collections/kroger/cashback");
+    for index in "${!move_folders[@]}" ; do
+        if [[ $index -lt 2 ]] ; then 
+            cp -Rvn ${move_folders[$index]} ./app/tmp/collections   
+        elif [[ $index -eq 2 ]] ; then 
+            cp -Rvn ${move_folders[$index]} ${move_folders[$index]/digital/promotions};
+        elif [[ $index -eq 3 ]] ; then 
+            cp -Rvn ${move_folders[$index]} ${move_folders[$index]/cashback/promotions} ;
+        fi ;
+        rm -rv ${move_folders[$index]} ;
+    done ;
+    # add all gpg files to separate archive
+    # archive ./app/ 
 
-
-    # remove intermediary files
+    # # remove intermediary files
+    tar -cvzf - "app/" | gpg --output "./${file_name}.gpg" --encrypt -r kylel9815@gmail.com;
     cat "${files[@]}" | gpg --output "./ALL_GPGs.tar.gz.gpg" --encrypt -r kylel9815@gmail.com;
     shred -u "${files[@]}" ;
-    # echo "combined all files into $file_name >:)"; 
-    # # list all with:
-    # gpg -d $file_name | tar -tvzif - ; 
-    # # extract with :
-    # gpg -d $file_name | tar -xvzif - ; 
-    # mv ./"$file_name" "../../../../data/" ;
-    # cd ../../../../data ;
-    # add new files to archive for version control
-    # 7z a ./archive.7z "./$file_name" -p -mhe ;
-    # ls -F | grep -E "^[^s][^\/]+$" | tar -tvzif - | grep -e ^d
+    rm -r app/;
+    echo "finalized archive files"
+
 }
 
 main() {
