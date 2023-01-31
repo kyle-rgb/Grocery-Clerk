@@ -978,11 +978,18 @@ async function getKrogerSpecialPromotions({ page }) {
       await page.waitForTimeout(8500);
       var categoryLinks = await page.$$eval("a.kds-Link.kds-ProminentLink", (nodes)=>nodes.map((el)=>el.href))
       var [shopAllLink] = categoryLinks.filter((a)=>a.includes("ShopAll"));
-      reachedSearchPage =  true;
+      var categoryButtons = await page.$$("a.kds-Link.kds-ProminentLink");
       console.log("shopAllLink = w/o bubbles", shopAllLink) 
-      await page.goto(shopAllLink);
+      try {
+        let shopAllBtn = categoryButtons[categoryLinks.indexOf(shopAllLink)];
+        await shopAllBtn.click();
+      } catch {
+        console.log("button not found")
+        await page.goto(shopAllLink);
+      }
+      reachedSearchPage =  true;
+      await page.waitForTimeout(17500);
       // get all categories in departments dropdown then proceed with waiting for and getting load more button
-      await page.waitForTimeout(10000);
       let departmentFilter = await page.$("span[aria-label='Open the Departments filter']")
       if (departmentFilter===null){
         await page.goto(shopAllLink);
@@ -1001,8 +1008,14 @@ async function getKrogerSpecialPromotions({ page }) {
       for (let j = 0 ; j <categoryFilters.length ; j++){
         categoryFilters = await page.$$("ul.x-staggering-transition-group.x-staggered-fade-and-slide.x-list.x-filters > li > div > div > label > input")
         console.log("categoryFilters ==> ", categoryFilters)
+
         if (categoryFilters.length<1){
-          departmentFilter = await page.waitForSelector("span[aria-label='Open the Departments filter']")
+          await page.waitForTimeout(12500)
+          departmentFilter = await page.$("span[aria-label='Open the Departments filter']")
+          if (departmentFilter === null){
+            console.log(departmentFilter, "<<<=== departmentFilter")
+            continue;
+          }
           await departmentFilter.click(); // will change upon click
           // get show all categories button
           await page.waitForTimeout(5000)

@@ -20,7 +20,7 @@ configs = {
     "publix": {
         "items" : {
             "dag_vars": {
-                "schedule_interval": "4 0 * * 2",
+                "schedule_interval": "19 0 * * 1",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["publix", "items", "instacart"]
             }
