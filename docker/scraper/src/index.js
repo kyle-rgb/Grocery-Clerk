@@ -1071,7 +1071,7 @@ async function getKrogerSpecialPromotions({ page }) {
   * (ibid): https://www.kroger.com/pl/cleaning-and-household/26?keyword=Buy6Save3ShopAll22104&monet=promo&pzn=relevance&query=Buy6Save3ShopAll22104&searchType=mktg%20attribute&taxonomyId=26&fulfillment=all
   */
   console.log("getting remaining special promo links ...> ", specialPromoLinks)
-
+  var MAX_RETRYS = 0 ; 
   for (let i = 0 ; i < specialPromoLinks.length ; i++ ){
     let link = specialPromoLinks[i]
     let dirName = link.match(/keyword=(.+?)\&/)[1]
@@ -1100,10 +1100,16 @@ async function getKrogerSpecialPromotions({ page }) {
       await wrapFile(linkFileName)
       console.log("finished ", linkFileName)
       console.log("finished link : ", link)
+      MAX_RETRYS=0 ; 
     } catch (err){
       console.log(err);
       console.log("restarting iteration for ", link)
-      i--
+      i--;
+      if (MAX_RETRYS > 3) {
+        i++;
+      } else {
+        MAX_RETRYS++; 
+      }
     }
     await page.waitForTimeout(9000)
   }
