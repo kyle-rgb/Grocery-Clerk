@@ -11,7 +11,7 @@ configs = {
     "aldi": {
         "items": {
             "dag_vars": {
-                "schedule_interval": "5 0 * * 2",
+                "schedule_interval": "5 0 * * 2,3",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["aldi", "items", "instacart"]
             }
@@ -20,14 +20,14 @@ configs = {
     "publix": {
         "items" : {
             "dag_vars": {
-                "schedule_interval": "19 0 * * 1",
+                "schedule_interval": "0 19 * * 1,2",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["publix", "items", "instacart"]
             }
         },
         "promotions": {
             "dag_vars": {
-                "schedule_interval": "3 0 * * 2",
+                "schedule_interval": "3 0 * * 2,3",
                 "dagrun_timeout": timedelta(minutes=10),
                 "tags": ["publix", "promotions", "1st Party Site"]
             }
@@ -36,21 +36,21 @@ configs = {
     "kroger": {
         "special": {
             "dag_vars": {
-                "schedule_interval": "0 0 * * 2",
+                "schedule_interval": "0 0 * * 2,3",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["kroger", "promotions", "1st Party Site"]
             }
         },
         "digital": {
             "dag_vars": {
-                "schedule_interval": "1 0 * * 2",
+                "schedule_interval": "1 0 * * 2,3",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["kroger", "promotions", "1st Party Site"]
             }
         },
         "cashback": {
             "dag_vars": {
-                "schedule_interval": "2 0 * * 2",
+                "schedule_interval": "2 0 * * 2,3",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["kroger", "promotions", "1st Party Site"]
             }
