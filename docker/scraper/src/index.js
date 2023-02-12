@@ -1553,7 +1553,7 @@ async function getFoodDepotItems({ page }){
     pageHeight = await body.getProperty("offsetHeight").then((jsHandle)=> jsHandle.jsonValue())
     console.log(pageHeight)
     await page.keyboard.press("End");
-    await page.waitForTimeout(6500);
+    await page.waitForTimeout(16500);
     newHeight = await body.getProperty("offsetHeight").then((jsHandle)=> jsHandle.jsonValue());
     console.log(newHeight)
     let u = 1; 
