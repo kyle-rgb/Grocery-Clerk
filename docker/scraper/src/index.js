@@ -1266,6 +1266,7 @@ async function getDollarGeneralPromotions({ page }){
   // set request interception on page
   
   var badRequests = [];
+  var loadMoreSwitch = 0, lastLoadMoreSwitch = 0; 
   var path = "/app/tmp/collections/dollargeneral/promotions/"
   var fileName = new Date().toLocaleDateString().replaceAll(/\//g, "_") + ".json";
   var offset = 0 ; 
@@ -1319,12 +1320,18 @@ async function getDollarGeneralPromotions({ page }){
       if (eligibleItems){
         let loadMoreButton = await eligibleItems.$("button[class='button eligible-products-results__load-more-button']") ;
         console.log(loadMoreButton)
-        while (loadMoreButton){
+        while (loadMoreButton && (loadMoreSwitch==0 || loadMoreSwitch != lastLoadMoreSwitch)){
           await loadMoreButton.click();
           await page.waitForTimeout(7500);
           loadMoreButton = await eligibleItems.$("button[class='button eligible-products-results__load-more-button']") ; 
           console.log(loadMoreButton)
+          lastLoadMoreSwitch = loadMoreSwitch ; 
+          let tmpResults = await page.$$(".eligible-products-results__results-list > li");
+          loadMoreSwitch = tmpResults.length
+          console.log("loadMore ", loadMoreSwitch, "lastLoadMore ", lastLoadMoreSwitch)
         }
+        loadMoreSwitch = 0;
+        lastLoadMoreSwitch = 0; 
       };
       // exit out of page and return page to promotions tab ; 
       //await newTab.close();

@@ -66,21 +66,21 @@ configs = {
     "family-dollar": {
         "items": {
             "dag_vars": {
-                "schedule_interval": "3 0 * * 6",
+                "schedule_interval": "3 0 * * 6,0",
                 "dagrun_timeout": timedelta(minutes=120),
                 "tags": ["family dollar", "items", "1st Party Site"]
             }
         },
         "promotions": {
             "dag_vars": {
-                "schedule_interval": "2 0 * * 6",
+                "schedule_interval": "2 0 * * 6,0",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["family dollar", "promotions", "1st Party Site"]
             }
         },
         "instacartItems": {
             "dag_vars": {
-                "schedule_interval": "1 0 * * 6",
+                "schedule_interval": "1 0 * * 6,0",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["family dollar", "items", "instacart"]
             }
@@ -89,14 +89,14 @@ configs = {
     "dollar-general": {
         "items": {
             "dag_vars": {
-                "schedule_interval": "5 0 * * 6",
+                "schedule_interval": "5 0 * * 6,0",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["dollar general", "items", "1st Party Site"]
             }
         },
         "promotions": {
             "dag_vars": {
-                "schedule_interval": "4 0 * * 6",
+                "schedule_interval": "8 0 * * 6,0",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["dollar general", "promotions", "1st Party Site"]
             }
