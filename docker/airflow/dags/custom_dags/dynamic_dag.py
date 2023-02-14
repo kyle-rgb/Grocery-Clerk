@@ -105,14 +105,14 @@ configs = {
     "food-depot": {
         "items": {
             "dag_vars": {
-                "schedule_interval": "0 0 * * 0",
+                "schedule_interval": "0 0 * * 0,2",
                 "dagrun_timeout": timedelta(minutes=300),
                 "tags": ["food depot", "items", "1st Party Site"]
             }
         },
         "promotions": {
             "dag_vars": {
-                "schedule_interval": "1 0 * * 0",
+                "schedule_interval": "1 0 * * 0,2",
                 "dagrun_timeout": timedelta(minutes=30),
                 "tags": ["food depot", "promotions", "1st Party Site"]
             }
