@@ -6,12 +6,14 @@ from airflow import DAG
 from airflow.exceptions import AirflowSkipException
 from airflow.operators.email import EmailOperator 
 from airflow.operators.bash import BashOperator
+from airflow.utils.edgemodifier import Label
+from airflow.utils.trigger_rule import TriggerRule
 
 configs = {
     "aldi": {
         "items": {
             "dag_vars": {
-                "schedule_interval": "5 0 * * 2,3",
+                "schedule_interval": "5 10,22 * * 2,3",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["aldi", "items", "instacart"]
             }
@@ -20,14 +22,14 @@ configs = {
     "publix": {
         "items" : {
             "dag_vars": {
-                "schedule_interval": "0 19 * * 1,2",
+                "schedule_interval": "0 10,22 * * 2,3",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["publix", "items", "instacart"]
             }
         },
         "promotions": {
             "dag_vars": {
-                "schedule_interval": "3 0 * * 2,3",
+                "schedule_interval": "3 10,22 * * 2,3",
                 "dagrun_timeout": timedelta(minutes=10),
                 "tags": ["publix", "promotions", "1st Party Site"]
             }
@@ -36,28 +38,28 @@ configs = {
     "kroger": {
         "special": {
             "dag_vars": {
-                "schedule_interval": "0 0 * * 2,3",
+                "schedule_interval": "0 10,22 * * 2,3",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["kroger", "promotions", "1st Party Site"]
             }
         },
         "digital": {
             "dag_vars": {
-                "schedule_interval": "1 0 * * 2,3",
+                "schedule_interval": "1 10,22 * * 2,3",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["kroger", "promotions", "1st Party Site"]
             }
         },
         "cashback": {
             "dag_vars": {
-                "schedule_interval": "2 0 * * 2,3",
+                "schedule_interval": "2 10,22 * * 2,3",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["kroger", "promotions", "1st Party Site"]
             }
         },
         "trips": {
             "dag_vars": {
-                "schedule_interval": "0 0 * * 3",
+                "schedule_interval": "0 10,22 * * 2,3",
                 "dagrun_timeout": timedelta(minutes=45),
                 "tags": ["kroger", "trips", "1st Party Site"]
             }
@@ -66,21 +68,21 @@ configs = {
     "family-dollar": {
         "items": {
             "dag_vars": {
-                "schedule_interval": "3 0 * * 6,0",
+                "schedule_interval": "3 10,22 * * 6,0",
                 "dagrun_timeout": timedelta(minutes=120),
                 "tags": ["family dollar", "items", "1st Party Site"]
             }
         },
         "promotions": {
             "dag_vars": {
-                "schedule_interval": "2 0 * * 6,0",
+                "schedule_interval": "2 10,22 * * 6,0",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["family dollar", "promotions", "1st Party Site"]
             }
         },
         "instacartItems": {
             "dag_vars": {
-                "schedule_interval": "1 0 * * 6,0",
+                "schedule_interval": "1 10,22 * * 6,0",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["family dollar", "items", "instacart"]
             }
@@ -89,14 +91,14 @@ configs = {
     "dollar-general": {
         "items": {
             "dag_vars": {
-                "schedule_interval": "5 0 * * 6,0",
+                "schedule_interval": "5 10,22 * * 6,0",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["dollar general", "items", "1st Party Site"]
             }
         },
         "promotions": {
             "dag_vars": {
-                "schedule_interval": "8 0 * * 6,0",
+                "schedule_interval": "7 10,22 * * 6,0",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["dollar general", "promotions", "1st Party Site"]
             }
@@ -105,14 +107,14 @@ configs = {
     "food-depot": {
         "items": {
             "dag_vars": {
-                "schedule_interval": "0 0 * * 0,2",
+                "schedule_interval": "0 10,22 * * 0,1",
                 "dagrun_timeout": timedelta(minutes=300),
                 "tags": ["food depot", "items", "1st Party Site"]
             }
         },
         "promotions": {
             "dag_vars": {
-                "schedule_interval": "1 0 * * 0,2",
+                "schedule_interval": "1 10,22 * * 0,1",
                 "dagrun_timeout": timedelta(minutes=30),
                 "tags": ["food depot", "promotions", "1st Party Site"]
             }
@@ -138,6 +140,25 @@ for chain, dag_types in configs.items():
             **kwargs
         )
         def dynamic_generated_dag():
+            
+            @task(task_id="verify_time")
+            def verify_time(chain=None, logical_date=None):
+                properTimes = {
+                    "kroger": ((22, 2), (10, 3)),
+                    "publix": ((22, 2), (10, 3)),
+                    "aldi": ((22, 2), (10, 3)),
+                    "family-dollar": ((22, 6), (10, 0)),
+                    "dollar-general": ((22, 6), (10, 0)),
+                    "food-depot": ((22, 0), (10, 1)),
+                }
+
+                cron_day = logical_date.isoweekday()%7
+
+                if (logical_date.hour, cron_day) in properTimes[chain]:
+                    return 0 
+                else:
+                    raise AirflowSkipException
+
             @task(task_id="start_container")
             def start_container(docker_name=None, chain=None, target_data=None, email_on_failure=None):
                 import docker, shutil
@@ -354,10 +375,10 @@ for chain, dag_types in configs.items():
 
             # [START main_flow_non_kroger]
             if chain != "kroger":
-                start_container() >> insertRun() >> scrapeData() >> updateRun(pipeline_action="transform", push=True)  >> transformData() >> updateRun(pipeline_action="archive", push=True) >> archiveData() >> docker_cp_bash >> updateRun(push=False)>> stopContainer() >> send_email
+                verify_time() >> start_container() >> insertRun() >> scrapeData() >> updateRun(pipeline_action="transform", push=True)  >> transformData() >> updateRun(pipeline_action="archive", push=True) >> archiveData() >> docker_cp_bash >> updateRun(push=False)>> stopContainer() >> send_email
             else:
                 docker_cp_venv_files = BashOperator(task_id="bash_docker_cp_venv_files", bash_command=f"docker cp {f'scraper_{chain}_{target_data}'}:/app/tmp/collections /tmp/archive/.venv_files")
-                start_container() >> insertRun() >> scrapeData() >> updateRun(pipeline_action="transform", push=True)  >> docker_cp_venv_files >> transformDataVenv() >> updateRun(pipeline_action="archive", push=True) >> archiveData() >> docker_cp_bash >> updateRun(push=False)>> stopContainer() >> send_email
+                verify_time() >> start_container() >> insertRun() >> scrapeData() >> updateRun(pipeline_action="transform", push=True)  >> docker_cp_venv_files >> transformDataVenv() >> updateRun(pipeline_action="archive", push=True) >> archiveData() >> docker_cp_bash >> updateRun(push=False)>> stopContainer() >> send_email
                 
             # [END main_flow_non_kroger]
 
