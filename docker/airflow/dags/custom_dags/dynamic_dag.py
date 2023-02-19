@@ -68,21 +68,21 @@ configs = {
     "family-dollar": {
         "items": {
             "dag_vars": {
-                "schedule_interval": "3 10,22 * * 6,0",
+                "schedule_interval": "4 10,22 * * 6,0",
                 "dagrun_timeout": timedelta(minutes=120),
                 "tags": ["family dollar", "items", "1st Party Site"]
             }
         },
         "promotions": {
             "dag_vars": {
-                "schedule_interval": "2 10,22 * * 6,0",
+                "schedule_interval": "20 10,22 * * 6,0",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["family dollar", "promotions", "1st Party Site"]
             }
         },
         "instacartItems": {
             "dag_vars": {
-                "schedule_interval": "1 10,22 * * 6,0",
+                "schedule_interval": "11 10,22 * * 6,0",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["family dollar", "items", "instacart"]
             }
@@ -91,14 +91,14 @@ configs = {
     "dollar-general": {
         "items": {
             "dag_vars": {
-                "schedule_interval": "5 10,22 * * 6,0",
+                "schedule_interval": "15 10,22 * * 6,0",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["dollar general", "items", "1st Party Site"]
             }
         },
         "promotions": {
             "dag_vars": {
-                "schedule_interval": "7 10,22 * * 6,0",
+                "schedule_interval": "17 10,22 * * 6,0",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["dollar general", "promotions", "1st Party Site"]
             }
@@ -153,7 +153,7 @@ for chain, dag_types in configs.items():
                 }
 
                 cron_day = logical_date.isoweekday()%7
-
+                print("LOG DATE:", logical_date, "; CRON DATE: ", cron_day)
                 if (logical_date.hour, cron_day) in properTimes[chain]:
                     return 0 
                 else:
@@ -185,6 +185,9 @@ for chain, dag_types in configs.items():
                         init=True, stdin_open=True,
                         privileged =True
                 )
+
+                
+                print(f"Running {container.image} @ version {container.image.id}")
 
                 client.close()
 
@@ -304,7 +307,10 @@ for chain, dag_types in configs.items():
                     user="pptruser", environment={"MONGO_CONN_URL": connections["MONGO_CONN_URL"].get_uri(), "EMAIL": email},
                     workdir="/app"
                 )
-                output = output.decode("ascii")
+                try:
+                    output = output.decode("ascii")
+                except:
+                    print(output)
                 print(output)
                 client.close()
 

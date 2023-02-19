@@ -417,15 +417,17 @@ function processInternalCoupons({target, parser, uuid}){
         }
         console.log("chunk length = ", chunk.length)
         chunk.map((d)=> {
-            let newPromo = {}
-            let relKeys = parserKeys.filter((pk)=> pk in d)
-            for (let key of relKeys){
-                let actions = parser[key]
-                actions.convert ? d[key] = actions.convert(d[key]) : 0;
-                actions.to ? actions.to in newPromo ? newPromo[actions.to] = [newPromo[actions.to], ...d[key]]: newPromo[actions.to] = d[key] : 0;
-                actions.keep ? newPromo[key] = d[key] : 0;
+            if (!Array.isArray(d)){
+                let newPromo = {}
+                let relKeys = parserKeys.filter((pk)=> pk in d)
+                for (let key of relKeys){
+                    let actions = parser[key]
+                    actions.convert ? d[key] = actions.convert(d[key]) : 0;
+                    actions.to ? actions.to in newPromo ? newPromo[actions.to] = [newPromo[actions.to], ...d[key]]: newPromo[actions.to] = d[key] : 0;
+                    actions.keep ? newPromo[key] = d[key] : 0;
+                }
+                allCoupons.push(newPromo)
             }
-            allCoupons.push(newPromo)
         })
     }
 
