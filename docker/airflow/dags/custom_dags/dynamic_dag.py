@@ -68,7 +68,7 @@ configs = {
     "family-dollar": {
         "items": {
             "dag_vars": {
-                "schedule_interval": "4 10,22 * * 6,0",
+                "schedule_interval": "41 10,22 * * 6,0",
                 "dagrun_timeout": timedelta(minutes=120),
                 "tags": ["family dollar", "items", "1st Party Site"]
             }
@@ -82,7 +82,7 @@ configs = {
         },
         "instacartItems": {
             "dag_vars": {
-                "schedule_interval": "11 10,22 * * 6,0",
+                "schedule_interval": "12 10,22 * * 6,0",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["family dollar", "items", "instacart"]
             }
@@ -91,7 +91,7 @@ configs = {
     "dollar-general": {
         "items": {
             "dag_vars": {
-                "schedule_interval": "15 10,22 * * 6,0",
+                "schedule_interval": "16 10,22 * * 6,0",
                 "dagrun_timeout": timedelta(minutes=500),
                 "tags": ["dollar general", "items", "1st Party Site"]
             }
@@ -143,6 +143,7 @@ for chain, dag_types in configs.items():
             
             @task(task_id="verify_time")
             def verify_time(chain=None, logical_date=None):
+                import datetime as dt
                 properTimes = {
                     "kroger": ((22, 2), (10, 3)),
                     "publix": ((22, 2), (10, 3)),
@@ -152,9 +153,10 @@ for chain, dag_types in configs.items():
                     "food-depot": ((22, 0), (10, 1)),
                 }
 
-                cron_day = logical_date.isoweekday()%7
-                print("LOG DATE:", logical_date, "; CRON DATE: ", cron_day)
-                if (logical_date.hour, cron_day) in properTimes[chain]:
+                startTime = dt.datetime.utcnow()
+                cron_day = startTime.isoweekday()%7
+                
+                if (startTime.hour, cron_day) in properTimes[chain]:
                     return 0 
                 else:
                     raise AirflowSkipException
