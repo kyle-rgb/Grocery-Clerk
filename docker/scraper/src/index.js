@@ -962,7 +962,20 @@ async function getKrogerSpecialPromotions({ page }) {
   // that redirect us to items search page. specialPromoNonBubble links require a few extra steps.
   console.log("specialPromoLinks >>", specialPromoLinks)
   console.log("specialPromoNonBubbleLinks {links that need navigation to own promotions page} >>", specialPromoNonBubbleLinks)
-  var reachedSearchPage = false; 
+  var reachedSearchPage = false;
+  let shopAllLinkArray = [];
+  if (specialPromoNonBubbleLinks.length > 0){
+    for (let specialLink of specialPromoNonBubbleLinks){
+      console.log("specialLink = w/o bubbles", specialLink)
+      await page.goto(specialLink);
+      await page.waitForTimeout(8500);
+      var categoryLinks = await page.$$eval("a.kds-Link.kds-ProminentLink", (nodes)=>nodes.map((el)=>el.href))
+      var [shopAllLink] = categoryLinks.filter((a)=>a.includes("ShopAll"));
+      // var categoryButtons = await page.$$("a.kds-Link.kds-ProminentLink");
+      console.log("shopAllLink = w/o bubbles", shopAllLink)
+      shopAllLinkArray.push(shopAllLink);
+    }
+  }
   page.on("response", async (response)=> {
     if (reachedSearchPage && response.url().match(specialPromoRegex)){
       console.log("captured URL : ", response.url())
@@ -974,21 +987,9 @@ async function getKrogerSpecialPromotions({ page }) {
   }) 
   if (specialPromoNonBubbleLinks.length>0){
     // go to page find and find search link that comprises the broadest category (should have ShopAll in it and no reference to a specific category.)
-    for (let specialLink of specialPromoNonBubbleLinks ){
-      console.log("specialLink = w/o bubbles", specialLink)
-      await page.goto(specialLink);
-      await page.waitForTimeout(8500);
-      var categoryLinks = await page.$$eval("a.kds-Link.kds-ProminentLink", (nodes)=>nodes.map((el)=>el.href))
-      var [shopAllLink] = categoryLinks.filter((a)=>a.includes("ShopAll"));
-      var categoryButtons = await page.$$("a.kds-Link.kds-ProminentLink");
-      console.log("shopAllLink = w/o bubbles", shopAllLink) 
-      try {
-        let shopAllBtn = categoryButtons[categoryLinks.indexOf(shopAllLink)];
-        await shopAllBtn.click();
-      } catch {
-        console.log("button not found")
-        await page.goto(shopAllLink);
-      }
+    for (let specialLink of shopAllLinkArray){
+      console.log("navigating to ", specialLink)
+      await page.goto(specialLink)
       reachedSearchPage =  true;
       await page.waitForTimeout(17500);
       // get all categories in departments dropdown then proceed with waiting for and getting load more button
@@ -1057,6 +1058,7 @@ async function getKrogerSpecialPromotions({ page }) {
       let linkFileName = path+dirName+"/"+fileName 
       await wrapFile(linkFileName)
       console.log("finished ", linkFileName)
+      await page.waitForTimeout(8800); // prevent straggling api calls to be recorded. 
     }    
   } else {
     reachedSearchPage = true
