@@ -787,7 +787,14 @@ async function getKrogerTrips({ page }){
     page.$eval("#SignIn-submitButton", (el) => el.click())
   ])
   await page.waitForTimeout(8000)
-  
+  let introModals = await page.$$("button.kds-DismissalButton.kds-Modal-closeButton")
+  if (introModals){
+    for (let modal of introModals){
+      await modal.click(); 
+    }
+  }
+  await page.waitForTimeout(6000);
+
   const nextButton = async () => {
     let isNext = await page.$eval("button.kds-Pagination-next", (el)=>!el.disabled);
     if (isNext){
