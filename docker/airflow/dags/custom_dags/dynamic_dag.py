@@ -130,6 +130,9 @@ for chain, dag_types in configs.items():
         "email_on_failure": True, "email": "kylel9815@gmail.com", "retries": 4, "retry_delay": timedelta(seconds=60)}
         kwargs["tags"] += ["grocery", "GroceryClerk", "ETL", "python", "node", "mongodb", "docker"]
     
+        if target_data=="trips":
+            kwargs["default_args"]["retry_delay"] = timedelta(minutes=10)
+
         dag_id = f"dynamic_generated_dag_scrape_{chain}_{target_data}"
         log = logging.getLogger(__name__)
 
