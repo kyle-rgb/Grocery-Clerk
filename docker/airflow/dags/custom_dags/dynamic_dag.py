@@ -59,7 +59,7 @@ configs = {
         },
         "trips": {
             "dag_vars": {
-                "schedule_interval": "10 10,22 * * 2,3",
+                "schedule_interval": "42 10,22 * * 2,3",
                 "dagrun_timeout": timedelta(minutes=45),
                 "tags": ["kroger", "trips", "1st Party Site"]
             }
