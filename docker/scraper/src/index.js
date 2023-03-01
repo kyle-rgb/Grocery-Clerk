@@ -407,34 +407,54 @@ async function setUpBrowser(task) {
       //enter in zipcode
       //press enter
       //click on store link element that matches wanted location's address)
+      try{
       var wantedStoreAddress = "4650 Hugh Howell Rd"; 
-      await page.goto("https://www.publix.com")
-      await page.$eval("div.store-search-toggle-wrapper button", (el)=>el.click())
-      let storeSearchButton = await page.waitForSelector("input[data-qa='store-search-input']", {visible: true}) ; 
+      
+      const context = browser.defaultBrowserContext();
+      await context.overridePermissions("https://www.publix.com", ['geolocation']);
+      await page.goto("https://www.publix.com");
+      let openSearch = undefined; 
+      try {
+        openSearch = await page.$("div.store-search-toggle")
+      } catch {
+        openSearch = await page.$("button[aria-controls='userStoreLocator']")
+      }
+      await openSearch.click();
+
+      let storeSearchButton = await page.waitForSelector("input[aria-label='Search locations']", {visible: true}) ; 
       await storeSearchButton.hover();
       await storeSearchButton.click(); 
       await storeSearchButton.type(ZIPCODE, {delay: 200}) 
-      await page.$eval("button[title='Store Search']", (el)=>{
-        el.click();
-      })
+      let searchLocationsBtn = await page.$("a[href^='/locations']")
+      await searchLocationsBtn.click()
+      await page.waitForTimeout(10000)
       // filter by address ; default store pods based on zip code : 15 stores . 
-      let wantedStoreDivs = await page.$$("div.store-pod")
+      let wantedStoreDivs = await page.$$("div.results-scroll-container li")
+      console.log(wantedStoreDivs);
       var wantedStoreDiv = await asyncFilter(wantedStoreDivs, async (storeItem, index)=> {
-        let address = await storeItem.$("p.address")
+        let address = await storeItem.$("div.p-text")
         address = await address.getProperty("innerText").then((jsHandle)=> jsHandle.jsonValue());
+        console.log(address)
         if (address.includes(wantedStoreAddress)){ 
+          console.log(address, "is in ", wantedStoreAddress)
           return index
         } 
       });
+      let wantedStoreBtn = await wantedStoreDiv.$("div.p-button-group__wrapper button")
+      console.log(wantedStoreBtn);
       await Promise.all([
         page.waitForNavigation({waitUntil:"load"}),
-        wantedStoreDiv.$eval("button.choose-store-button", (el)=>el.click())
+        wantedStoreBtn.click({delay: 200})
       ])
-      await 
+      await page.goto("https://www.publix.com");
       // wait for reload
       await page.waitForTimeout(12000)
       // navigate to https://www.publix.com/savings/all-deals
       break;
+      } catch (err) {
+        throw err
+        await page.waitForTimeout(3650000)
+      }
       }
       case "foodDepotItems": {
         // * food depot items: navigate to store page, enter zipcode into input box, select store based on address, click start shopping button
