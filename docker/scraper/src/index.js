@@ -1061,9 +1061,14 @@ async function getKrogerSpecialPromotions({ page }) {
         await page.waitForTimeout(12500)
         // check for load button
         var loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
-        console.log('starting load loop for :', page.url())
+        console.log('starting load loop for :', page.url(), loadMoreButton)
         while (loadMoreButton){
-          await loadMoreButton.click();
+          try {
+            await loadMoreButton.click();
+          } catch (err){
+            console.log(err)
+            break; 
+          }
           try{
             let loadMoreResponse = await page.waitForResponse(async (response)=> response.url().match(specialPromoRegex)!==null, {timeout: 20000})
             if (loadMoreResponse.ok()){
@@ -1075,9 +1080,9 @@ async function getKrogerSpecialPromotions({ page }) {
           } 
           await page.waitForTimeout(12000)
           loadMoreButton = await page.$('div.PaginateItems button.LoadMore__load-more-button')
-
           
         };
+        loadMoreButton = null;
         console.log("finished category : ", page.url().match(/pl\/(.+?)\//))
 
       };
