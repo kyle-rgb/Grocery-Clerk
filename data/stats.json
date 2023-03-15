@@ -2,32 +2,32 @@
    "db": "new",
    "collections": 11,
    "views": 0,
-   "objects": 7106581,
-   "avgObjSize": 223.83909238493166,
-   "dataSize": 1590730641.0,
-   "storageSize": 324595712.0,
+   "objects": 7165738,
+   "avgObjSize": 223.76909873065412,
+   "dataSize": 1603470734.0,
+   "storageSize": 325922816.0,
    "indexes": 11,
-   "indexSize": 71553024.0,
-   "totalSize": 396148736.0,
+   "indexSize": 72196096.0,
+   "totalSize": 398118912.0,
    "scaleFactor": 1.0,
-   "fsUsedSize": 209073938432.0,
+   "fsUsedSize": 210484035584.0,
    "fsTotalSize": 239380459520.0,
    "ok": 1.0,
    "collectionStats": [
       {
          "ns": "new.items",
-         "size": 288326927,
-         "count": 203632,
-         "avgObjSize": 1415,
-         "storageSize": 74493952,
-         "freeStorageSize": 229376,
+         "size": 288634500,
+         "count": 203701,
+         "avgObjSize": 1416,
+         "storageSize": 74612736,
+         "freeStorageSize": 258048,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 1888256,
-         "totalSize": 76382208,
+         "totalIndexSize": 1880064,
+         "totalSize": 76492800,
          "indexSizes": {
-            "_id_": 1888256
+            "_id_": 1880064
          },
          "scaleFactor": 1,
          "ok": 1.0
@@ -88,18 +88,18 @@
       },
       {
          "ns": "new.runs",
-         "size": 3104097,
-         "count": 750,
-         "avgObjSize": 4138,
-         "storageSize": 937984,
-         "freeStorageSize": 106496,
+         "size": 3148681,
+         "count": 757,
+         "avgObjSize": 4159,
+         "storageSize": 917504,
+         "freeStorageSize": 73728,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 53248,
-         "totalSize": 991232,
+         "totalIndexSize": 61440,
+         "totalSize": 978944,
          "indexSizes": {
-            "_id_": 53248
+            "_id_": 61440
          },
          "scaleFactor": 1,
          "ok": 1.0
@@ -124,18 +124,18 @@
       },
       {
          "ns": "new.inventories",
-         "size": 425844167,
-         "count": 2833510,
+         "size": 430364395,
+         "count": 2862394,
          "avgObjSize": 150,
-         "storageSize": 71675904,
-         "freeStorageSize": 159744,
+         "storageSize": 72458240,
+         "freeStorageSize": 192512,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 28471296,
-         "totalSize": 100147200,
+         "totalIndexSize": 28782592,
+         "totalSize": 101240832,
          "indexSizes": {
-            "_id_": 28471296
+            "_id_": 28782592
          },
          "scaleFactor": 1,
          "ok": 1.0
@@ -159,18 +159,18 @@
       },
       {
          "ns": "new.prices",
-         "size": 784891722,
-         "count": 4001232,
+         "size": 792229665,
+         "count": 4030459,
          "avgObjSize": 196,
-         "storageSize": 144166912,
-         "freeStorageSize": 1167360,
+         "storageSize": 144236544,
+         "freeStorageSize": 167936,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 40296448,
-         "totalSize": 184463360,
+         "totalIndexSize": 40620032,
+         "totalSize": 184856576,
          "indexSizes": {
-            "_id_": 40296448
+            "_id_": 40620032
          },
          "scaleFactor": 1,
          "ok": 1.0
@@ -195,18 +195,18 @@
       },
       {
          "ns": "new.promotions",
-         "size": 48119453,
-         "count": 62477,
-         "avgObjSize": 770,
-         "storageSize": 16707584,
-         "freeStorageSize": 630784,
+         "size": 48649218,
+         "count": 63447,
+         "avgObjSize": 766,
+         "storageSize": 17084416,
+         "freeStorageSize": 811008,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 602112,
-         "totalSize": 17309696,
+         "totalIndexSize": 610304,
+         "totalSize": 17694720,
          "indexSizes": {
-            "_id_": 602112
+            "_id_": 610304
          },
          "scaleFactor": 1,
          "ok": 1.0
