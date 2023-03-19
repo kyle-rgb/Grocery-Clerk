@@ -417,8 +417,11 @@ async function setUpBrowser(task) {
       try {
         openSearch = await page.$("div.store-search-toggle")
       } catch {
+        console.log("error was raised for openSearch")
         openSearch = await page.$("button[aria-controls='userStoreLocator']")
       }
+      console.log("OPENSEARCH = ", openSearch)
+      await page.waitForTimeout(60 * 1000)
       await openSearch.click();
 
       let storeSearchButton = await page.waitForSelector("input[aria-label='Search locations']", {visible: true}) ; 
@@ -999,6 +1002,11 @@ async function getKrogerSpecialPromotions({ page }) {
       var categoryLinks = await page.$$eval("a.kds-Link.kds-ProminentLink", (nodes)=>nodes.map((el)=>el.href))
       var [shopAllLink] = categoryLinks.filter((a)=>a.includes("ShopAll"));
       // var categoryButtons = await page.$$("a.kds-Link.kds-ProminentLink");
+      if (!shopAllLink){
+        shopAllLink = await page.$$eval("a.kds-Link.kds-ProminentLink", (nodes)=>nodes.map((el)=>el.href))
+        shopAllLink = shopAllLink[0]
+      }
+
       console.log("shopAllLink = w/o bubbles", shopAllLink)
       shopAllLinkArray.push(shopAllLink);
     }
@@ -1031,8 +1039,8 @@ async function getKrogerSpecialPromotions({ page }) {
       await page.waitForTimeout(8800)
       // get show all categories button
       let loadAllCategoriesButton = await page.$("button[data-test='sliced-filters-show-more-button']");
-      await loadAllCategoriesButton.click();
-      await page.waitForSelector("button.x-filter.x-sliced-filters__button.x-sliced-filters__button--show-less")
+      if (loadAllCategoriesButton) await loadAllCategoriesButton.click();
+      // await page.waitForSelector("button.x-filter.x-sliced-filters__button.x-sliced-filters__button--show-less")
       let categoryFilters = await page.$$("ul.x-staggering-transition-group.x-staggered-fade-and-slide.x-list.x-filters > li > div > div > label > input")
       console.log("categoryFilters = w/o bubbles", categoryFilters)
       for (let j = 0 ; j <categoryFilters.length ; j++){
