@@ -281,7 +281,7 @@ async function setUpBrowser(task) {
             modalityButton.click()
           ]);
           // click on pickup location picker (store picker)
-          let locationPicker = await page.$(`div[class$='${wantedModality === "Delivery" ? wantedModality+"Address" : wantedModality+"Location"}Picker'] button[aria-haspopup]`);
+          let locationPicker = await page.$("button[type='button'][aria-haspopup='dialog'][aria-expanded='false']")// (`div[class$='${wantedModality === "Delivery" ? wantedModality+"Address" : wantedModality+"Location"}Picker'] button[aria-haspopup]`);
           await locationPicker.click();
           // wait for map modal to appear
           await page.waitForSelector(`div.__reakit-portal div[aria-label='${wantedModality === "Delivery" ? "Choose address" : "Choose a pickup location" }']`,
@@ -353,7 +353,8 @@ async function setUpBrowser(task) {
           modalityButton.click()
         ]);
         // click on pickup location picker
-        let locationPicker = await page.$(`div[class$='${wantedModality === "Delivery" ? wantedModality+"Address" : wantedModality+"Location"}Picker'] button[aria-haspopup]`);
+        
+        let locationPicker = await page.$("button[type='button'][aria-haspopup='dialog'][aria-expanded='false']")//await page.$(`div[class$='${wantedModality === "Delivery" ? wantedModality+"Address" : wantedModality+"Location"}Picker'] button[aria-haspopup]`);
         await locationPicker.click();
         // wait for map modal to appear
         await page.waitForSelector(`div.__reakit-portal div[aria-label='${wantedModality === "Delivery" ? "Choose address" : "Choose a pickup location" }']`,
@@ -416,13 +417,31 @@ async function setUpBrowser(task) {
       let openSearch = undefined; 
       try {
         openSearch = await page.$("div.store-search-toggle")
+        if (!openSearch) throw new Error("new website displayed")
       } catch {
         console.log("error was raised for openSearch")
         openSearch = await page.$("button[aria-controls='userStoreLocator']")
       }
       console.log("OPENSEARCH = ", openSearch)
       await page.waitForTimeout(60 * 1000)
-      await openSearch.click();
+      try{
+        await openSearch.click();  
+      } catch {
+        await page.$eval("button[aria-controls='userStoreLocator']", (el)=> {
+          function simulateMouseClick(targetNode) {
+            function triggerMouseEvent(targetNode, eventType) {
+                var clickEvent = document.createEvent('MouseEvents');
+                clickEvent.initEvent(eventType, true, true);
+                targetNode.dispatchEvent(clickEvent);
+            }
+            ["mouseover", "mousedown", "mouseup", "click"].forEach(function(eventType) { 
+                triggerMouseEvent(targetNode, eventType);
+            });
+          }
+          simulateMouseClick(document.querySelector("button[aria-controls='userStoreLocator']"))
+        })        
+      }
+      
 
       let storeSearchButton = await page.waitForSelector("input[aria-label='Search locations']", {visible: true}) ; 
       await storeSearchButton.hover();
