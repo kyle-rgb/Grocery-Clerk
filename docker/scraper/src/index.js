@@ -718,7 +718,14 @@ async function setUpBrowser(task) {
         //input address location
         var inputZip = await page.waitForSelector("#streetAddress")
         await inputZip.type(ZIPSTREET, {delay: 125})
-        var addrSuggestions = await page.$$("div[class$='AddressSuggestionList']");
+        // var addrSuggestions = await page.$$("div[class$='AddressSuggestionList']");
+        // var targetLocation = await asyncFilter(addrSuggestions, async (storeItem, index)=> {
+        //   let address = await storeItem.getProperty("innerText").then((v)=>v.jsonValue())
+        //   if (address.includes(ZIPCODE)){ 
+        //     return index
+        //   } 
+        // });
+        var addrSuggestions = await page.$$("div[data-dialog='true'][aria-label$='address'] li > div");
         var targetLocation = await asyncFilter(addrSuggestions, async (storeItem, index)=> {
           let address = await storeItem.getProperty("innerText").then((v)=>v.jsonValue())
           if (address.includes(ZIPCODE)){ 
@@ -727,7 +734,8 @@ async function setUpBrowser(task) {
         });
         await targetLocation.click(); 
         //click save address button
-        var addressSubmit = await page.waitForSelector("div[class$='UserAddressManager'] button[type='submit']");
+        // var addressSubmit = await page.waitForSelector("div[class$='UserAddressManager'] button[type='submit']");
+        var addressSubmit = await page.waitForSelector("div[aria-label='Choose address'] button[type='submit']");
         page.on("response", async (res)=> {
           if (Object.keys(passDownArgs).length<1 && res.url().match(instacartRegex)){
             let shopIdObject = await res.json()
