@@ -200,7 +200,7 @@ async function setUpBrowser(task) {
               await modal.click(); 
             }
           }
-          await page.$eval("button.CurrentModality-button", (el)=>el.click());
+          await page.$eval("button[class^='CurrentModality-button']", (el)=>el.click());
           zipInput = await page.$("input[autocomplete='postal-code']");
           placeHolder = await zipInput.getProperty("value").then((v)=> v.jsonValue());
           for (let j=0;j<placeHolder.length;j++){
@@ -288,12 +288,17 @@ async function setUpBrowser(task) {
           {visible: true});
           if (wantedModality === "Pickup"){
             // click zip button to launch choose address modal
-            await page.$eval("button[class$='AddressButton']", (el)=>el.click());
+            try{
+              await page.$eval("button[class$='AddressButton']", (el)=>el.click());
+            } catch {
+              await page.$eval("div[aria-label='Pickup Locations List'] button[aria-haspopup]", (el)=>el.click());
+            }
+             // 
           }
           let inputZip = await page.waitForSelector("#streetAddress");
           // do not have to press enter b/c autocomplete request occurs when typing
           await inputZip.type(ZIPSTREET);
-          addrSuggestions = await page.$$("div[class$='AddressSuggestionList']");
+          addrSuggestions = await page.$$("div[aria-label='Choose address'] li div[role='button']")//("div[class$='AddressSuggestionList']");
           var targetLocation = await asyncFilter(addrSuggestions, async (storeItem, index)=> {
             let address = await storeItem.getProperty("innerText").then((jsHandle)=> jsHandle.jsonValue());
             if (address.includes(ZIPCODE)){ 
@@ -361,13 +366,17 @@ async function setUpBrowser(task) {
         {visible: true});
         if (wantedModality === "Pickup"){
           // click zip button to launch choose address modal
-          await page.$eval("button[class$='AddressButton']", (el)=>el.click());
+          try{
+              await page.$eval("button[class$='AddressButton']", (el)=>el.click());
+            } catch {
+              await page.$eval("div[aria-label='Pickup Locations List'] button[aria-haspopup]", (el)=>el.click());
+            }
         }
         
         let inputZip = await page.waitForSelector("#streetAddress");
         // do not have to press enter b/c autocomplete request occurs when typing
         await inputZip.type(ZIPSTREET);
-        var addrSuggestions = await page.$$("div[class$='AddressSuggestionList']");
+        var addrSuggestions = await page.$$("div[aria-label='Choose address'] li div[role='button']");
         var targetLocation = await asyncFilter(addrSuggestions, async (storeItem, index)=> {
           let address = await storeItem.getProperty("innerText").then((jsHandle)=> jsHandle.jsonValue());
           if (address.includes(ZIPCODE)){ 
