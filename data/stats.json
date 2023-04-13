@@ -2,32 +2,32 @@
    "db": "new",
    "collections": 11,
    "views": 0,
-   "objects": 7847597,
-   "avgObjSize": 222.42667507008832,
-   "dataSize": 1745514908.0,
-   "storageSize": 353579008.0,
+   "objects": 7919763,
+   "avgObjSize": 222.55022151546706,
+   "dataSize": 1762545010.0,
+   "storageSize": 356675584.0,
    "indexes": 11,
-   "indexSize": 79110144.0,
-   "totalSize": 432689152.0,
+   "indexSize": 79802368.0,
+   "totalSize": 436477952.0,
    "scaleFactor": 1.0,
-   "fsUsedSize": 210091667456.0,
+   "fsUsedSize": 212189573120.0,
    "fsTotalSize": 239380459520.0,
    "ok": 1.0,
    "collectionStats": [
       {
          "ns": "new.items",
-         "size": 301641844,
-         "count": 208068,
-         "avgObjSize": 1449,
-         "storageSize": 77946880,
-         "freeStorageSize": 290816,
+         "size": 304800969,
+         "count": 208872,
+         "avgObjSize": 1459,
+         "storageSize": 78618624,
+         "freeStorageSize": 212992,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 1937408,
-         "totalSize": 79884288,
+         "totalIndexSize": 1921024,
+         "totalSize": 80539648,
          "indexSizes": {
-            "_id_": 1937408
+            "_id_": 1921024
          },
          "scaleFactor": 1,
          "ok": 1.0
@@ -88,16 +88,16 @@
       },
       {
          "ns": "new.runs",
-         "size": 3994387,
-         "count": 899,
-         "avgObjSize": 4443,
-         "storageSize": 1134592,
-         "freeStorageSize": 73728,
+         "size": 4044292,
+         "count": 906,
+         "avgObjSize": 4463,
+         "storageSize": 1171456,
+         "freeStorageSize": 98304,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
          "totalIndexSize": 61440,
-         "totalSize": 1196032,
+         "totalSize": 1232896,
          "indexSizes": {
             "_id_": 61440
          },
@@ -124,18 +124,18 @@
       },
       {
          "ns": "new.inventories",
-         "size": 470944829,
-         "count": 3130137,
+         "size": 477668539,
+         "count": 3174252,
          "avgObjSize": 150,
-         "storageSize": 79298560,
-         "freeStorageSize": 192512,
+         "storageSize": 80551936,
+         "freeStorageSize": 221184,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 31473664,
-         "totalSize": 110772224,
+         "totalIndexSize": 31924224,
+         "totalSize": 112476160,
          "indexSizes": {
-            "_id_": 31473664
+            "_id_": 31924224
          },
          "scaleFactor": 1,
          "ok": 1.0
@@ -159,18 +159,18 @@
       },
       {
          "ns": "new.prices",
-         "size": 876082430,
-         "count": 4433687,
+         "size": 882687001,
+         "count": 4460199,
          "avgObjSize": 197,
-         "storageSize": 160587776,
-         "freeStorageSize": 151552,
+         "storageSize": 161562624,
+         "freeStorageSize": 172032,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 44724224,
-         "totalSize": 205312000,
+         "totalIndexSize": 44986368,
+         "totalSize": 206548992,
          "indexSizes": {
-            "_id_": 44724224
+            "_id_": 44986368
          },
          "scaleFactor": 1,
          "ok": 1.0
@@ -195,18 +195,18 @@
       },
       {
          "ns": "new.promotions",
-         "size": 52391797,
-         "count": 69766,
+         "size": 52884588,
+         "count": 70494,
          "avgObjSize": 750,
-         "storageSize": 17997824,
-         "freeStorageSize": 458752,
+         "storageSize": 18157568,
+         "freeStorageSize": 495616,
          "capped": false,
          "nindexes": 1,
          "indexBuilds": [],
-         "totalIndexSize": 671744,
-         "totalSize": 18669568,
+         "totalIndexSize": 667648,
+         "totalSize": 18825216,
          "indexSizes": {
-            "_id_": 671744
+            "_id_": 667648
          },
          "scaleFactor": 1,
          "ok": 1.0
