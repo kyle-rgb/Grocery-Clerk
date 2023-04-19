@@ -429,14 +429,14 @@ async function setUpBrowser(task) {
         if (!openSearch) throw new Error("new website displayed")
       } catch {
         console.log("error was raised for openSearch")
-        openSearch = await page.$("button[aria-controls='userStoreLocator']")
+        openSearch = await page.$("button[aria-label='Click here to choose a store by location']")
       }
       console.log("OPENSEARCH = ", openSearch)
-      await page.waitForTimeout(60 * 1000)
+      await page.waitForTimeout(10 * 1000)
       try{
         await openSearch.click();  
       } catch {
-        await page.$eval("button[aria-controls='userStoreLocator']", (el)=> {
+        await page.$eval("button[aria-label='Click here to choose a store by location']", (el)=> {
           function simulateMouseClick(targetNode) {
             function triggerMouseEvent(targetNode, eventType) {
                 var clickEvent = document.createEvent('MouseEvents');
@@ -447,7 +447,7 @@ async function setUpBrowser(task) {
                 triggerMouseEvent(targetNode, eventType);
             });
           }
-          simulateMouseClick(document.querySelector("button[aria-controls='userStoreLocator']"))
+          simulateMouseClick(document.querySelector("button[aria-label='Click here to choose a store by location']"))
         })        
       }
       
@@ -456,9 +456,22 @@ async function setUpBrowser(task) {
       await storeSearchButton.hover();
       await storeSearchButton.click(); 
       await storeSearchButton.type(ZIPCODE, {delay: 200}) 
-      let searchLocationsBtn = await page.$("a[href^='/locations']")
-      await searchLocationsBtn.click()
-      await page.waitForTimeout(10000)
+      await page.$eval("#view-map-button", (el)=> {
+        function simulateMouseClick(targetNode) {
+          function triggerMouseEvent(targetNode, eventType) {
+              var clickEvent = document.createEvent('MouseEvents');
+              clickEvent.initEvent(eventType, true, true);
+              targetNode.dispatchEvent(clickEvent);
+          }
+          ["mouseover", "mousedown", "mouseup", "click"].forEach(function(eventType) { 
+              triggerMouseEvent(targetNode, eventType);
+          });
+        }
+        simulateMouseClick(document.querySelector("#view-map-button"))
+      })
+      // let searchLocationsBtn = await page.$("a[href^='/locations']")
+      // await searchLocationsBtn.click()
+      await page.waitForTimeout(12000)
       // filter by address ; default store pods based on zip code : 15 stores . 
       let wantedStoreDivs = await page.$$("div.results-scroll-container li")
       console.log(wantedStoreDivs);
@@ -1028,6 +1041,7 @@ async function getKrogerSpecialPromotions({ page }) {
   // that redirect us to items search page. specialPromoNonBubble links require a few extra steps.
   console.log("specialPromoLinks >>", specialPromoLinks)
   console.log("specialPromoNonBubbleLinks {links that need navigation to own promotions page} >>", specialPromoNonBubbleLinks)
+  specialPromoNonBubbleLinks = specialPromoNonBubbleLinks.filter((d)=>d!=='https://www.kroger.com/pr/seasonal-low-prices')
   var reachedSearchPage = false;
   let shopAllLinkArray = [];
   if (specialPromoNonBubbleLinks.length > 0){
