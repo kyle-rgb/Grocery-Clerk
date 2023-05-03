@@ -201,6 +201,7 @@ async function setUpBrowser(task) {
             }
           }
           await page.$eval("button[class^='CurrentModality-button']", (el)=>el.click());
+          await page.$eval("button[class^='PostalCodeSearchBox']", el=>el.click())
           zipInput = await page.$("input[autocomplete='postal-code']");
           placeHolder = await zipInput.getProperty("value").then((v)=> v.jsonValue());
           for (let j=0;j<placeHolder.length;j++){
@@ -213,15 +214,19 @@ async function setUpBrowser(task) {
           );
           await modalityButton.click();
           if (wantedModality === "PICKUP" || wantedModality === "IN_STORE"){
+          
             // outerText of inner div has street address, city, state
-            var targetStoreModals = await page.$$("div.ModalitySelector--StoreSearchResult") 
+            var targetStoreModals = await page.$$("div[data-testid='ModalitySelector-StoreSearchResultVanityName']") 
+            console.log(targetStoreModals)
             var targetStoreModal = await asyncFilter(targetStoreModals, async (storeItem, index)=> {
               let address = await storeItem.$eval("div[data-testid='StoreSearchResultAddress']", (el)=>el.outerText)
+              console.log(address)
               if (address.includes(wantedAddress)){ 
                 return index
               } 
             })
             // button to choose right store
+            console.log(targetStoreModal)
             await targetStoreModal.$eval("button", (el) => el.click());
           } 
           // page.waitForNetworkIdle({idleTime: 4500})
