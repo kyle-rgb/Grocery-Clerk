@@ -1226,7 +1226,7 @@ async function getInstacartItems({ page}){
    * & =RecipesByProductId (links to recipes page on instacart site, which provide all items for recipes and their prices)
         * given that this data is mostly static, It could be collected Incrementally Over Scrapes. It would have to occur over time given the large catalogue of items (1000+ items). 
    */
-  let unwantedPattern = /(outdoor|toys|bed|electronics|clothing-shoes-accessories|office-crafts-party-supplies|greeting-cards|storm-prep|tailgating|popular|floral|shop-now)$/
+  let unwantedPattern = /(outdoor|toys|bed|electronics|clothing-shoes-accessories|office-crafts-party-supplies|greeting-cards|storm-prep|tailgating|popular|floral|shop-now|miscellaneous|office-craft|celebrate-mom|new-and-interesting|party-gifts|furniture|craft-hobby)$/
   let storePatterns = /(aldi|familydollar|publix)/
   let currentUrl = await page.url();
   let store = currentUrl.match(storePatterns)[0]
@@ -1285,7 +1285,7 @@ async function getInstacartItems({ page}){
       }, timeout)
     })
   }
-
+  
   for (let link of allCategoryLinks){
     // navigate to page ;
     // wait for request where (collections_all_items_grid) in wanted request
