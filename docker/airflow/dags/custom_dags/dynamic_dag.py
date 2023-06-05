@@ -158,7 +158,7 @@ for chain, dag_types in configs.items():
 
                 startTime = dt.datetime.utcnow()
                 cron_day = startTime.isoweekday()%7
-                
+                print((startTime.hour, cron_day) in properTimes[chain], (startTime.hour, cron_day))
                 if (startTime.hour, cron_day) in properTimes[chain]:
                     return 0 
                 else:

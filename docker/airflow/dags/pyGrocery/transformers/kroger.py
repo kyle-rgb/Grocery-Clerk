@@ -277,88 +277,89 @@ def deconstructKrogerFile(filename):
                         if bool(p.get('productRestrictions')):
                             itemDoc['productRestrictions']  = p.get('productRestrictions')
                         sources = p.get('sourceLocations')
-                        for source in sources:
-                            priceData={}
-                            if 'prices' in source:
-                                prices = source.get('prices')[0]
-                                sellers = list(filter(lambda x: x.get('sellerId')==prices.get('sellerId'), sellerCollection))
-                                if bool(prices.get('sale')):
-                                    promo = float(prices.get('sale').get('nFor').get('price').replace('USD', ''))
-                                    quantity = float(prices.get('sale').get('nFor').get('count'))
-                                    priceData['value'] = round(promo / quantity, 2)
-                                    priceData['quantity'] = quantity
-                                    priceData['type'] = prices.get('displayTemplate')
-                                    if 'linkedOfferCode' in prices.get('sale'):
-                                        priceData['offerIds'] = prices.get('sale').get('linkedOfferCode')
-                                if bool(prices.get('regular')):
-                                    priceData['value'] = float(prices.get('regular').get('nFor').get('price').replace('USD', '')) / prices.get('regular').get('nFor').get('count')
-                                    priceData['quantity'] = prices.get('regular').get('nFor').get('count')
-                                    priceData['type'] =  prices.get('displayTemplate')
-                                    if '.' in prices.get('effectiveDate').get('value'):
-                                        priceData['effectiveDate'] = pytz.utc.localize(dt.datetime.strptime(prices.get('effectiveDate').get('value'), "%Y-%m-%dT%H:%M:%S.%fZ"))
-                                    else:
-                                        priceData['effectiveDate'] = pytz.utc.localize(dt.datetime.strptime(prices.get('effectiveDate').get('value'), "%Y-%m-%dT%H:%M:%SZ"))
-                                    if '.' in prices.get('expirationDate').get('value'):
-                                        priceData['expirationDate'] =  pytz.utc.localize(dt.datetime.strptime(prices.get('expirationDate').get('value'), "%Y-%m-%dT%H:%M:%S.%fZ"))
-                                    else:
-                                        priceData['expirationDate'] =  pytz.utc.localize(dt.datetime.strptime(prices.get('expirationDate').get('value'), "%Y-%m-%dT%H:%M:%SZ"))
-                                    itemDoc['sellBy'] = prices.get('sellBy')
-                                    itemDoc['orderBy'] = prices.get('orderBy')
+                        if sources!=None:
+                            for source in sources:
+                                priceData={}
+                                if 'prices' in source:
+                                    prices = source.get('prices')[0]
+                                    sellers = list(filter(lambda x: x.get('sellerId')==prices.get('sellerId'), sellerCollection))
+                                    if bool(prices.get('sale')):
+                                        promo = float(prices.get('sale').get('nFor').get('price').replace('USD', ''))
+                                        quantity = float(prices.get('sale').get('nFor').get('count'))
+                                        priceData['value'] = round(promo / quantity, 2)
+                                        priceData['quantity'] = quantity
+                                        priceData['type'] = prices.get('displayTemplate')
+                                        if 'linkedOfferCode' in prices.get('sale'):
+                                            priceData['offerIds'] = prices.get('sale').get('linkedOfferCode')
+                                    if bool(prices.get('regular')):
+                                        priceData['value'] = float(prices.get('regular').get('nFor').get('price').replace('USD', '')) / prices.get('regular').get('nFor').get('count')
+                                        priceData['quantity'] = prices.get('regular').get('nFor').get('count')
+                                        priceData['type'] =  prices.get('displayTemplate')
+                                        if '.' in prices.get('effectiveDate').get('value'):
+                                            priceData['effectiveDate'] = pytz.utc.localize(dt.datetime.strptime(prices.get('effectiveDate').get('value'), "%Y-%m-%dT%H:%M:%S.%fZ"))
+                                        else:
+                                            priceData['effectiveDate'] = pytz.utc.localize(dt.datetime.strptime(prices.get('effectiveDate').get('value'), "%Y-%m-%dT%H:%M:%SZ"))
+                                        if '.' in prices.get('expirationDate').get('value'):
+                                            priceData['expirationDate'] =  pytz.utc.localize(dt.datetime.strptime(prices.get('expirationDate').get('value'), "%Y-%m-%dT%H:%M:%S.%fZ"))
+                                        else:
+                                            priceData['expirationDate'] =  pytz.utc.localize(dt.datetime.strptime(prices.get('expirationDate').get('value'), "%Y-%m-%dT%H:%M:%SZ"))
+                                        itemDoc['sellBy'] = prices.get('sellBy')
+                                        itemDoc['orderBy'] = prices.get('orderBy')
+                                        if len(sellers)==0:
+                                            id = len(sellerCollection)
+                                            sellerCollection.append({'sellerId': prices.get('sellerId'), 'sellerName': prices.get('sellerName'), "id": id})
+                                            priceData['sellerKey'] = id 
+                                        else:
+                                            id = sellerCollection.index(sellers[0])
+                                            priceData['sellerKey'] = id 
+                                    if 'modalityAvailabilities' in source:
+                                        priceData.setdefault('modalities', [])
+                                        for modal in source.get('modalityAvailabilities'):
+                                            if modal.get('availability'):
+                                                priceData['modalities'].append(modal.get('modalityType'))
+                                    priceData['upc']=itemDoc.get('upc')
+                                    priceData['locationId'] = source.get('id')
+                                    priceData['utcTimestamp']=acquistionTimestamp
+                                    priceData["isPurchase"] = False
+                                    pricesCollection.append(priceData)
+                                if 'inventory' in source:
+                                    inventory = source.get('inventory')
+                                    i = inventory[0]
+                                    i['locationId'] = source.get('id')
+                                    i['utcTimestamp'] = acquistionTimestamp
+                                    i['upc'] = itemDoc.get('upc')
+                                    sellers = list(filter(lambda x: x.get('sellerId')==i.get('sellerId'), sellerCollection))
                                     if len(sellers)==0:
                                         id = len(sellerCollection)
-                                        sellerCollection.append({'sellerId': prices.get('sellerId'), 'sellerName': prices.get('sellerName'), "id": id})
-                                        priceData['sellerKey'] = id 
+                                        sellerCollection.append({'sellerId': i.get('sellerId'), 'sellerName': i.get('sellerName'), "id": id})
+                                        i['sellerKey'] = id 
                                     else:
                                         id = sellerCollection.index(sellers[0])
-                                        priceData['sellerKey'] = id 
-                                if 'modalityAvailabilities' in source:
-                                    priceData.setdefault('modalities', [])
-                                    for modal in source.get('modalityAvailabilities'):
-                                        if modal.get('availability'):
-                                            priceData['modalities'].append(modal.get('modalityType'))
-                                priceData['upc']=itemDoc.get('upc')
-                                priceData['locationId'] = source.get('id')
-                                priceData['utcTimestamp']=acquistionTimestamp
-                                priceData["isPurchase"] = False
-                                pricesCollection.append(priceData)
-                            if 'inventory' in source:
-                                inventory = source.get('inventory')
-                                i = inventory[0]
-                                i['locationId'] = source.get('id')
-                                i['utcTimestamp'] = acquistionTimestamp
-                                i['upc'] = itemDoc.get('upc')
-                                sellers = list(filter(lambda x: x.get('sellerId')==i.get('sellerId'), sellerCollection))
-                                if len(sellers)==0:
-                                    id = len(sellerCollection)
-                                    sellerCollection.append({'sellerId': i.get('sellerId'), 'sellerName': i.get('sellerName'), "id": id})
-                                    i['sellerKey'] = id 
-                                else:
-                                    id = sellerCollection.index(sellers[0])
-                                    i['sellerKey'] = id 
-                                i.pop('sellerId')
-                                i.pop('sellerName')
-                                if 'offerId' in i:
-                                    i.pop('offerId')
-                                inventoryCollection.append(i)
-                        toPop = []
-                        for key, value in itemDoc.items():
-                            if key in itemKeep['bool']:
-                                if key=='prop65':
-                                    value = value.get('required')
-                                if bool(value)==False:
-                                    toPop.append(key)
-                            elif key in itemKeep['keep']:
-                                if key=='mainImagePerspective':
-                                    imgs = list(filter(lambda x: x.get('perspective')==value, itemDoc.get('images')))
-                                    imgs = sorted(imgs, key=lambda i: i.get('size'))
-                                    imgs[0].setdefault('main', True)
-                        itemDoc = {k:v for k,v in itemDoc.items() if (k not in toPop and k in itemKeep['bool']) or  (k in itemKeep['keep'])}
-                        if itemDoc.get('upc') in forGeneralItems.keys():
-                            moreInfo = forGeneralItems[itemDoc.get('upc')]
-                            itemDoc.update(moreInfo)
-                        isProcessed = bool(list(filter(lambda x: x.get('upc')==itemDoc.get('upc'), itemCollection)))
-                        if isProcessed==False:
-                            itemCollection.append(itemDoc)
+                                        i['sellerKey'] = id 
+                                    i.pop('sellerId')
+                                    i.pop('sellerName')
+                                    if 'offerId' in i:
+                                        i.pop('offerId')
+                                    inventoryCollection.append(i)
+                            toPop = []
+                            for key, value in itemDoc.items():
+                                if key in itemKeep['bool']:
+                                    if key=='prop65':
+                                        value = value.get('required')
+                                    if bool(value)==False:
+                                        toPop.append(key)
+                                elif key in itemKeep['keep']:
+                                    if key=='mainImagePerspective':
+                                        imgs = list(filter(lambda x: x.get('perspective')==value, itemDoc.get('images')))
+                                        imgs = sorted(imgs, key=lambda i: i.get('size'))
+                                        imgs[0].setdefault('main', True)
+                            itemDoc = {k:v for k,v in itemDoc.items() if (k not in toPop and k in itemKeep['bool']) or  (k in itemKeep['keep'])}
+                            if itemDoc.get('upc') in forGeneralItems.keys():
+                                moreInfo = forGeneralItems[itemDoc.get('upc')]
+                                itemDoc.update(moreInfo)
+                            isProcessed = bool(list(filter(lambda x: x.get('upc')==itemDoc.get('upc'), itemCollection)))
+                            if isProcessed==False:
+                                itemCollection.append(itemDoc)
     if promotionsCollection:
         insertFilteredData(promotionsCollection, "promotions", "new", "krogerCouponNumber")
     if itemCollection:

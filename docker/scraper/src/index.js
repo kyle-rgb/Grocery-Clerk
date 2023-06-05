@@ -434,14 +434,14 @@ async function setUpBrowser(task) {
         if (!openSearch) throw new Error("new website displayed")
       } catch {
         console.log("error was raised for openSearch")
-        openSearch = await page.$("button[aria-label='Click here to choose a store by location']")
+        openSearch = await page.$("button[aria-label$='click here to choose a store by location']")
       }
       console.log("OPENSEARCH = ", openSearch)
       await page.waitForTimeout(10 * 1000)
       try{
         await openSearch.click();  
       } catch {
-        await page.$eval("button[aria-label='Click here to choose a store by location']", (el)=> {
+        await page.$eval("button[aria-label$='click here to choose a store by location']", (el)=> {
           function simulateMouseClick(targetNode) {
             function triggerMouseEvent(targetNode, eventType) {
                 var clickEvent = document.createEvent('MouseEvents');
@@ -452,7 +452,7 @@ async function setUpBrowser(task) {
                 triggerMouseEvent(targetNode, eventType);
             });
           }
-          simulateMouseClick(document.querySelector("button[aria-label='Click here to choose a store by location']"))
+          simulateMouseClick(document.querySelector("button[aria-label$='click here to choose a store by location']"))
         })        
       }
       
